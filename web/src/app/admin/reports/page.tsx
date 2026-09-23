@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { pool } from "@/lib/db";
+import { countReportsByStatus } from "@/lib/reports";
 
 const ISSUE_LABELS: Record<string, string> = {
   box_or_hangtab: "กล่อง/หูแขวน",
@@ -25,11 +26,14 @@ export default async function AdminReportsPage({ searchParams }: ReportsPageProp
   const { status: statusParam } = await searchParams;
   const status = statusParam === "reviewed" ? "reviewed" : "pending";
 
-  const { rows } = await pool.query<ReportListRow>(
-    `SELECT id, sku, lot, reporter_name, issue_type, status, created_at
-     FROM discrepancy_reports WHERE status = $1 ORDER BY created_at DESC`,
-    [status],
-  );
+  const [{ rows }, counts] = await Promise.all([
+    pool.query<ReportListRow>(
+      `SELECT id, sku, lot, reporter_name, issue_type, status, created_at
+       FROM discrepancy_reports WHERE status = $1 ORDER BY created_at DESC`,
+      [status],
+    ),
+    countReportsByStatus(),
+  ]);
 
   function tabClass(target: string): string {
     const active = status === target;
@@ -49,10 +53,10 @@ export default async function AdminReportsPage({ searchParams }: ReportsPageProp
 
       <div className="flex gap-2">
         <Link href="/admin/reports?status=pending" className={tabClass("pending")}>
-          รอตรวจ
+          รอตรวจ ({counts.pending.toLocaleString("th-TH")})
         </Link>
         <Link href="/admin/reports?status=reviewed" className={tabClass("reviewed")}>
-          ตรวจแล้ว
+          ตรวจแล้ว ({counts.reviewed.toLocaleString("th-TH")})
         </Link>
       </div>
 

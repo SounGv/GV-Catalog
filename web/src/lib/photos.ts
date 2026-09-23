@@ -32,11 +32,17 @@ export async function getPhotosForSku(sku: string): Promise<Partial<Record<Photo
   return photos;
 }
 
-export async function setPhotoForSku(sku: string, angle: PhotoAngle, url: string): Promise<void> {
+export async function setPhotoForSku(
+  sku: string,
+  angle: PhotoAngle,
+  url: string,
+  backgroundRemoved: boolean,
+): Promise<void> {
   await pool.query(
-    `INSERT INTO product_photos (sku, angle, url) VALUES ($1, $2, $3)
-     ON CONFLICT (sku, angle) DO UPDATE SET url = EXCLUDED.url, uploaded_at = now()`,
-    [sku, angle, url],
+    `INSERT INTO product_photos (sku, angle, url, background_removed) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (sku, angle) DO UPDATE SET
+       url = EXCLUDED.url, background_removed = EXCLUDED.background_removed, uploaded_at = now()`,
+    [sku, angle, url, backgroundRemoved],
   );
 }
 

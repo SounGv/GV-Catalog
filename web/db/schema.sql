@@ -42,9 +42,16 @@ CREATE TABLE IF NOT EXISTS product_photos (
   sku text NOT NULL REFERENCES products (sku) ON DELETE CASCADE,
   angle text NOT NULL CHECK (angle IN ('front', 'back', 'barcode', 'thai_label', 'top', 'bottom', 'unit')),
   url text NOT NULL,
+  -- Which choice the admin made on that upload (README's photo-intake
+  -- requirement) — kept for reference, not re-derived from the image.
+  background_removed boolean NOT NULL DEFAULT false,
   uploaded_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (sku, angle)
 );
+
+-- Migrating an already-created table: CREATE TABLE IF NOT EXISTS above won't
+-- add a column to a table that already exists, so add it explicitly.
+ALTER TABLE product_photos ADD COLUMN IF NOT EXISTS background_removed boolean NOT NULL DEFAULT false;
 
 -- Receiving-discrepancy reports ("ของที่รับมาไม่ตรงรูป") filed by warehouse staff
 -- against a SKU, reviewed by an admin. Report photo attachments are still

@@ -10,13 +10,13 @@ import { getPhotosForSku } from "@/lib/photos";
 
 type EditProductPageProps = {
   params: Promise<{ sku: string[] }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; photoError?: string; photoAngle?: string }>;
 };
 
 export default async function EditProductPage({ params, searchParams }: EditProductPageProps) {
   const { sku: segments } = await params;
   const sku = skuFromSegments(segments);
-  const [product, photos, { error }] = await Promise.all([
+  const [product, photos, { error, photoError, photoAngle }] = await Promise.all([
     getProduct(sku),
     getPhotosForSku(sku),
     searchParams,
@@ -37,7 +37,11 @@ export default async function EditProductPage({ params, searchParams }: EditProd
 
       <ProductForm action={boundUpdate} product={product} error={error} />
 
-      <ProductPhotoManager sku={product.sku} photos={photos} />
+      <ProductPhotoManager
+        sku={product.sku}
+        photos={photos}
+        photoError={photoError && photoAngle ? { angle: photoAngle, message: photoError } : undefined}
+      />
 
       <form
         action={boundDelete}
