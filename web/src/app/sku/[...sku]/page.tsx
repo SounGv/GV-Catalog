@@ -26,13 +26,13 @@ async function loadSku(params: SkuPageProps["params"]) {
 }
 
 export async function generateMetadata({ params }: SkuPageProps): Promise<Metadata> {
-  const product = getProduct(await loadSku(params));
+  const product = await getProduct(await loadSku(params));
   if (!product) return { title: "ค้นหาไม่พบ · GV Catalog" };
   return { title: `${product.sku} · GV Catalog` };
 }
 
 export default async function SkuPage({ params, searchParams }: SkuPageProps) {
-  const product = getProduct(await loadSku(params));
+  const product = await getProduct(await loadSku(params));
   if (!product) notFound();
 
   const query = parseCatalogQuery(await searchParams);

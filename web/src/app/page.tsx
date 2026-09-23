@@ -25,8 +25,10 @@ export default async function Home({
   searchParams: Promise<{ q?: string | string[]; brand?: string | string[]; category?: string | string[] }>;
 }) {
   const query = parseCatalogQuery(await searchParams);
-  const { shown, total } = filterProducts(query);
-  const categories = listCategories();
+  const [{ shown, total }, categories] = await Promise.all([
+    filterProducts(query),
+    listCategories(),
+  ]);
 
   return (
     <main className="mx-auto flex max-w-[1180px] flex-col gap-4 px-4 py-6">
