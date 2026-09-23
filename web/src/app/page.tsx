@@ -3,6 +3,7 @@ import { catalogHref, parseCatalogQuery, skuHref } from "@/lib/catalog-query";
 import { filterProducts, listCategories, PAGE_SIZE } from "@/lib/products";
 import type { CatalogQuery } from "@/lib/types";
 import { ProductCard } from "@/components/product-card";
+import { CategoryScrollRow } from "@/components/category-scroll-row";
 
 const BRANDS = [
   { id: "", label: "ทั้งหมด" },
@@ -11,7 +12,9 @@ const BRANDS = [
 ] as const;
 
 function brandHref(query: CatalogQuery, brand: CatalogQuery["brand"]): string {
-  return catalogHref({ ...query, brand, page: 1 });
+  // Categories are scoped to brand — a category picked under the old brand may not
+  // exist under the new one, so keeping it would silently filter to zero results.
+  return catalogHref({ ...query, brand, category: "", page: 1 });
 }
 
 function categoryHref(query: CatalogQuery, category: string): string {
@@ -36,7 +39,7 @@ export default async function Home({
   const query = parseCatalogQuery(await searchParams);
   const [{ shown, total }, categories] = await Promise.all([
     filterProducts(query),
-    listCategories(),
+    listCategories(query.brand),
   ]);
 
   return (
@@ -82,31 +85,15 @@ export default async function Home({
         })}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <span className="text-sm text-muted">หมวดหมู่ (ไม่บังคับ)</span>
-        <div className="relative -mx-4">
-          <div
-            className="scrollbar-hide flex gap-2 overflow-x-auto px-4 py-0.5 [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)]"
-          >
-            {categories.map((category) => {
-              const active = query.category === category;
-              return (
-                <Link
-                  key={category}
-                  href={categoryHref(query, category)}
-                  className={
-                    active
-                      ? "inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full bg-accent px-3.5 text-sm font-medium text-white"
-                      : "inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-line bg-surface px-3.5 text-sm"
-                  }
-                >
-                  {category}
-                </Link>
-              );
-            })}
-          </div>
+      {categories.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-muted">หมวดหมู่ (ไม่บังคับ)</span>
+          <CategoryScrollRow
+            items={categories.map((category) => ({ category, href: categoryHref(query, category) }))}
+            activeCategory={query.category}
+          />
         </div>
-      </div>
+      ) : null}
 
       <p className="text-base text-muted">พบ {total.toLocaleString("th-TH")} รายการ</p>
 

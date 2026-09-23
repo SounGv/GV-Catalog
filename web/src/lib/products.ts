@@ -60,9 +60,18 @@ function rowToProduct(row: ProductRow): Product {
   };
 }
 
-export async function listCategories(): Promise<string[]> {
+/**
+ * Categories scoped to `brand` when given — otherwise the chip row would list
+ * categories that have zero matches for the brand the staff already filtered
+ * to (e.g. a UGREEN-only category showing up while "Fantech" is selected),
+ * which reads as broken rather than just unrelated.
+ */
+export async function listCategories(brand?: Brand | ""): Promise<string[]> {
+  const where = brand ? "WHERE category IS NOT NULL AND brand = $1" : "WHERE category IS NOT NULL";
+  const params = brand ? [brand] : [];
   const { rows } = await pool.query<{ category: string }>(
-    "SELECT DISTINCT category FROM products WHERE category IS NOT NULL ORDER BY category",
+    `SELECT DISTINCT category FROM products ${where} ORDER BY category`,
+    params,
   );
   return rows.map((row) => row.category);
 }
