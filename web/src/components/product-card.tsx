@@ -5,14 +5,23 @@ import type { Product } from "@/lib/types";
 type ProductCardProps = {
   product: Product;
   href: string;
+  /** True when other products currently shown share this SKU's leading numeric
+   * run (e.g. "75701C" and "75701C-ONL" both start with "75701") — likely the
+   * same base product under different packaging/channel variants. */
+  sameFamily?: boolean;
 };
 
-export function ProductCard({ product, href }: ProductCardProps) {
+export function ProductCard({ product, href, sameFamily }: ProductCardProps) {
   const hasImage = Boolean(product.imageUrl);
   return (
     <Link
       href={href}
-      className="flex h-full flex-col overflow-hidden rounded-[10px] bg-surface shadow-[var(--shadow-sm)]"
+      title={sameFamily ? `มี SKU อื่นที่ขึ้นต้นเหมือนกัน (${product.sku})` : undefined}
+      className={
+        sameFamily
+          ? "flex h-full flex-col overflow-hidden rounded-[10px] border-2 border-red-500 bg-surface shadow-[var(--shadow-sm)]"
+          : "flex h-full flex-col overflow-hidden rounded-[10px] bg-surface shadow-[var(--shadow-sm)]"
+      }
     >
       <div className="relative aspect-square bg-neutral-100">
         {hasImage && product.imageUrl ? (

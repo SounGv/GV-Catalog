@@ -81,9 +81,26 @@ export async function getProduct(sku: string): Promise<Product | undefined> {
   return rows[0] ? rowToProduct(rows[0]) : undefined;
 }
 
+/** A product plus how many other currently-matching products share its leading
+ * numeric SKU run (e.g. "75701" out of both "75701C" and "75701C-ONL") — used
+ * to flag same-base-SKU variants in the catalog grid. Computed within the
+ * active filter/search, not the whole table: a search that surfaces a SKU's
+ * variants together is exactly when this matters. */
+type ProductWithFamily = Product & { sameFamilyCount: number };
+
+function rowToProductWithFamily(row: ProductRow & { family_key: string | null; family_count: string }): ProductWithFamily {
+  return {
+    ...rowToProduct(row),
+    // A null family_key means the SKU has no ≥5-digit leading run to match on —
+    // window functions bucket all such NULLs into one partition, so family_count
+    // for those rows is meaningless noise, not a real shared-family count.
+    sameFamilyCount: row.family_key === null ? 1 : Number(row.family_count),
+  };
+}
+
 export async function filterProducts(
   query: CatalogQuery,
-): Promise<{ shown: Product[]; total: number }> {
+): Promise<{ shown: ProductWithFamily[]; total: number }> {
   const conditions: string[] = [];
   const params: unknown[] = [];
 
@@ -106,14 +123,20 @@ export async function filterProducts(
 
   const [{ rows: countRows }, { rows: shownRows }] = await Promise.all([
     pool.query<{ n: string }>(`SELECT count(*)::text AS n FROM products ${where}`, params),
-    pool.query<ProductRow>(
-      `SELECT * FROM products ${where} ORDER BY sku LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+    pool.query<ProductRow & { family_key: string | null; family_count: string }>(
+      `WITH filtered AS (
+         SELECT *, NULLIF(substring(sku from '^[0-9]{5,}'), '') AS family_key
+         FROM products ${where}
+       )
+       SELECT *, count(*) OVER (PARTITION BY family_key)::text AS family_count
+       FROM filtered
+       ORDER BY sku LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
       params,
     ),
   ]);
 
   return {
-    shown: shownRows.map(rowToProduct),
+    shown: shownRows.map(rowToProductWithFamily),
     total: Number(countRows[0]?.n ?? 0),
   };
 }

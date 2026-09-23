@@ -97,7 +97,11 @@ export default async function Home({
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 max-sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] max-sm:gap-2.5">
           {shown.map((product) => (
             <li key={product.sku}>
-              <ProductCard product={product} href={skuHref(product.sku, query)} />
+              <ProductCard
+                product={product}
+                href={skuHref(product.sku, query)}
+                sameFamily={product.sameFamilyCount > 1}
+              />
             </li>
           ))}
         </ul>
