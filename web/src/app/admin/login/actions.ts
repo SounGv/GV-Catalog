@@ -9,15 +9,23 @@ import {
   isCorrectAdminPassword,
 } from "@/lib/admin-auth";
 
-/** Only allow redirecting back into /admin — never to an attacker-supplied external URL. */
-function safeNextPath(next: FormDataEntryValue | null): string {
-  if (typeof next === "string" && next.startsWith("/admin")) return next;
-  return "/admin";
+/**
+ * Where to land after login. Only ever an internal /admin/* path (never an
+ * attacker-supplied external URL) — and only when it's a *specific* admin
+ * page someone was deep-linking to (e.g. the proxy bounced them off
+ * /admin/products/edit/SKU). The bare "/admin" dashboard is deliberately not
+ * treated as a real destination: admins manage everything from the public
+ * site itself now, so a plain login (or one bounced off just "/admin") lands
+ * on the homepage instead of that now-secondary dashboard.
+ */
+function landingPathAfterLogin(next: FormDataEntryValue | null): string {
+  if (typeof next === "string" && next.startsWith("/admin/")) return next;
+  return "/";
 }
 
 export async function loginAction(formData: FormData): Promise<void> {
   const password = String(formData.get("password") ?? "");
-  const next = safeNextPath(formData.get("next"));
+  const next = landingPathAfterLogin(formData.get("next"));
 
   if (!isCorrectAdminPassword(password)) {
     redirect(`/admin/login?error=1&next=${encodeURIComponent(next)}`);
@@ -38,5 +46,5 @@ export async function loginAction(formData: FormData): Promise<void> {
 export async function logoutAction(): Promise<void> {
   const store = await cookies();
   store.delete(ADMIN_SESSION_COOKIE);
-  redirect("/admin/login");
+  redirect("/");
 }

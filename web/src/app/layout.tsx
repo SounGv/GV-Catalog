@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sarabun } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
+import { AdminBar } from "@/components/admin-bar";
 import "./globals.css";
 
 const sarabun = Sarabun({
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   description: "แคตตาล็อกอ้างอิงแพ็กเกจสำหรับจุดรับสินค้า Gadget Villa",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="th" className={`${sarabun.variable} h-full antialiased`}>
       <body className="min-h-full">
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
           </div>
         </header>
+        <AdminBar />
         {children}
       </body>
     </html>
