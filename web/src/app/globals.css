@@ -33,3 +33,13 @@ body {
   font-family: var(--font-sarabun), "Segoe UI", sans-serif;
   font-size: 16px;
 }
+
+/* Category strip: scrolls but never shows a scrollbar — the edge fade (see
+   page.tsx) is the only scroll affordance, on purpose, to keep the row visually calm. */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

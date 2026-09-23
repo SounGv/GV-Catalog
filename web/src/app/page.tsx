@@ -73,29 +73,31 @@ export default async function Home({
         })}
       </div>
 
-      <details className="group" open={Boolean(query.category)}>
-        <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-base text-muted">
-          หมวดหมู่ (ไม่บังคับ) ▾
-        </summary>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {categories.map((category) => {
-            const active = query.category === category;
-            return (
-              <Link
-                key={category}
-                href={categoryHref(query, category)}
-                className={
-                  active
-                    ? "inline-flex min-h-11 items-center rounded-full bg-accent px-3 text-base text-white"
-                    : "inline-flex min-h-11 items-center rounded-full border border-line bg-surface px-3 text-base"
-                }
-              >
-                {category}
-              </Link>
-            );
-          })}
+      <div className="flex flex-col gap-2">
+        <span className="text-sm text-muted">หมวดหมู่ (ไม่บังคับ)</span>
+        <div className="relative -mx-4">
+          <div
+            className="scrollbar-hide flex gap-2 overflow-x-auto px-4 py-0.5 [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)]"
+          >
+            {categories.map((category) => {
+              const active = query.category === category;
+              return (
+                <Link
+                  key={category}
+                  href={categoryHref(query, category)}
+                  className={
+                    active
+                      ? "inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full bg-accent px-3.5 text-sm font-medium text-white"
+                      : "inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-line bg-surface px-3.5 text-sm"
+                  }
+                >
+                  {category}
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </details>
+      </div>
 
       <p className="text-base text-muted">
         พบ {total.toLocaleString("th-TH")} รายการ
