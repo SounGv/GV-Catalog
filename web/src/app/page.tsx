@@ -101,6 +101,7 @@ export default async function Home({
                 product={product}
                 href={skuHref(product.sku, query)}
                 sameFamily={product.sameFamilyCount > 1}
+                familySuffix={product.sameFamilyCount > 1 ? product.familySuffix : null}
               />
             </li>
           ))}

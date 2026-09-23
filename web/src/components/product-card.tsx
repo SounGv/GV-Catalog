@@ -9,10 +9,15 @@ type ProductCardProps = {
    * run (e.g. "75701C" and "75701C-ONL" both start with "75701") — likely the
    * same base product under different packaging/channel variants. */
   sameFamily?: boolean;
+  /** The part of this SKU after the shared numeric run (e.g. "-BOX" for
+   * "10594-BOX"), highlighted so it's obvious at a glance what sets this
+   * variant apart from its siblings — not just that it has siblings. */
+  familySuffix?: string | null;
 };
 
-export function ProductCard({ product, href, sameFamily }: ProductCardProps) {
+export function ProductCard({ product, href, sameFamily, familySuffix }: ProductCardProps) {
   const hasImage = Boolean(product.imageUrl);
+  const skuBase = familySuffix ? product.sku.slice(0, product.sku.length - familySuffix.length) : product.sku;
   return (
     <Link
       href={href}
@@ -38,7 +43,19 @@ export function ProductCard({ product, href, sameFamily }: ProductCardProps) {
       </div>
       <div className="flex flex-1 flex-col gap-2 p-3">
         <span className="text-sm font-medium text-accent">{product.brand}</span>
-        <span className="font-mono text-[17px] font-bold leading-tight">{product.sku}</span>
+        <span className="font-mono text-[17px] font-bold leading-tight">
+          {familySuffix ? (
+            <>
+              {skuBase}
+              <span className="rounded bg-red-500 px-1 text-white">{familySuffix}</span>
+            </>
+          ) : (
+            product.sku
+          )}
+        </span>
+        {sameFamily && !familySuffix ? (
+          <span className="w-fit rounded bg-neutral-100 px-1 font-mono text-xs text-muted">SKU หลัก ไม่มีต่อท้าย</span>
+        ) : null}
         <span className="line-clamp-2 min-h-[3rem] text-base leading-6">{product.name}</span>
         <span
           className={

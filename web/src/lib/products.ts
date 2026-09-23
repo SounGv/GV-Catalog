@@ -86,7 +86,14 @@ export async function getProduct(sku: string): Promise<Product | undefined> {
  * to flag same-base-SKU variants in the catalog grid. Computed within the
  * active filter/search, not the whole table: a search that surfaces a SKU's
  * variants together is exactly when this matters. */
-type ProductWithFamily = Product & { sameFamilyCount: number };
+type ProductWithFamily = Product & {
+  sameFamilyCount: number;
+  /** The part of the SKU after the shared numeric run (e.g. "-BOX" for
+   * "10594-BOX" when "10594" is the family key) — lets the UI point at
+   * exactly what distinguishes this variant from its siblings. Null when
+   * the SKU has no family (see sameFamilyCount's null-family_key note). */
+  familySuffix: string | null;
+};
 
 function rowToProductWithFamily(row: ProductRow & { family_key: string | null; family_count: string }): ProductWithFamily {
   return {
@@ -95,6 +102,7 @@ function rowToProductWithFamily(row: ProductRow & { family_key: string | null; f
     // window functions bucket all such NULLs into one partition, so family_count
     // for those rows is meaningless noise, not a real shared-family count.
     sameFamilyCount: row.family_key === null ? 1 : Number(row.family_count),
+    familySuffix: row.family_key === null ? null : row.sku.slice(row.family_key.length),
   };
 }
 
