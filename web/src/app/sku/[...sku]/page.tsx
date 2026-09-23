@@ -23,6 +23,7 @@ type SkuPageProps = {
     q?: string | string[];
     brand?: string | string[];
     category?: string | string[];
+    page?: string | string[];
     reported?: string;
     reportError?: string;
   }>;

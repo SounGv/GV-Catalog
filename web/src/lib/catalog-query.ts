@@ -11,22 +11,30 @@ export function parseCatalogQuery(searchParams: {
   q?: SearchParamValue;
   brand?: SearchParamValue;
   category?: SearchParamValue;
+  page?: SearchParamValue;
 }): CatalogQuery {
   const brandValue = first(searchParams.brand);
   const brand = brandValue === "UGREEN" || brandValue === "Fantech" ? brandValue : "";
+  const parsedPage = Number(first(searchParams.page));
   return {
     q: first(searchParams.q).trim(),
     brand,
     category: first(searchParams.category).trim(),
+    page: Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1,
   };
 }
 
-export function catalogHref(query: CatalogQuery): string {
+function catalogParams(query: CatalogQuery): URLSearchParams {
   const params = new URLSearchParams();
   if (query.q) params.set("q", query.q);
   if (query.brand) params.set("brand", query.brand);
   if (query.category) params.set("category", query.category);
-  const search = params.toString();
+  if (query.page > 1) params.set("page", String(query.page));
+  return params;
+}
+
+export function catalogHref(query: CatalogQuery): string {
+  const search = catalogParams(query).toString();
   return search ? `/?${search}` : "/";
 }
 
@@ -45,11 +53,7 @@ export function adminProductEditPath(sku: string): string {
 }
 
 export function skuHref(sku: string, query: CatalogQuery): string {
-  const params = new URLSearchParams();
-  if (query.q) params.set("q", query.q);
-  if (query.brand) params.set("brand", query.brand);
-  if (query.category) params.set("category", query.category);
-  const search = params.toString();
+  const search = catalogParams(query).toString();
   const path = skuPath(sku);
   return search ? `${path}?${search}` : path;
 }

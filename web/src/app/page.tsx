@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { catalogHref, parseCatalogQuery, skuHref } from "@/lib/catalog-query";
-import { filterProducts, listCategories, RESULT_CAP } from "@/lib/products";
+import { filterProducts, listCategories, PAGE_SIZE } from "@/lib/products";
 import type { CatalogQuery } from "@/lib/types";
 import { ProductCard } from "@/components/product-card";
 
@@ -11,18 +11,27 @@ const BRANDS = [
 ] as const;
 
 function brandHref(query: CatalogQuery, brand: CatalogQuery["brand"]): string {
-  return catalogHref({ ...query, brand });
+  return catalogHref({ ...query, brand, page: 1 });
 }
 
 function categoryHref(query: CatalogQuery, category: string): string {
   const next = query.category === category ? "" : category;
-  return catalogHref({ ...query, category: next });
+  return catalogHref({ ...query, category: next, page: 1 });
+}
+
+function pageHref(query: CatalogQuery, page: number): string {
+  return catalogHref({ ...query, page });
 }
 
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string | string[]; brand?: string | string[]; category?: string | string[] }>;
+  searchParams: Promise<{
+    q?: string | string[];
+    brand?: string | string[];
+    category?: string | string[];
+    page?: string | string[];
+  }>;
 }) {
   const query = parseCatalogQuery(await searchParams);
   const [{ shown, total }, categories] = await Promise.all([
@@ -99,10 +108,7 @@ export default async function Home({
         </div>
       </div>
 
-      <p className="text-base text-muted">
-        พบ {total.toLocaleString("th-TH")} รายการ
-        {total > RESULT_CAP ? ` — แสดง ${RESULT_CAP.toLocaleString("th-TH")} รายการแรก พิมพ์ค้นหาเพื่อดูรายการที่ต้องการ` : ""}
-      </p>
+      <p className="text-base text-muted">พบ {total.toLocaleString("th-TH")} รายการ</p>
 
       {shown.length === 0 ? (
         <p className="py-16 text-center text-base">ค้นหาไม่พบ</p>
@@ -115,6 +121,28 @@ export default async function Home({
           ))}
         </ul>
       )}
+
+      {total > PAGE_SIZE ? (
+        <div className="flex items-center justify-center gap-2 py-2">
+          <Link
+            href={pageHref(query, Math.max(1, query.page - 1))}
+            aria-disabled={query.page <= 1}
+            className={`min-h-11 rounded-[10px] border border-line px-3 text-base ${query.page <= 1 ? "pointer-events-none opacity-40" : ""}`}
+          >
+            ก่อนหน้า
+          </Link>
+          <span className="text-base text-muted">
+            หน้า {query.page.toLocaleString("th-TH")} / {Math.ceil(total / PAGE_SIZE).toLocaleString("th-TH")}
+          </span>
+          <Link
+            href={pageHref(query, Math.min(Math.ceil(total / PAGE_SIZE), query.page + 1))}
+            aria-disabled={query.page >= Math.ceil(total / PAGE_SIZE)}
+            className={`min-h-11 rounded-[10px] border border-line px-3 text-base ${query.page >= Math.ceil(total / PAGE_SIZE) ? "pointer-events-none opacity-40" : ""}`}
+          >
+            ถัดไป
+          </Link>
+        </div>
+      ) : null}
     </main>
   );
 }

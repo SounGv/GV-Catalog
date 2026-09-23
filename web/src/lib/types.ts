@@ -23,4 +23,6 @@ export type CatalogQuery = {
   q: string;
   brand: "" | "UGREEN" | "Fantech";
   category: string;
+  /** 1-indexed. Carried through skuHref too, so "‹ กลับแค็ตตาล็อก" returns to the page the staff was actually on. */
+  page: number;
 };

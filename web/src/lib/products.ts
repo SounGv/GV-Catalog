@@ -1,7 +1,7 @@
 import { pool } from "@/lib/db";
 import type { Brand, CatalogQuery, Product } from "@/lib/types";
 
-const RESULT_CAP = 60;
+const PAGE_SIZE = 60;
 
 type ProductRow = {
   sku: string;
@@ -93,11 +93,12 @@ export async function filterProducts(
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const offset = (query.page - 1) * PAGE_SIZE;
 
   const [{ rows: countRows }, { rows: shownRows }] = await Promise.all([
     pool.query<{ n: string }>(`SELECT count(*)::text AS n FROM products ${where}`, params),
     pool.query<ProductRow>(
-      `SELECT * FROM products ${where} ORDER BY sku LIMIT ${RESULT_CAP}`,
+      `SELECT * FROM products ${where} ORDER BY sku LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
       params,
     ),
   ]);
@@ -108,4 +109,4 @@ export async function filterProducts(
   };
 }
 
-export { RESULT_CAP };
+export { PAGE_SIZE };
