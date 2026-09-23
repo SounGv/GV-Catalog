@@ -11,21 +11,21 @@ type ProductCardProps = {
   sameFamily?: boolean;
   /** The part of this SKU after the shared numeric run (e.g. "-BOX" for
    * "10594-BOX"), highlighted so it's obvious at a glance what sets this
-   * variant apart from its siblings — not just that it has siblings. */
+   * variant apart from its siblings. */
   familySuffix?: string | null;
 };
 
 export function ProductCard({ product, href, sameFamily, familySuffix }: ProductCardProps) {
   const hasImage = Boolean(product.imageUrl);
   const skuBase = familySuffix ? product.sku.slice(0, product.sku.length - familySuffix.length) : product.sku;
+
   return (
     <Link
       href={href}
       title={sameFamily ? `มี SKU อื่นที่ขึ้นต้นเหมือนกัน (${product.sku})` : undefined}
       className={
-        sameFamily
-          ? "flex h-full flex-col overflow-hidden rounded-[10px] border-2 border-red-500 bg-surface shadow-[var(--shadow-sm)]"
-          : "flex h-full flex-col overflow-hidden rounded-[10px] bg-surface shadow-[var(--shadow-sm)]"
+        "group flex h-full flex-col overflow-hidden rounded-xl border bg-surface shadow-[var(--shadow-sm)] transition-shadow hover:shadow-md " +
+        (sameFamily ? "border-2 border-red-500" : "border-line hover:border-accent/50")
       }
     >
       <div className="relative aspect-square bg-neutral-100">
@@ -38,16 +38,16 @@ export function ProductCard({ product, href, sameFamily, familySuffix }: Product
             className="object-contain p-2.5"
           />
         ) : (
-          <span className="absolute inset-0 flex items-center justify-center text-muted">ไม่มีรูป</span>
+          <span className="absolute inset-0 flex items-center justify-center text-sm text-muted">ยังไม่มีรูป</span>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-3">
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
         <span className="text-sm font-medium text-accent">{product.brand}</span>
-        <span className="font-mono text-[17px] font-bold leading-tight">
+        <span className="font-mono text-xl font-bold leading-tight text-ink">
           {familySuffix ? (
             <>
               {skuBase}
-              <span className="rounded bg-red-500 px-1 text-white">{familySuffix}</span>
+              <span className="rounded bg-red-500 px-1 align-middle text-sm text-white">{familySuffix}</span>
             </>
           ) : (
             product.sku
@@ -56,18 +56,18 @@ export function ProductCard({ product, href, sameFamily, familySuffix }: Product
         {sameFamily && !familySuffix ? (
           <span className="w-fit rounded bg-neutral-100 px-1 font-mono text-xs text-muted">SKU หลัก ไม่มีต่อท้าย</span>
         ) : null}
-        <span className="line-clamp-2 min-h-[3rem] text-base leading-6">{product.name}</span>
-        <span
-          className={
-            hasImage
-              ? "w-fit rounded-md bg-neutral-100 px-2 py-1 text-sm text-muted"
-              : "w-fit rounded-md border border-ink px-2 py-1 text-sm"
-          }
-        >
+        <span className="line-clamp-2 min-h-[2.75rem] text-sm leading-snug text-ink">{product.name}</span>
+
+        <span className="flex items-center gap-1.5 text-sm text-muted">
+          <span className={`h-2 w-2 shrink-0 rounded-full ${hasImage ? "bg-amber-400" : "bg-slate-300"}`} aria-hidden="true" />
           {hasImage ? "รอตรวจยืนยันต้นแบบ" : "ยังไม่มีรูปสินค้า"}
         </span>
-        <span className="mt-auto flex min-h-11 items-center justify-center rounded-[10px] bg-accent px-3 text-base font-medium text-white">
+
+        <span className="mt-auto flex items-center justify-between border-t border-line pt-2 text-sm font-medium text-accent">
           ดูสินค้าและแพ็กเกจ
+          <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">
+            →
+          </span>
         </span>
       </div>
     </Link>

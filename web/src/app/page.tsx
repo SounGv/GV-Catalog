@@ -39,10 +39,15 @@ export default async function Home({
   ]);
 
   return (
-    <main className="mx-auto flex max-w-[1180px] flex-col gap-4 px-4 py-6">
+    <main className="mx-auto flex max-w-[1680px] flex-col gap-3 px-4 py-4 md:px-8 lg:px-12 xl:px-16">
+      <div>
+        <h1 className="text-2xl font-bold text-ink">แค็ตตาล็อกสินค้า</h1>
+        <p className="text-sm text-muted">ค้นหารุ่น แล้วเปิดดูสินค้าและแพ็กเกจ</p>
+      </div>
+
       <div
-        className="sticky z-30 flex flex-col gap-3 border-b border-line bg-bg pt-4 pb-3 shadow-[var(--shadow-sm)]"
-        style={{ top: "var(--sticky-top-offset, 84px)" }}
+        className="sticky z-30 flex flex-col gap-3 border-b border-line bg-bg pt-3 pb-3 shadow-[var(--shadow-sm)]"
+        style={{ top: "var(--sticky-top-offset, 72px)" }}
       >
         <form action="/" method="get">
           <label className="relative block">
@@ -58,8 +63,8 @@ export default async function Home({
             <input
               name="q"
               defaultValue={query.q}
-              placeholder="ค้นหา SKU, ชื่อ, รุ่น หรือค่าบาร์โค้ด"
-              className="h-[46px] w-full rounded-[10px] border border-line bg-surface pr-4 pl-[42px] text-base outline-none focus:border-accent"
+              placeholder="ค้นหา SKU, ชื่อสินค้า หรือสแกนบาร์โค้ด"
+              className="h-[50px] w-full rounded-[10px] border border-line bg-surface pr-4 pl-[42px] text-base outline-none focus:border-accent"
             />
           </label>
           {query.brand ? <input type="hidden" name="brand" value={query.brand} /> : null}
@@ -68,38 +73,46 @@ export default async function Home({
           ))}
         </form>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {BRANDS.map((brand) => {
-            const active = query.brand === brand.id;
-            return (
-              <Link
-                key={brand.label}
-                href={brandHref(query, brand.id)}
-                className={
-                  active
-                    ? "inline-flex min-h-11 items-center rounded-[10px] bg-accent px-4 text-base font-medium text-white"
-                    : "inline-flex min-h-11 items-center rounded-[10px] border border-line bg-surface px-4 text-base"
-                }
-              >
-                {brand.label}
-              </Link>
-            );
-          })}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {BRANDS.map((brand) => {
+              const active = query.brand === brand.id;
+              return (
+                <Link
+                  key={brand.label}
+                  href={brandHref(query, brand.id)}
+                  className={
+                    active
+                      ? "inline-flex min-h-11 items-center rounded-[10px] bg-accent px-4 text-base font-medium text-white"
+                      : "inline-flex min-h-11 items-center rounded-[10px] border border-line bg-surface px-4 text-base"
+                  }
+                >
+                  {brand.label}
+                </Link>
+              );
+            })}
 
-          {categories.length > 0 ? (
-            <Suspense>
-              <CategoryFilterDropdown categories={categories} />
-            </Suspense>
-          ) : null}
+            {categories.length > 0 ? (
+              <Suspense>
+                <CategoryFilterDropdown categories={categories} />
+              </Suspense>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-1.5 text-sm text-muted">
+            รายการสินค้า
+            <span className="inline-flex h-6 items-center rounded-full bg-accent-soft px-2.5 text-sm font-semibold text-accent">
+              {total.toLocaleString("th-TH")}
+            </span>
+            รายการ
+          </div>
         </div>
       </div>
-
-      <p className="text-base text-muted">พบ {total.toLocaleString("th-TH")} รายการ</p>
 
       {shown.length === 0 ? (
         <p className="py-16 text-center text-base">ค้นหาไม่พบ</p>
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 max-sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] max-sm:gap-2.5">
+        <ul className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {shown.map((product) => (
             <li key={product.sku}>
               <ProductCard

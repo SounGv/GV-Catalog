@@ -75,7 +75,7 @@ export function CategoryFilterDropdown({ categories }: CategoryFilterDropdownPro
 
   const buttonLabel =
     selected.length === 0
-      ? "หมวดหมู่ (ไม่บังคับ)"
+      ? "หมวดหมู่ทั้งหมด"
       : selected.length === 1
         ? selected[0]
         : `หมวดหมู่ (${selected.length})`;
