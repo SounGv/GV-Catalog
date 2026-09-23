@@ -4,7 +4,7 @@ export const PACKAGE_ANGLES = [
   { id: "front", label: "หน้า" },
   { id: "back", label: "หลัง" },
   { id: "barcode", label: "บาร์โค้ด" },
-  { id: "thai_label", label: "ฉลากไทย" },
+  { id: "thai_label", label: "ฉลากภาษาไทย (อย./ผู้นำเข้า)" },
   { id: "top", label: "บน/หูแขวน" },
   { id: "bottom", label: "ล่าง" },
 ] as const;
