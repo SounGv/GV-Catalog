@@ -40,53 +40,58 @@ export default async function Home({
 
   return (
     <main className="mx-auto flex max-w-[1180px] flex-col gap-4 px-4 py-6">
-      <form action="/" method="get">
-        <label className="relative block">
-          <span className="sr-only">ค้นหาสินค้า</span>
-          <svg
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted"
-          >
-            <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
-            <path d="M16.5 16.5 21 21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <input
-            name="q"
-            defaultValue={query.q}
-            placeholder="ค้นหา SKU, ชื่อ, รุ่น หรือค่าบาร์โค้ด"
-            className="h-[46px] w-full rounded-[10px] border border-line bg-surface pr-4 pl-[42px] text-base outline-none focus:border-accent"
-          />
-        </label>
-        {query.brand ? <input type="hidden" name="brand" value={query.brand} /> : null}
-        {query.category.map((category) => (
-          <input key={category} type="hidden" name="category" value={category} />
-        ))}
-      </form>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {BRANDS.map((brand) => {
-          const active = query.brand === brand.id;
-          return (
-            <Link
-              key={brand.label}
-              href={brandHref(query, brand.id)}
-              className={
-                active
-                  ? "inline-flex min-h-11 items-center rounded-[10px] bg-accent px-4 text-base font-medium text-white"
-                  : "inline-flex min-h-11 items-center rounded-[10px] border border-line bg-surface px-4 text-base"
-              }
+      <div
+        className="sticky z-30 flex flex-col gap-3 border-b border-line bg-bg pt-4 pb-3 shadow-[var(--shadow-sm)]"
+        style={{ top: "var(--sticky-top-offset, 84px)" }}
+      >
+        <form action="/" method="get">
+          <label className="relative block">
+            <span className="sr-only">ค้นหาสินค้า</span>
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted"
             >
-              {brand.label}
-            </Link>
-          );
-        })}
+              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
+              <path d="M16.5 16.5 21 21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <input
+              name="q"
+              defaultValue={query.q}
+              placeholder="ค้นหา SKU, ชื่อ, รุ่น หรือค่าบาร์โค้ด"
+              className="h-[46px] w-full rounded-[10px] border border-line bg-surface pr-4 pl-[42px] text-base outline-none focus:border-accent"
+            />
+          </label>
+          {query.brand ? <input type="hidden" name="brand" value={query.brand} /> : null}
+          {query.category.map((category) => (
+            <input key={category} type="hidden" name="category" value={category} />
+          ))}
+        </form>
 
-        {categories.length > 0 ? (
-          <Suspense>
-            <CategoryFilterDropdown categories={categories} />
-          </Suspense>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {BRANDS.map((brand) => {
+            const active = query.brand === brand.id;
+            return (
+              <Link
+                key={brand.label}
+                href={brandHref(query, brand.id)}
+                className={
+                  active
+                    ? "inline-flex min-h-11 items-center rounded-[10px] bg-accent px-4 text-base font-medium text-white"
+                    : "inline-flex min-h-11 items-center rounded-[10px] border border-line bg-surface px-4 text-base"
+                }
+              >
+                {brand.label}
+              </Link>
+            );
+          })}
+
+          {categories.length > 0 ? (
+            <Suspense>
+              <CategoryFilterDropdown categories={categories} />
+            </Suspense>
+          ) : null}
+        </div>
       </div>
 
       <p className="text-base text-muted">พบ {total.toLocaleString("th-TH")} รายการ</p>

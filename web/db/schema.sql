@@ -32,6 +32,17 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX IF NOT EXISTS products_brand_idx ON products (brand);
 CREATE INDEX IF NOT EXISTS products_category_idx ON products (category);
 
+-- The catalog and admin product search both do `column ILIKE '%term%'`,
+-- which a plain btree index can't help with (no fixed prefix to seek on) —
+-- it falls back to a full table scan on every keystroke-triggered search as
+-- the table grows. pg_trgm's GIN indexes make ILIKE substring matches use an
+-- index scan instead.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS products_sku_trgm_idx ON products USING gin (sku gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS products_name_trgm_idx ON products USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS products_model_trgm_idx ON products USING gin (model gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS products_gtin_trgm_idx ON products USING gin (gtin gin_trgm_ops);
+
 -- Reference package photos per SKU: the fixed 6-angle set
 -- (front/back/barcode/thai_label/top/bottom) plus a separate "unit" photo of
 -- the device itself. One current photo per (sku, angle) — re-uploading
