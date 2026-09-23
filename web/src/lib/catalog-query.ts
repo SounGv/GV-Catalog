@@ -30,9 +30,18 @@ export function catalogHref(query: CatalogQuery): string {
   return search ? `/?${search}` : "/";
 }
 
+/** Encodes a SKU (which may itself contain "/") into path segments — shared by
+ * every route keyed by a catch-all `[...sku]`, public or admin. */
+function encodeSkuSegments(sku: string): string {
+  return sku.split("/").map((segment) => encodeURIComponent(segment)).join("/");
+}
+
 export function skuPath(sku: string): string {
-  const encoded = sku.split("/").map((segment) => encodeURIComponent(segment)).join("/");
-  return `/sku/${encoded}`;
+  return `/sku/${encodeSkuSegments(sku)}`;
+}
+
+export function adminProductEditPath(sku: string): string {
+  return `/admin/products/edit/${encodeSkuSegments(sku)}`;
 }
 
 export function skuHref(sku: string, query: CatalogQuery): string {

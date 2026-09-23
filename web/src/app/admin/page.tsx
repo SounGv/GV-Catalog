@@ -16,12 +16,12 @@ export default function AdminHomePage() {
       <ul className="flex flex-col gap-3">
         <li>
           <Link href="/admin/products" className="text-base text-accent underline">
-            จัดการสินค้า (กำลังพัฒนา)
+            จัดการสินค้า
           </Link>
         </li>
         <li>
           <Link href="/admin/reports" className="text-base text-accent underline">
-            รายงานความต่าง (กำลังพัฒนา)
+            รายงานความต่าง
           </Link>
         </li>
       </ul>

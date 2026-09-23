@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopySkuLink } from "@/components/copy-sku-link";
 import { GtinCheck } from "@/components/gtin-check";
+import { ReportDiscrepancyForm } from "@/components/report-discrepancy-form";
 import { catalogHref, parseCatalogQuery, skuFromSegments, skuPath } from "@/lib/catalog-query";
 import { getProduct } from "@/lib/products";
+import { submitDiscrepancyReportAction } from "./report-actions";
 
 const PACKAGE_ANGLES = [
   { id: "front", label: "หน้า" },
@@ -17,7 +19,13 @@ const PACKAGE_ANGLES = [
 
 type SkuPageProps = {
   params: Promise<{ sku: string[] }>;
-  searchParams: Promise<{ q?: string | string[]; brand?: string | string[]; category?: string | string[] }>;
+  searchParams: Promise<{
+    q?: string | string[];
+    brand?: string | string[];
+    category?: string | string[];
+    reported?: string;
+    reportError?: string;
+  }>;
 };
 
 async function loadSku(params: SkuPageProps["params"]) {
@@ -35,10 +43,12 @@ export default async function SkuPage({ params, searchParams }: SkuPageProps) {
   const product = await getProduct(await loadSku(params));
   if (!product) notFound();
 
-  const query = parseCatalogQuery(await searchParams);
+  const sp = await searchParams;
+  const query = parseCatalogQuery(sp);
   const tags = [product.brand, product.category, product.model, product.color].filter(
     (tag): tag is string => Boolean(tag),
   );
+  const boundSubmitReport = submitDiscrepancyReportAction.bind(null, product.sku);
 
   return (
     <main className="mx-auto flex max-w-[1180px] flex-col gap-6 px-4 py-6">
@@ -81,6 +91,14 @@ export default async function SkuPage({ params, searchParams }: SkuPageProps) {
       </section>
 
       <GtinCheck gtin={product.gtin} />
+
+      {sp.reported ? (
+        <p className="rounded-[10px] bg-accent-soft p-4 text-base text-accent">
+          บันทึกการแจ้งความต่างแล้ว — ทีมงานจะตรวจสอบต่อไป
+        </p>
+      ) : null}
+
+      <ReportDiscrepancyForm action={boundSubmitReport} error={sp.reportError} />
 
       <div>
         <CopySkuLink path={skuPath(product.sku)} />

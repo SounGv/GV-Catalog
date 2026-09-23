@@ -51,6 +51,23 @@ CREATE TABLE IF NOT EXISTS discrepancy_reports (
 CREATE INDEX IF NOT EXISTS discrepancy_reports_sku_idx ON discrepancy_reports (sku);
 CREATE INDEX IF NOT EXISTS discrepancy_reports_status_idx ON discrepancy_reports (status);
 
+-- Holds one parsed-but-not-yet-committed Excel upload between the "preview"
+-- and "confirm" steps of Import Excel. Needed because the app runs on
+-- Vercel serverless: there is no shared disk between the upload request and
+-- the later confirm request, so the parsed rows have to live somewhere both
+-- requests can reach — here, instead of a local temp file.
+CREATE TABLE IF NOT EXISTS import_batches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  filename text NOT NULL,
+  rows jsonb NOT NULL,
+  insert_count int NOT NULL,
+  update_count int NOT NULL,
+  review_skus text[] NOT NULL DEFAULT '{}',
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'applied')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  applied_at timestamptz
+);
+
 -- Keeps `updated_at` honest on every UPDATE, regardless of which admin code path
 -- performed it — a trigger can't be forgotten the way a manual `SET updated_at`
 -- in each query can.
