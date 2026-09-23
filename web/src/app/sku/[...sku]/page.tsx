@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopySkuLink } from "@/components/copy-sku-link";
@@ -6,16 +7,8 @@ import { GtinCheck } from "@/components/gtin-check";
 import { ReportDiscrepancyForm } from "@/components/report-discrepancy-form";
 import { catalogHref, parseCatalogQuery, skuFromSegments, skuPath } from "@/lib/catalog-query";
 import { getProduct } from "@/lib/products";
+import { getPhotosForSku, PACKAGE_ANGLES, UNIT_ANGLE } from "@/lib/photos";
 import { submitDiscrepancyReportAction } from "./report-actions";
-
-const PACKAGE_ANGLES = [
-  { id: "front", label: "หน้า" },
-  { id: "back", label: "หลัง" },
-  { id: "barcode", label: "บาร์โค้ด" },
-  { id: "thai-label", label: "ฉลากไทย" },
-  { id: "top", label: "บน/หูแขวน" },
-  { id: "bottom", label: "ล่าง" },
-] as const;
 
 type SkuPageProps = {
   params: Promise<{ sku: string[] }>;
@@ -41,7 +34,8 @@ export async function generateMetadata({ params }: SkuPageProps): Promise<Metada
 }
 
 export default async function SkuPage({ params, searchParams }: SkuPageProps) {
-  const product = await getProduct(await loadSku(params));
+  const sku = await loadSku(params);
+  const [product, photos] = await Promise.all([getProduct(sku), getPhotosForSku(sku)]);
   if (!product) notFound();
 
   const sp = await searchParams;
@@ -80,15 +74,47 @@ export default async function SkuPage({ params, searchParams }: SkuPageProps) {
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">รูปแพ็กเกจ</h2>
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {PACKAGE_ANGLES.map((angle) => (
-            <li key={angle.id} className="flex flex-col gap-2">
-              <div className="flex aspect-square items-center justify-center rounded-[10px] bg-neutral-100 text-muted">
-                ไม่มีรูป
-              </div>
-              <p className="text-center text-base">{angle.label}</p>
-            </li>
-          ))}
+          {PACKAGE_ANGLES.map((angle) => {
+            const url = photos[angle.id];
+            return (
+              <li key={angle.id} className="flex flex-col gap-2">
+                {url ? (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[10px] bg-neutral-100"
+                  >
+                    <Image src={url} alt={angle.label} fill sizes="200px" className="object-contain p-1.5" />
+                  </a>
+                ) : (
+                  <div className="flex aspect-square items-center justify-center rounded-[10px] bg-neutral-100 text-muted">
+                    ไม่มีรูป
+                  </div>
+                )}
+                <p className="text-center text-base">{angle.label}</p>
+              </li>
+            );
+          })}
         </ul>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold">{UNIT_ANGLE.label}</h2>
+        {photos[UNIT_ANGLE.id] ? (
+          <a
+            href={photos[UNIT_ANGLE.id]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative flex aspect-square w-full max-w-[240px] items-center justify-center overflow-hidden rounded-[10px] bg-neutral-100"
+          >
+            <Image src={photos[UNIT_ANGLE.id]!} alt={UNIT_ANGLE.label} fill sizes="240px" className="object-contain p-1.5" />
+          </a>
+        ) : (
+          <div className="flex aspect-square w-full max-w-[240px] items-center justify-center rounded-[10px] bg-neutral-100 text-muted">
+            ไม่มีรูป
+          </div>
+        )}
       </section>
 
       <GtinCheck gtin={product.gtin} />

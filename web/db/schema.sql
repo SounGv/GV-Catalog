@@ -32,9 +32,23 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX IF NOT EXISTS products_brand_idx ON products (brand);
 CREATE INDEX IF NOT EXISTS products_category_idx ON products (category);
 
+-- Reference package photos per SKU: the fixed 6-angle set
+-- (front/back/barcode/thai_label/top/bottom) plus a separate "unit" photo of
+-- the device itself. One current photo per (sku, angle) — re-uploading
+-- replaces it; no version history yet (see README's "package history" note
+-- for a possible later addition).
+CREATE TABLE IF NOT EXISTS product_photos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sku text NOT NULL REFERENCES products (sku) ON DELETE CASCADE,
+  angle text NOT NULL CHECK (angle IN ('front', 'back', 'barcode', 'thai_label', 'top', 'bottom', 'unit')),
+  url text NOT NULL,
+  uploaded_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (sku, angle)
+);
+
 -- Receiving-discrepancy reports ("ของที่รับมาไม่ตรงรูป") filed by warehouse staff
--- against a SKU, reviewed by an admin. Photo attachments are deferred — see
--- gv_catalog_products_NOTES.md — so there is no photos column yet.
+-- against a SKU, reviewed by an admin. Report photo attachments are still
+-- deferred (separate from the package reference photos above).
 CREATE TABLE IF NOT EXISTS discrepancy_reports (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   sku text NOT NULL REFERENCES products (sku) ON DELETE CASCADE,

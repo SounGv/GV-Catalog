@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/product-form";
 import { DeleteProductButton } from "@/components/delete-product-button";
+import { ProductPhotoManager } from "@/components/product-photo-manager";
 import { deleteProductAction, updateProductAction } from "@/app/admin/products/actions";
 import { skuFromSegments } from "@/lib/catalog-query";
 import { getProduct } from "@/lib/products";
+import { getPhotosForSku } from "@/lib/photos";
 
 type EditProductPageProps = {
   params: Promise<{ sku: string[] }>;
@@ -14,7 +16,11 @@ type EditProductPageProps = {
 export default async function EditProductPage({ params, searchParams }: EditProductPageProps) {
   const { sku: segments } = await params;
   const sku = skuFromSegments(segments);
-  const [product, { error }] = await Promise.all([getProduct(sku), searchParams]);
+  const [product, photos, { error }] = await Promise.all([
+    getProduct(sku),
+    getPhotosForSku(sku),
+    searchParams,
+  ]);
   if (!product) notFound();
 
   const boundUpdate = updateProductAction.bind(null, sku);
@@ -30,6 +36,8 @@ export default async function EditProductPage({ params, searchParams }: EditProd
       </div>
 
       <ProductForm action={boundUpdate} product={product} error={error} />
+
+      <ProductPhotoManager sku={product.sku} photos={photos} />
 
       <form
         action={boundDelete}

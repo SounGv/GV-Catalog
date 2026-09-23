@@ -16,10 +16,14 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   images: {
-    remotePatterns: imageHosts.map((hostname) => ({
-      protocol: "https",
-      hostname,
-    })),
+    remotePatterns: [
+      ...imageHosts.map((hostname) => ({
+        protocol: "https" as const,
+        hostname,
+      })),
+      // Vercel Blob public storage — serves the SKU package/unit photos admins upload.
+      { protocol: "https" as const, hostname: "*.public.blob.vercel-storage.com" },
+    ],
   },
 };
 
