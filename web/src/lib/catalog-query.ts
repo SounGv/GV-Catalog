@@ -7,6 +7,11 @@ function first(value: SearchParamValue): string {
   return value ?? "";
 }
 
+function all(value: SearchParamValue): string[] {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return value ? [value] : [];
+}
+
 export function parseCatalogQuery(searchParams: {
   q?: SearchParamValue;
   brand?: SearchParamValue;
@@ -19,7 +24,7 @@ export function parseCatalogQuery(searchParams: {
   return {
     q: first(searchParams.q).trim(),
     brand,
-    category: first(searchParams.category).trim(),
+    category: all(searchParams.category).map((c) => c.trim()).filter(Boolean),
     page: Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1,
   };
 }
@@ -28,7 +33,7 @@ function catalogParams(query: CatalogQuery): URLSearchParams {
   const params = new URLSearchParams();
   if (query.q) params.set("q", query.q);
   if (query.brand) params.set("brand", query.brand);
-  if (query.category) params.set("category", query.category);
+  for (const category of query.category) params.append("category", category);
   if (query.page > 1) params.set("page", String(query.page));
   return params;
 }

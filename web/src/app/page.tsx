@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { catalogHref, parseCatalogQuery, skuHref } from "@/lib/catalog-query";
 import { filterProducts, listCategories, PAGE_SIZE } from "@/lib/products";
 import type { CatalogQuery } from "@/lib/types";
 import { ProductCard } from "@/components/product-card";
-import { CategoryScrollRow } from "@/components/category-scroll-row";
+import { CategoryFilterDropdown } from "@/components/category-filter-dropdown";
 
 const BRANDS = [
   { id: "", label: "ทั้งหมด" },
@@ -14,12 +15,7 @@ const BRANDS = [
 function brandHref(query: CatalogQuery, brand: CatalogQuery["brand"]): string {
   // Categories are scoped to brand — a category picked under the old brand may not
   // exist under the new one, so keeping it would silently filter to zero results.
-  return catalogHref({ ...query, brand, category: "", page: 1 });
-}
-
-function categoryHref(query: CatalogQuery, category: string): string {
-  const next = query.category === category ? "" : category;
-  return catalogHref({ ...query, category: next, page: 1 });
+  return catalogHref({ ...query, brand, category: [], page: 1 });
 }
 
 function pageHref(query: CatalogQuery, page: number): string {
@@ -63,7 +59,9 @@ export default async function Home({
           />
         </label>
         {query.brand ? <input type="hidden" name="brand" value={query.brand} /> : null}
-        {query.category ? <input type="hidden" name="category" value={query.category} /> : null}
+        {query.category.map((category) => (
+          <input key={category} type="hidden" name="category" value={category} />
+        ))}
       </form>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -83,17 +81,13 @@ export default async function Home({
             </Link>
           );
         })}
-      </div>
 
-      {categories.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <span className="text-sm text-muted">หมวดหมู่ (ไม่บังคับ)</span>
-          <CategoryScrollRow
-            items={categories.map((category) => ({ category, href: categoryHref(query, category) }))}
-            activeCategory={query.category}
-          />
-        </div>
-      ) : null}
+        {categories.length > 0 ? (
+          <Suspense>
+            <CategoryFilterDropdown categories={categories} />
+          </Suspense>
+        ) : null}
+      </div>
 
       <p className="text-base text-muted">พบ {total.toLocaleString("th-TH")} รายการ</p>
 

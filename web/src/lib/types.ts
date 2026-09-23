@@ -22,7 +22,8 @@ export type Product = {
 export type CatalogQuery = {
   q: string;
   brand: "" | "UGREEN" | "Fantech";
-  category: string;
+  /** Zero or more — matches ANY selected category (OR), like the Excel-style checklist filter it's modeled on. */
+  category: string[];
   /** 1-indexed. Carried through skuHref too, so "‹ กลับแค็ตตาล็อก" returns to the page the staff was actually on. */
   page: number;
 };

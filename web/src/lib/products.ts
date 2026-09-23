@@ -91,9 +91,9 @@ export async function filterProducts(
     params.push(query.brand);
     conditions.push(`brand = $${params.length}`);
   }
-  if (query.category) {
+  if (query.category.length > 0) {
     params.push(query.category);
-    conditions.push(`category = $${params.length}`);
+    conditions.push(`category = ANY($${params.length}::text[])`);
   }
   if (query.q) {
     params.push(`%${query.q}%`);
