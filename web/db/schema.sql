@@ -32,6 +32,29 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX IF NOT EXISTS products_brand_idx ON products (brand);
 CREATE INDEX IF NOT EXISTS products_category_idx ON products (category);
 
+-- Free-text note an admin updates whenever the physical package changes
+-- between incoming lots even though the barcode stayed the same (e.g. box
+-- got noticeably thinner) — lets receiving staff see "this lot is expected
+-- to look different" instead of filing an unnecessary discrepancy report.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS current_lot_note text;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS current_lot_updated_at timestamptz;
+
+-- Alternate barcodes some big offline retail chains (COM7, IT City, Jaymart,
+-- AIS, OfficeMate, etc.) require printed on the package before shipment,
+-- distinct from the default barcode in products.gtin. `retailer` is free
+-- text (not a CHECK enum) since new chains get added over time without a
+-- migration; the admin UI offers the common names as suggestions only.
+CREATE TABLE IF NOT EXISTS product_barcodes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sku text NOT NULL REFERENCES products (sku) ON DELETE CASCADE,
+  retailer text NOT NULL,
+  barcode text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (sku, retailer)
+);
+
+CREATE INDEX IF NOT EXISTS product_barcodes_sku_idx ON product_barcodes (sku);
+
 -- The catalog and admin product search both do `column ILIKE '%term%'`,
 -- which a plain btree index can't help with (no fixed prefix to seek on) —
 -- it falls back to a full table scan on every keystroke-triggered search as

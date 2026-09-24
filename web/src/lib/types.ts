@@ -17,6 +17,10 @@ export type Product = {
   spu: string | null;
   createdAt: string | null;
   needsReview: string[];
+  /** Free-text note an admin sets whenever the current incoming lot's
+   * package differs from before (see current_lot_updated_at). */
+  currentLotNote: string | null;
+  currentLotUpdatedAt: string | null;
 };
 
 export type CatalogQuery = {

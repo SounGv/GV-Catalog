@@ -1,9 +1,12 @@
 import type { Product } from "@/lib/types";
+import type { RetailerBarcode } from "@/lib/retailer-barcode-types";
+import { RetailerBarcodesEditor } from "@/components/retailer-barcodes-editor";
 
 type ProductFormProps = {
   action: (formData: FormData) => void;
   product?: Product;
   error?: string;
+  retailerBarcodes?: RetailerBarcode[];
 };
 
 const inputClass =
@@ -11,7 +14,7 @@ const inputClass =
 const labelClass = "flex flex-col gap-1";
 const labelTextClass = "text-base text-muted";
 
-export function ProductForm({ action, product, error }: ProductFormProps) {
+export function ProductForm({ action, product, error, retailerBarcodes = [] }: ProductFormProps) {
   return (
     <form action={action} className="flex flex-col gap-4">
       {error ? <p className="text-base text-red-600">{error}</p> : null}
@@ -46,7 +49,7 @@ export function ProductForm({ action, product, error }: ProductFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <label className={labelClass}>
-          <span className={labelTextClass}>GTIN</span>
+          <span className={labelTextClass}>บาร์โค้ดหลัก (GTIN)</span>
           <input name="gtin" defaultValue={product?.gtin ?? ""} className={`${inputClass} font-mono`} />
         </label>
         <label className={labelClass}>
@@ -54,6 +57,13 @@ export function ProductForm({ action, product, error }: ProductFormProps) {
           <input name="imageUrl" defaultValue={product?.imageUrl ?? ""} className={inputClass} />
         </label>
       </div>
+
+      <label className={labelClass}>
+        <span className={labelTextClass}>
+          บาร์โค้ดตามร้านค้า (ถ้าร้านค้าต้องเปลี่ยนบาร์โค้ดก่อนส่ง เช่น COM7, IT City, Jaymart, AIS, OfficeMate)
+        </span>
+        <RetailerBarcodesEditor initial={retailerBarcodes} />
+      </label>
 
       <div className="grid grid-cols-2 gap-4">
         <label className={labelClass}>
@@ -108,6 +118,28 @@ export function ProductForm({ action, product, error }: ProductFormProps) {
           />
         </label>
       </div>
+
+      <label className={labelClass}>
+        <span className={labelTextClass}>
+          หมายเหตุล็อตปัจจุบัน (กรอกเมื่อแพ็กเกจล็อตนี้ต่างจากล็อตก่อน แม้บาร์โค้ดเดิม เช่น &quot;กล่องบางลง&quot;)
+        </span>
+        <textarea
+          name="currentLotNote"
+          defaultValue={product?.currentLotNote ?? ""}
+          rows={2}
+          className="w-full rounded-[10px] border border-line bg-surface p-3 text-base outline-none focus:border-accent"
+        />
+        {product?.currentLotUpdatedAt ? (
+          <span className="text-sm text-muted">
+            อัปเดตล่าสุด{" "}
+            {new Date(product.currentLotUpdatedAt).toLocaleDateString("th-TH", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+        ) : null}
+      </label>
 
       <button
         type="submit"

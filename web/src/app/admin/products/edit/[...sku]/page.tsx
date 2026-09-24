@@ -7,6 +7,7 @@ import { deleteProductAction, updateProductAction } from "@/app/admin/products/a
 import { skuFromSegments } from "@/lib/catalog-query";
 import { getProduct } from "@/lib/products";
 import { getPhotosForSku } from "@/lib/photos";
+import { getBarcodesForSku } from "@/lib/barcodes";
 
 type EditProductPageProps = {
   params: Promise<{ sku: string[] }>;
@@ -16,9 +17,10 @@ type EditProductPageProps = {
 export default async function EditProductPage({ params, searchParams }: EditProductPageProps) {
   const { sku: segments } = await params;
   const sku = skuFromSegments(segments);
-  const [product, photos, { error, photoError, photoAngle }] = await Promise.all([
+  const [product, photos, retailerBarcodes, { error, photoError, photoAngle }] = await Promise.all([
     getProduct(sku),
     getPhotosForSku(sku),
+    getBarcodesForSku(sku),
     searchParams,
   ]);
   if (!product) notFound();
@@ -35,7 +37,7 @@ export default async function EditProductPage({ params, searchParams }: EditProd
         </Link>
       </div>
 
-      <ProductForm action={boundUpdate} product={product} error={error} />
+      <ProductForm action={boundUpdate} product={product} error={error} retailerBarcodes={retailerBarcodes} />
 
       <ProductPhotoManager
         sku={product.sku}

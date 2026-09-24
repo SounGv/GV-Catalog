@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/types";
+import type { RetailerBarcode } from "@/lib/retailer-barcode-types";
 
 type ProductCardProps = {
   product: Product;
@@ -13,9 +14,13 @@ type ProductCardProps = {
    * "10594-BOX"), highlighted so it's obvious at a glance what sets this
    * variant apart from its siblings. */
   familySuffix?: string | null;
+  /** Alternate barcodes required by specific retailers (COM7, IT City, ...)
+   * — shown alongside the main barcode so staff can tell them apart without
+   * opening the product. */
+  retailerBarcodes?: RetailerBarcode[];
 };
 
-export function ProductCard({ product, href, sameFamily, familySuffix }: ProductCardProps) {
+export function ProductCard({ product, href, sameFamily, familySuffix, retailerBarcodes = [] }: ProductCardProps) {
   const hasImage = Boolean(product.imageUrl);
   const skuBase = familySuffix ? product.sku.slice(0, product.sku.length - familySuffix.length) : product.sku;
 
@@ -56,7 +61,23 @@ export function ProductCard({ product, href, sameFamily, familySuffix }: Product
         {sameFamily && !familySuffix ? (
           <span className="w-fit rounded bg-neutral-100 px-1 font-mono text-xs text-muted">SKU หลัก ไม่มีต่อท้าย</span>
         ) : null}
-        <span className="line-clamp-2 min-h-[2.75rem] text-sm leading-snug text-ink">{product.name}</span>
+
+        <span className="font-mono text-sm text-ink">
+          {product.gtin ? product.gtin : <span className="text-muted">ไม่มีบาร์โค้ด</span>}
+        </span>
+        {retailerBarcodes.length > 0 ? (
+          <ul className="flex flex-wrap gap-1">
+            {retailerBarcodes.map((rb) => (
+              <li
+                key={rb.retailer}
+                className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-xs text-muted"
+                title={`บาร์โค้ดสำหรับ ${rb.retailer}`}
+              >
+                {rb.retailer}: {rb.barcode}
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         <span className="flex items-center gap-1.5 text-sm text-muted">
           <span className={`h-2 w-2 shrink-0 rounded-full ${hasImage ? "bg-amber-400" : "bg-slate-300"}`} aria-hidden="true" />

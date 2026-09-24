@@ -8,6 +8,7 @@ import { ReportDiscrepancyForm } from "@/components/report-discrepancy-form";
 import { catalogHref, parseCatalogQuery, skuFromSegments, skuPath } from "@/lib/catalog-query";
 import { getProduct } from "@/lib/products";
 import { getPhotosForSku, PACKAGE_ANGLES, UNIT_ANGLE } from "@/lib/photos";
+import { getBarcodesForSku } from "@/lib/barcodes";
 import { submitDiscrepancyReportAction } from "./report-actions";
 
 type SkuPageProps = {
@@ -35,7 +36,11 @@ export async function generateMetadata({ params }: SkuPageProps): Promise<Metada
 
 export default async function SkuPage({ params, searchParams }: SkuPageProps) {
   const sku = await loadSku(params);
-  const [product, photos] = await Promise.all([getProduct(sku), getPhotosForSku(sku)]);
+  const [product, photos, retailerBarcodes] = await Promise.all([
+    getProduct(sku),
+    getPhotosForSku(sku),
+    getBarcodesForSku(sku),
+  ]);
   if (!product) notFound();
 
   const sp = await searchParams;
@@ -66,10 +71,43 @@ export default async function SkuPage({ params, searchParams }: SkuPageProps) {
         </ul>
       ) : null}
 
-      <section className="rounded-[10px] bg-surface p-4 shadow-[var(--shadow-sm)]">
-        <p className="text-base text-muted">GTIN</p>
-        <p className="font-mono text-[26px] leading-tight">{product.gtin ?? "ยังไม่มีข้อมูล"}</p>
+      <section className="flex flex-col gap-3 rounded-[10px] bg-surface p-4 shadow-[var(--shadow-sm)]">
+        <div>
+          <p className="text-base text-muted">บาร์โค้ดหลัก</p>
+          <p className="font-mono text-[26px] leading-tight">{product.gtin ?? "ยังไม่มีข้อมูล"}</p>
+        </div>
+        {retailerBarcodes.length > 0 ? (
+          <div className="flex flex-col gap-1.5 border-t border-line pt-3">
+            <p className="text-base text-muted">บาร์โค้ดตามร้านค้า (เปลี่ยนก่อนส่ง)</p>
+            <ul className="flex flex-wrap gap-2">
+              {retailerBarcodes.map((rb) => (
+                <li key={rb.retailer} className="rounded-md bg-neutral-100 px-2 py-1 font-mono text-base">
+                  <span className="text-muted">{rb.retailer}:</span> {rb.barcode}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
+
+      {product.currentLotNote ? (
+        <section className="rounded-[10px] border border-amber-300 bg-amber-50 p-4">
+          <p className="text-base font-medium text-amber-900">
+            ล็อตปัจจุบันแตกต่างจากล็อตก่อนหน้า (บาร์โค้ดเดิม)
+          </p>
+          <p className="text-base text-amber-900">{product.currentLotNote}</p>
+          {product.currentLotUpdatedAt ? (
+            <p className="text-sm text-amber-700">
+              อัปเดต{" "}
+              {new Date(product.currentLotUpdatedAt).toLocaleDateString("th-TH", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">รูปแพ็กเกจ</h2>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { catalogHref, parseCatalogQuery, skuHref } from "@/lib/catalog-query";
 import { filterProducts, listCategories, PAGE_SIZE } from "@/lib/products";
+import { getBarcodesForSkus } from "@/lib/barcodes";
 import type { CatalogQuery } from "@/lib/types";
 import { ProductCard } from "@/components/product-card";
 import { CategoryFilterDropdown } from "@/components/category-filter-dropdown";
@@ -37,6 +38,7 @@ export default async function Home({
     filterProducts(query),
     listCategories(query.brand),
   ]);
+  const barcodesBySku = await getBarcodesForSkus(shown.map((product) => product.sku));
 
   return (
     <main className="mx-auto flex max-w-[1680px] flex-col gap-3 px-4 py-4 md:px-8 lg:px-12 xl:px-16">
@@ -120,6 +122,7 @@ export default async function Home({
                 href={skuHref(product.sku, query)}
                 sameFamily={product.sameFamilyCount > 1}
                 familySuffix={product.sameFamilyCount > 1 ? product.familySuffix : null}
+                retailerBarcodes={barcodesBySku[product.sku]}
               />
             </li>
           ))}

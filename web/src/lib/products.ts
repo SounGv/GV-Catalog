@@ -20,6 +20,8 @@ type ProductRow = {
   spu: string | null;
   merchant_created_at: string | null;
   needs_review: string[] | null;
+  current_lot_note: string | null;
+  current_lot_updated_at: string | null;
 };
 
 function asBrand(value: string): Brand {
@@ -57,6 +59,8 @@ function rowToProduct(row: ProductRow): Product {
     spu: row.spu,
     createdAt: row.merchant_created_at,
     needsReview: row.needs_review ?? [],
+    currentLotNote: row.current_lot_note,
+    currentLotUpdatedAt: row.current_lot_updated_at,
   };
 }
 
