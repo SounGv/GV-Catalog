@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pool } from "@/lib/db";
 import { adminProductEditPath } from "@/lib/catalog-query";
-import { resolveReportAction, reopenReportAction } from "../actions";
+import { resolveReportAction, reopenReportAction, applyAsCurrentLotAction } from "../actions";
 
 const ISSUE_LABELS: Record<string, string> = {
   box_or_hangtab: "กล่อง/หูแขวน",
@@ -39,6 +39,7 @@ export default async function AdminReportDetailPage({ params }: { params: Promis
 
   const boundResolve = resolveReportAction.bind(null, report.id);
   const boundReopen = reopenReportAction.bind(null, report.id);
+  const boundApplyLot = applyAsCurrentLotAction.bind(null, report.id);
 
   return (
     <main className="mx-auto flex max-w-[640px] flex-col gap-4 px-4 py-8">
@@ -80,6 +81,17 @@ export default async function AdminReportDetailPage({ params }: { params: Promis
         <p className="text-base text-muted">รายละเอียด</p>
         <p className="whitespace-pre-wrap text-base">{report.detail || "—"}</p>
       </div>
+
+      {report.status !== "reviewed" ? (
+        <form action={boundApplyLot}>
+          <button
+            type="submit"
+            className="min-h-11 w-fit rounded-[10px] border border-amber-400 bg-amber-50 px-4 text-base text-amber-900"
+          >
+            ยืนยันว่าเป็นล็อตต่างปกติ (ไม่ใช่ของเสีย) → บันทึกเป็นหมายเหตุล็อตปัจจุบันของสินค้า
+          </button>
+        </form>
+      ) : null}
 
       {report.status === "reviewed" ? (
         <section className="flex flex-col gap-2 rounded-[10px] border border-line p-4">
