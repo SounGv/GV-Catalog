@@ -1,3 +1,5 @@
+import { SubmitReportButton } from "@/components/submit-report-button";
+
 const ISSUE_TYPES = [
   { id: "box_or_hangtab", label: "กล่อง/หูแขวน" },
   { id: "label_or_barcode", label: "ฉลาก/บาร์โค้ด" },
@@ -59,12 +61,7 @@ export function ReportDiscrepancyForm({ action, error, openByDefault }: ReportDi
 
         <p className="text-sm text-muted">แนบรูปยังไม่รองรับในตอนนี้ — จะเพิ่มพร้อมระบบรูปแพ็กเกจ</p>
 
-        <button
-          type="submit"
-          className="min-h-11 w-fit rounded-[10px] border border-ink px-4 text-base text-red-700"
-        >
-          ส่งเรื่องแจ้งความต่าง
-        </button>
+        <SubmitReportButton />
       </form>
     </details>
   );
