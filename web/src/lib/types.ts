@@ -21,6 +21,8 @@ export type Product = {
    * package differs from before (see current_lot_updated_at). */
   currentLotNote: string | null;
   currentLotUpdatedAt: string | null;
+  /** Pieces per carton from the merchant SKU export's "Carton" unit — null means unknown. */
+  qtyPerCarton: number | null;
 };
 
 export type CatalogQuery = {

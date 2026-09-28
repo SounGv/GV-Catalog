@@ -22,6 +22,7 @@ type ProductRow = {
   needs_review: string[] | null;
   current_lot_note: string | null;
   current_lot_updated_at: string | null;
+  qty_per_carton: number | null;
 };
 
 function asBrand(value: string): Brand {
@@ -61,6 +62,7 @@ function rowToProduct(row: ProductRow): Product {
     needsReview: row.needs_review ?? [],
     currentLotNote: row.current_lot_note,
     currentLotUpdatedAt: row.current_lot_updated_at,
+    qtyPerCarton: row.qty_per_carton,
   };
 }
 

@@ -84,6 +84,16 @@ export function ProductCard({ product, href, sameFamily, familySuffix, retailerB
           {hasImage ? "รอตรวจยืนยันต้นแบบ" : "ยังไม่มีรูปสินค้า"}
         </span>
 
+        <span className="text-sm text-muted">
+          {product.qtyPerCarton !== null ? (
+            <>
+              ชิ้น/ลัง: <span className="font-medium text-ink">{product.qtyPerCarton.toLocaleString()}</span>
+            </>
+          ) : (
+            "ยังไม่มีข้อมูลชิ้น/ลัง"
+          )}
+        </span>
+
         <span className="mt-auto flex items-center justify-between border-t border-line pt-2 text-sm font-medium text-accent">
           ดูสินค้าและแพ็กเกจ
           <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">
