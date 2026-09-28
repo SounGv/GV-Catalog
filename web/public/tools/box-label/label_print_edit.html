@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>พิมพ์ใบแปะกล่อง V2</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
+       background: #eef1f6; color: #111; min-height: 100vh; }
+
+/* ── Form Panel ── */
+#form-panel {
+  max-width: 680px; margin: 32px auto 48px;
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.10); overflow: hidden;
+}
+.form-header {
+  background: linear-gradient(135deg, #185c45 0%, #1d6b4f 100%);
+  padding: 22px 28px; color: #fff;
+}
+.form-header h1 { font-size: 1.2rem; font-weight: 800; }
+.form-header p  { font-size: .8rem; opacity: .7; margin-top: 4px; }
+.form-body { padding: 24px 28px 32px; }
+.sec-title {
+  font-size: .68rem; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: #6b7280;
+  margin: 22px 0 12px; padding-bottom: 7px;
+  border-bottom: 1.5px solid #e5e7eb;
+  display: flex; align-items: center; gap: 8px;
+}
+.sec-title:first-of-type { margin-top: 0; }
+.field { margin-bottom: 10px; }
+.field label { display: block; font-size: .76rem; font-weight: 700; margin-bottom: 4px; color: #374151; }
+.field input {
+  width: 100%; padding: 8px 12px;
+  border: 1.5px solid #d1d5db; border-radius: 8px;
+  font-size: .93rem; outline: none; background: #fafafa;
+  transition: border-color .15s, box-shadow .15s; font-family: inherit;
+}
+.field input:focus { border-color: #185c45; box-shadow: 0 0 0 3px rgba(24,92,69,.12); background: #fff; }
+.field input::placeholder { color: #c4c9d4; }
+.field input[readonly] { background: #f0f4ff; cursor: default; }
+.field input.err { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.1); }
+.field .err-msg { font-size: .7rem; color: #dc2626; font-weight: 600; margin-top: 3px; display: none; }
+.field input.err ~ .err-msg { display: block; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+#sku-list { display: flex; flex-direction: column; gap: 12px; }
+.sku-row { border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 14px 15px 12px; background: #f9fafb; }
+.sku-row.has-error { border-color: #fca5a5; background: #fff5f5; }
+.sku-row-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sku-badge { font-size: .73rem; font-weight: 800; color: #185c45; background: #e8f2ed; padding: 2px 11px; border-radius: 99px; }
+.ctn-range-badge { font-size: .7rem; font-weight: 700; color: #065f46; background: #d1fae5; padding: 2px 9px; border-radius: 99px; display: none; }
+.ctn-range-badge.visible { display: inline; }
+.btn-del { background: none; border: none; cursor: pointer; color: #ef4444; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: .95rem; }
+.btn-del:hover { background: #fee2e2; }
+.divider-label { font-size: .66rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #9ca3af; margin: 10px 0 8px; padding-top: 10px; border-top: 1px dashed #e5e7eb; }
+.btn-add-sku { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 10px; padding: 10px; background: #e8f2ed; color: #185c45; border: 1.5px dashed #93c9b3; border-radius: 10px; font-size: .88rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn-add-sku:hover { background: #d3e8dd; }
+#summary-bar { display: none; margin-top: 14px; padding: 11px 15px; background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 9px; font-size: .83rem; color: #0c4a6e; font-weight: 700; }
+.btn-print { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; margin-top: 18px; padding: 14px; background: linear-gradient(135deg,#185c45,#1d6b4f); color: #fff; border: none; border-radius: 10px; font-size: 1.05rem; font-weight: 800; cursor: pointer; font-family: inherit; }
+.btn-print:hover { opacity: .92; }
+
+/* ── Preview ── */
+#preview-area { max-width: 760px; margin: 0 auto 60px; display: none; }
+#preview-bar { display: flex; align-items: center; justify-content: space-between; background: #fff; border-radius: 10px; padding: 13px 22px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+#preview-title { font-size: .85rem; color: #374151; font-weight: 700; }
+.preview-actions { display: flex; gap: 10px; }
+.btn-back { padding: 7px 14px; background: #f3f4f6; color: #374151; border: 1.5px solid #d1d5db; border-radius: 7px; font-size: .82rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn-back:hover { background: #e5e7eb; }
+.btn-reprint { padding: 8px 18px; background: #185c45; color: #fff; border: none; border-radius: 7px; font-size: .85rem; font-weight: 800; cursor: pointer; font-family: inherit; }
+.btn-reprint:hover { background: #14432f; }
+#label-grid { display: flex; flex-wrap: wrap; gap: 20px; }
+
+/* ══════════════════════════════════════════
+   LABEL CARD  101.6mm × 152.4mm (4×6 in)
+
+   Fixed heights:
+     A  Company  20mm
+     B  PR+Date  28mm
+     C  SKU      flex:1  (~48mm)
+     D  QTY      28mm
+     E  CTN      24mm
+══════════════════════════════════════════ */
+.label-card {
+  width: 101.6mm; height: 152.4mm;
+  border: 2px solid #000; background: #fff;
+  display: flex; flex-direction: column;
+  font-family: Arial, sans-serif;
+  flex-shrink: 0; overflow: hidden;
+}
+
+/* A — Company */
+.lbl-company-wrap {
+  height: 20mm; flex-shrink: 0;
+  padding: 0 5mm;
+  border-bottom: 1.5px solid #000;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.lbl-company {
+  font-weight: 900; white-space: nowrap;
+  text-align: center; overflow: hidden;
+  display: block; width: 100%;
+  /* font-size set by JS */
+}
+
+/* B — PR + Date */
+.lbl-pr-date-row {
+  height: 28mm; flex-shrink: 0;
+  display: flex; border-bottom: 1.5px solid #000;
+}
+.lbl-pr-cell {
+  flex: 0 0 60%;
+  border-right: 1.5px solid #000;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2mm 4mm; gap: 1.5mm; overflow: hidden;
+}
+.lbl-date-cell {
+  flex: 0 0 40%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2mm 3mm; gap: 1.5mm; overflow: hidden;
+}
+.lbl-cell-key {
+  font-size: 8pt; font-weight: 700; color: #777;
+  white-space: nowrap; line-height: 1;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.lbl-pr-val {
+  font-weight: 900; line-height: 1;
+  white-space: nowrap; text-align: center;
+  display: block; overflow: hidden;
+  /* font-size set by JS */
+}
+.lbl-date-val {
+  font-weight: 900; line-height: 1;
+  white-space: nowrap; display: block; overflow: hidden;
+  /* font-size set by JS */
+}
+
+/* C — SKU */
+.lbl-sku-wrap {
+  flex: 1; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  padding: 5mm 5mm; border-bottom: 1.5px solid #000;
+}
+.lbl-sku-box {
+  width: 100%; border: 3px solid #000; border-radius: 4mm;
+  padding: 2.5mm 4mm;
+  font-weight: 900; text-align: center;
+  white-space: nowrap; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  /* font-size set by JS; height auto */
+}
+.lbl-sku-empty { width: 100%; height: 18mm; border: 2px dashed #ccc; border-radius: 4mm; }
+
+/* D — QTY */
+.lbl-qty-wrap {
+  height: 28mm; flex-shrink: 0;
+  padding: 2mm 5mm 2mm; border-bottom: 1.5px solid #000;
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 0.5mm; overflow: hidden;
+}
+.lbl-qty-key { font-size: 9.5pt; font-weight: 800; color: #444; line-height: 1; letter-spacing: .05em; }
+.lbl-qty-row { display: flex; align-items: baseline; gap: 2mm; line-height: 1; }
+.lbl-qty-num { font-weight: 900; line-height: .88; white-space: nowrap; display: block; /* font-size by JS */ }
+.lbl-qty-unit { font-size: 20pt; font-weight: 800; color: #222; }
+
+/* E — CTN */
+.lbl-ctn-row {
+  height: 24mm; flex-shrink: 0;
+  display: flex;
+}
+.lbl-ctn-no, .lbl-ctn-total {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2mm 3mm; gap: 1mm; overflow: hidden;
+}
+.lbl-ctn-no { border-right: 1.5px solid #000; }
+.lbl-ctn-key { font-size: 8pt; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: .04em; line-height: 1; }
+.lbl-ctn-val { font-weight: 900; line-height: .88; white-space: nowrap; display: block; /* font-size set by JS */ }
+
+/* ── Print ── */
+@media print {
+  @page { size: 4in 6in; margin: 0; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  #form-panel, #preview-bar { display: none !important; }
+  #preview-area { display: block !important; margin: 0; padding: 0; max-width: none; }
+  #label-grid { display: block; margin: 0; padding: 0; }
+  .label-card { width: 4in; height: 6in; border: none; margin: 0; padding: 0; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
+  .label-card:last-child { page-break-after: auto; break-after: auto; }
+  .lbl-company-wrap { border-bottom: 1pt solid #000; }
+  .lbl-pr-date-row  { border-bottom: 1pt solid #000; }
+  .lbl-pr-cell      { border-right:  1pt solid #000; }
+  .lbl-sku-wrap     { border-bottom: 1pt solid #000; }
+  .lbl-qty-wrap     { border-bottom: 1pt solid #000; }
+  .lbl-ctn-no       { border-right:  1pt solid #000; }
+  .lbl-sku-box      { border: 2pt solid #000; }
+}
+</style>
+</head>
+<body>
+
+<a href="/" style="display:inline-block;padding:10px 22px 0;color:#64748b;text-decoration:none;font-size:13px;font-weight:600">&lsaquo; กลับหน้าหลัก</a>
+
+<div id="form-panel">
+  <div class="form-header">
+    <h1>🖨 พิมพ์ใบแปะกล่อง V2</h1>
+    <p>4 × 6 นิ้ว — Label Generator สำหรับคลังสินค้าองค์กร</p>
+  </div>
+  <div class="form-body">
+
+    <div class="sec-title">📋 ข้อมูลหัวใบ (ใช้ร่วมทุก SKU)</div>
+    <div class="field">
+      <label>ชื่อบริษัท / หัวใบ</label>
+      <input id="f-company" type="text"
+             value="บริษัท เจ.ไอ.บี.คอมพิวเตอร์ กรุ๊ป จำกัด (สำนักงานใหญ่)" tabindex="1">
+    </div>
+    <div class="g3">
+      <div class="field">
+        <label>เลข PR</label>
+        <input id="f-pr" type="text" placeholder="PR2026062296" tabindex="2"
+               oninput="clearErr(this)" onkeydown="nextOnEnter(event,'f-date')">
+        <div class="err-msg">กรุณากรอกเลข PR</div>
+      </div>
+      <div class="field">
+        <label>วันที่ส่ง</label>
+        <input id="f-date" type="date" tabindex="3" onkeydown="nextOnEnter(event,'f-unit')">
+      </div>
+      <div class="field">
+        <label>หน่วย</label>
+        <input id="f-unit" type="text" value="PCS" tabindex="4">
+      </div>
+    </div>
+
+    <div class="sec-title">
+      📦 รายการ SKU
+      <span id="sku-count-badge" style="font-size:.68rem;font-weight:700;color:#185c45;background:#e8f2ed;padding:1px 9px;border-radius:99px;text-transform:none;letter-spacing:0">0 รายการ</span>
+    </div>
+    <div id="sku-list"></div>
+    <button class="btn-add-sku" onclick="addSku()" type="button">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      เพิ่ม SKU
+    </button>
+    <div id="summary-bar"></div>
+    <button class="btn-print" onclick="generateLabels()" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      สร้างใบปริ้นและดูตัวอย่าง
+    </button>
+
+  </div>
+</div>
+
+<div id="preview-area">
+  <div id="preview-bar">
+    <span id="preview-title"></span>
+    <div class="preview-actions">
+      <button class="btn-back"    onclick="backToForm()">← แก้ไขข้อมูล</button>
+      <button class="btn-reprint" onclick="window.print()">🖨 พิมพ์</button>
+    </div>
+  </div>
+  <div id="label-grid"></div>
+</div>
+
+
+<script>
+/* ══════════════════════════════════════════════════════
+   CANVAS-BASED TEXT MEASUREMENT
+   Using Canvas is the only 100% reliable way to measure
+   text width — DOM scrollWidth breaks inside flex/overflow:hidden.
+══════════════════════════════════════════════════════ */
+const _cvs = document.createElement('canvas');
+const _ctx = _cvs.getContext('2d');
+
+/**
+ * Return the largest font size (pt) that fits `text` within `maxPx` CSS pixels.
+ * Uses Canvas.measureText() which is accurate regardless of CSS layout.
+ *
+ * @param {string} text
+ * @param {number} maxPx   available width in CSS pixels
+ * @param {number} startPt start (max allowed) font size in pt
+ * @param {number} minPt   minimum font size in pt
+ * @param {string} weight  CSS font-weight, e.g. '900'
+ * @param {string} family  CSS font-family, e.g. 'Arial'
+ */
+function canvasFitPt(text, maxPx, startPt, minPt, weight, family) {
+  if (!text || maxPx <= 0) return minPt;
+
+  /* 1pt = 1.333 CSS px at standard 96 dpi */
+  _ctx.font = `${weight} ${startPt}pt ${family}`;
+  const measuredW = _ctx.measureText(text).width;
+
+  if (measuredW <= maxPx) return startPt;           /* already fits at startPt */
+
+  /* Proportional scale-down (first guess) */
+  let fitted = startPt * (maxPx / measuredW);
+  fitted = Math.max(minPt, Math.floor(fitted * 2) / 2);
+
+  /* Canvas text width doesn't scale perfectly linearly with font size
+     (kerning/hinting), so the proportional guess can still slightly
+     overflow — verify and nudge down until it actually fits or hits the floor. */
+  while (fitted > minPt) {
+    _ctx.font = `${weight} ${fitted}pt ${family}`;
+    if (_ctx.measureText(text).width <= maxPx) break;
+    fitted -= 0.5;
+  }
+  return fitted;
+}
+
+/* ── Apply fit to a DOM element ── */
+function applyFit(el, text, maxPx, startPt, minPt, weight, family) {
+  const sz = canvasFitPt(text, maxPx, startPt, minPt, weight, family);
+  el.style.fontSize = sz + 'pt';
+}
+
+
+/* ══════════════════════════════════════════════════════
+   FIT ALL LABELS
+   Called after DOM is laid out (double-rAF).
+   Measures container widths from DOM, sizes text with Canvas.
+══════════════════════════════════════════════════════ */
+function fitAllLabels() {
+  document.querySelectorAll('.label-card').forEach(fitCard);
+}
+
+function fitCard(card) {
+  const FONT = 'Arial';   /* must match CSS font-family */
+
+  /* ── A  Company name ── */
+  const compWrap = card.querySelector('.lbl-company-wrap');
+  const compEl   = card.querySelector('.lbl-company');
+  if (compWrap && compEl) {
+    /* available = wrap width − (5mm padding × 2) ≈ wrap.clientWidth − 38px */
+    const avail = compWrap.clientWidth - 38;
+    const text  = compEl.textContent;
+
+    compEl.style.whiteSpace = 'nowrap';
+    compEl.style.wordBreak  = 'normal';
+    compEl.style.lineHeight = 'normal';
+    const sz = canvasFitPt(text, avail, 30, 9, '900', FONT);
+    compEl.style.fontSize = sz + 'pt';
+
+    /* Some names still don't fit on one line even at the floor size —
+       wrap to two lines instead of letting the rest get clipped. */
+    _ctx.font = `900 ${sz}pt ${FONT}`;
+    if (_ctx.measureText(text).width > avail) {
+      compEl.style.whiteSpace = 'normal';
+      compEl.style.wordBreak  = 'break-word';
+      compEl.style.lineHeight = '1.2';
+      let pt = sz;
+      compEl.style.fontSize = pt + 'pt';
+      while (pt > 6 && compEl.scrollHeight > compWrap.clientHeight) {
+        pt -= 0.5;
+        compEl.style.fontSize = pt + 'pt';
+      }
+    }
+  }
+
+  /* ── B  PR value ── */
+  const prCell = card.querySelector('.lbl-pr-cell');
+  const prVal  = card.querySelector('.lbl-pr-val');
+  if (prCell && prVal) {
+    /* cell width − (4mm padding × 2) ≈ clientWidth − 30px */
+    const avail = prCell.clientWidth - 30;
+    applyFit(prVal, prVal.textContent, avail, 26, 8, '900', FONT);
+  }
+
+  /* ── B  Date value ── */
+  const dateCell = card.querySelector('.lbl-date-cell');
+  const dateVal  = card.querySelector('.lbl-date-val');
+  if (dateCell && dateVal) {
+    const avail = dateCell.clientWidth - 24;
+    applyFit(dateVal, dateVal.textContent, avail, 26, 8, '900', FONT);
+  }
+
+  /* ── C  SKU ── */
+  const skuWrap = card.querySelector('.lbl-sku-wrap');
+  const skuBox  = card.querySelector('.lbl-sku-box');
+  if (skuWrap && skuBox) {
+    /*
+     * Available width inside the box:
+     *   wrap.clientWidth  (known from DOM)
+     *   − wrap padding    (5mm × 2 ≈ 38px)
+     *   − box border      (3px × 2 = 6px)
+     *   − box padding     (4mm × 2 ≈ 30px)
+     * ≈ wrap.clientWidth − 74px
+     *
+     * Height cap: text shouldn't be taller than ~70% of wrap height.
+     * 1pt = 1.333px, so maxHeightPt = wrapH × 0.70 / 1.333
+     */
+    const wrapW      = skuWrap.clientWidth;
+    const wrapH      = skuWrap.clientHeight;
+    const availW     = wrapW - 74;
+    const heightCapPt= Math.min(68, Math.floor((wrapH * 0.70) / 1.333));
+    const text       = skuBox.textContent;
+
+    applyFit(skuBox, text, availW, heightCapPt, 9, '900', FONT);
+  }
+
+  /* ── D  QTY number ── */
+  const qtyWrap = card.querySelector('.lbl-qty-wrap');
+  const qtyNum  = card.querySelector('.lbl-qty-num');
+  if (qtyWrap && qtyNum) {
+    /*
+     * Available width: wrap − padding (5mm×2≈38px) − unit width estimate (≈70px)
+     * Height cap: ~80% of (wrap height − key label ≈ 12px)
+     */
+    const availW     = qtyWrap.clientWidth - 38 - 70;
+    const wrapH      = qtyWrap.clientHeight;
+    const heightCapPt= Math.min(60, Math.floor(((wrapH - 14) * 0.80) / 1.333));
+    applyFit(qtyNum, qtyNum.textContent, availW, heightCapPt, 14, '900', FONT);
+  }
+
+  /* ── E  CTN numbers ── */
+  const ctnNoCell  = card.querySelector('.lbl-ctn-no');
+  const ctnNoVal   = card.querySelector('.lbl-ctn-no .lbl-ctn-val');
+  const ctnTotCell = card.querySelector('.lbl-ctn-total');
+  const ctnTotVal  = card.querySelector('.lbl-ctn-total .lbl-ctn-val');
+
+  if (ctnNoCell && ctnNoVal) {
+    const avail      = ctnNoCell.clientWidth - 24;
+    const wrapH      = ctnNoCell.clientHeight;
+    const heightCapPt= Math.min(52, Math.floor(((wrapH - 14) * 0.85) / 1.333));
+    applyFit(ctnNoVal,  ctnNoVal.textContent,  avail, heightCapPt, 14, '900', FONT);
+  }
+  if (ctnTotCell && ctnTotVal) {
+    const avail      = ctnTotCell.clientWidth - 24;
+    const wrapH      = ctnTotCell.clientHeight;
+    const heightCapPt= Math.min(52, Math.floor(((wrapH - 14) * 0.85) / 1.333));
+    applyFit(ctnTotVal, ctnTotVal.textContent, avail, heightCapPt, 14, '900', FONT);
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════ */
+let uid = 0;
+document.getElementById('f-date').valueAsDate = new Date();
+addSku();
+
+
+/* ══════════════════════════════════════════════════════
+   SKU ROW MANAGEMENT
+══════════════════════════════════════════════════════ */
+function addSku() {
+  uid++;
+  const id  = uid;
+  const num = document.querySelectorAll('.sku-row').length + 1;
+  const t   = 10 + (num - 1) * 10;
+
+  const row = document.createElement('div');
+  row.className   = 'sku-row';
+  row.id          = 'sr-' + id;
+  row.dataset.uid = id;
+
+  row.innerHTML = `
+    <div class="sku-row-head">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="sku-badge">SKU #${num}</span>
+        <span class="ctn-range-badge" id="rb-${id}"></span>
+      </div>
+      <button class="btn-del" onclick="delSku('sr-${id}')" title="ลบ" type="button">✕</button>
+    </div>
+    <div class="field">
+      <label>ชื่อ SKU / สินค้า</label>
+      <input id="sn-${id}" type="text" placeholder="เช่น FAN-KEY-MK921-BK-BK-BR"
+             tabindex="${t}" oninput="clearErr(this)" onkeydown="nextOnEnter(event,'sq-${id}')">
+      <div class="err-msg">กรุณากรอกชื่อ SKU</div>
+    </div>
+    <div class="g3">
+      <div class="field">
+        <label>QTY รวม (ชิ้น)</label>
+        <input id="sq-${id}" type="number" min="1" placeholder="100"
+               tabindex="${t+1}" oninput="recalcQtyPerCtn(${id});clearErr(this)"
+               onkeydown="nextOnEnter(event,'sc-${id}')">
+        <div class="err-msg">กรุณากรอก QTY</div>
+      </div>
+      <div class="field">
+        <label>จำนวนลัง (CTN)</label>
+        <input id="sc-${id}" type="number" min="1" placeholder="10"
+               tabindex="${t+2}" oninput="recalcQtyPerCtn(${id});recalcAll();clearErr(this)"
+               onkeydown="nextOnEnter(event,'sp-${id}')">
+        <div class="err-msg">กรุณากรอกจำนวนลัง</div>
+      </div>
+      <div class="field">
+        <label>ชิ้น / ลัง <span style="font-weight:400;color:#9ca3af">(แก้ไขได้ เช่น ลังเศษ)</span></label>
+        <input id="sp-${id}" type="number" min="1" placeholder="อัตโนมัติ"
+               tabindex="${t+3}" oninput="onSpInput(this,${id});clearErr(this)"
+               onkeydown="nextOnEnter(event,'sf-${id}')">
+      </div>
+    </div>
+    <div class="divider-label">ช่วงที่จะปริ้น (CTN No.)</div>
+    <div class="g2">
+      <div class="field">
+        <label>ตั้งแต่ลังที่</label>
+        <input id="sf-${id}" type="number" min="1" tabindex="${t+4}" onkeydown="nextOnEnter(event,'st-${id}')">
+      </div>
+      <div class="field">
+        <label>ถึงลังที่</label>
+        <input id="st-${id}" type="number" min="1" tabindex="${t+5}">
+      </div>
+    </div>`;
+
+  document.getElementById('sku-list').appendChild(row);
+  refreshBadges();
+  recalcAll();
+  document.getElementById('sn-' + id).focus();
+}
+
+function delSku(rowId) {
+  const el = document.getElementById(rowId);
+  if (el) el.remove();
+  refreshBadges();
+  recalcAll();
+}
+
+function refreshBadges() {
+  const rows = document.querySelectorAll('.sku-row');
+  document.getElementById('sku-count-badge').textContent = rows.length + ' รายการ';
+  rows.forEach((r, i) => {
+    const b = r.querySelector('.sku-badge');
+    if (b) b.textContent = 'SKU #' + (i + 1);
+  });
+}
+
+
+/* ══════════════════════════════════════════════════════
+   CTN CALCULATION
+══════════════════════════════════════════════════════ */
+function recalcAll() {
+  let running = 0, grandTotal = 0;
+  document.querySelectorAll('.sku-row').forEach(r =>
+    grandTotal += parseIntSafe(document.getElementById('sc-' + r.dataset.uid).value));
+
+  document.querySelectorAll('.sku-row').forEach(row => {
+    const id  = row.dataset.uid;
+    const cnt = parseIntSafe(document.getElementById('sc-' + id).value);
+    if (cnt > 0) {
+      const s = running + 1, e = running + cnt;
+      running += cnt;
+      const b = document.getElementById('rb-' + id);
+      if (b) { b.textContent = 'CTN ' + pad2(s) + '–' + pad2(e); b.classList.add('visible'); }
+      document.getElementById('sf-' + id).value = s;
+      document.getElementById('st-' + id).value = e;
+      row.dataset.ctnStart = s; row.dataset.ctnEnd = e;
+    } else {
+      const b = document.getElementById('rb-' + id);
+      if (b) { b.textContent = ''; b.classList.remove('visible'); }
+      row.dataset.ctnStart = running + 1; row.dataset.ctnEnd = running;
+    }
+    row.dataset.grandTotal = grandTotal;
+  });
+
+  const bar = document.getElementById('summary-bar');
+  const n   = document.querySelectorAll('.sku-row').length;
+  if (grandTotal > 0) {
+    bar.style.display = 'block';
+    bar.textContent   = '📦 CTN TOTAL: ' + grandTotal + ' ลัง จาก ' + n + ' SKU';
+  } else { bar.style.display = 'none'; }
+}
+
+function recalcQtyPerCtn(id) {
+  const row = document.getElementById('sr-' + id);
+  if (row && row.dataset.spManual === '1') return;   /* user typed a custom value — don't overwrite it */
+  const qt = parseIntSafe(document.getElementById('sq-' + id).value);
+  const ct = parseIntSafe(document.getElementById('sc-' + id).value);
+  document.getElementById('sp-' + id).value = (qt > 0 && ct > 0) ? Math.ceil(qt / ct) : '';
+}
+
+function onSpInput(el, id) {
+  const row = document.getElementById('sr-' + id);
+  if (row) row.dataset.spManual = el.value.trim() ? '1' : '0';
+}
+
+
+/* ══════════════════════════════════════════════════════
+   LABEL GENERATION
+══════════════════════════════════════════════════════ */
+function generateLabels() {
+  if (!validateForm()) return;
+
+  const company = document.getElementById('f-company').value.trim();
+  const pr      = document.getElementById('f-pr').value.trim();
+  const dateVal = document.getElementById('f-date').value;
+  const unit    = document.getElementById('f-unit').value.trim() || 'PCS';
+
+  recalcAll();
+
+  const grid = document.getElementById('label-grid');
+  grid.innerHTML = '';
+  let totalCards = 0, aborted = false;
+
+  document.querySelectorAll('.sku-row').forEach(row => {
+    if (aborted) return;
+    const id         = row.dataset.uid;
+    const skuName    = document.getElementById('sn-' + id).value.trim();
+    const ctnCount   = parseIntSafe(document.getElementById('sc-' + id).value);
+    const qtyTotal   = parseIntSafe(document.getElementById('sq-' + id).value);
+    const qtyPerCtn  = parseIntSafe(document.getElementById('sp-' + id).value);
+    const ctnStart   = parseIntSafe(row.dataset.ctnStart) || 1;
+    const ctnEnd     = parseIntSafe(row.dataset.ctnEnd)   || ctnStart + ctnCount - 1;
+    const grandTotal = parseIntSafe(row.dataset.grandTotal) || ctnCount;
+
+    const pf = clamp(parseIntSafe(document.getElementById('sf-' + id).value) || ctnStart, ctnStart, ctnEnd);
+    const pt = clamp(parseIntSafe(document.getElementById('st-' + id).value) || ctnEnd,   ctnStart, ctnEnd);
+
+    if (pf > pt) { alert('SKU "' + (skuName||id) + '": ช่วงลังไม่ถูกต้อง'); aborted = true; return; }
+
+    for (let ctnNo = pf; ctnNo <= pt; ctnNo++) {
+      let qty = qtyPerCtn || '—';
+      if (qtyTotal > 0 && qtyPerCtn > 0 && ctnCount > 0) {
+        const pos = ctnNo - ctnStart + 1;
+        qty = (pos === ctnCount) ? qtyTotal - qtyPerCtn * (ctnCount - 1) : qtyPerCtn;
+      }
+      grid.appendChild(buildCard({ company, pr, dateVal, unit, skuName, qty, ctnNo, grandTotal }));
+      totalCards++;
+    }
+  });
+
+  if (aborted || !totalCards) return;
+
+  const skuCount = document.querySelectorAll('.sku-row').length;
+  const grandT   = document.querySelector('.sku-row')?.dataset.grandTotal || '?';
+  document.getElementById('preview-title').textContent =
+    'ตัวอย่าง ' + totalCards + ' ใบ จาก ' + skuCount + ' SKU — CTN TOTAL: ' + grandT + ' ลัง';
+
+  document.getElementById('preview-area').style.display = 'block';
+  document.getElementById('form-panel').style.display   = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  /*
+   * Double rAF: first frame triggers layout/paint, second frame reads stable
+   * clientWidth/clientHeight values that reflect actual rendered sizes.
+   */
+  requestAnimationFrame(() => requestAnimationFrame(fitAllLabels));
+}
+
+function buildCard({ company, pr, dateVal, unit, skuName, qty, ctnNo, grandTotal }) {
+  const card = document.createElement('div');
+  card.className = 'label-card';
+  card.innerHTML = `
+    <div class="lbl-company-wrap">
+      <span class="lbl-company">${esc(company || 'HEADER')}</span>
+    </div>
+    <div class="lbl-pr-date-row">
+      <div class="lbl-pr-cell">
+        <span class="lbl-cell-key">PR No.</span>
+        <span class="lbl-pr-val">${esc(pr || '—')}</span>
+      </div>
+      <div class="lbl-date-cell">
+        <span class="lbl-cell-key">วันที่ส่ง</span>
+        <span class="lbl-date-val">${fmtDate(dateVal)}</span>
+      </div>
+    </div>
+    <div class="lbl-sku-wrap">
+      ${skuName
+        ? `<div class="lbl-sku-box">${esc(skuName)}</div>`
+        : `<div class="lbl-sku-empty"></div>`}
+    </div>
+    <div class="lbl-qty-wrap">
+      <div class="lbl-qty-key">QTY :</div>
+      <div class="lbl-qty-row">
+        <span class="lbl-qty-num">${esc(String(qty))}</span>
+        <span class="lbl-qty-unit">${esc(unit)}</span>
+      </div>
+    </div>
+    <div class="lbl-ctn-row">
+      <div class="lbl-ctn-no">
+        <span class="lbl-ctn-key">CTN. No.</span>
+        <span class="lbl-ctn-val">${pad2(ctnNo)}</span>
+      </div>
+      <div class="lbl-ctn-total">
+        <span class="lbl-ctn-key">CTN. TOTAL</span>
+        <span class="lbl-ctn-val">${grandTotal}</span>
+      </div>
+    </div>`;
+  return card;
+}
+
+
+/* ══════════════════════════════════════════════════════
+   VALIDATION
+══════════════════════════════════════════════════════ */
+function validateForm() {
+  let ok = true;
+  const prEl = document.getElementById('f-pr');
+  if (!prEl.value.trim()) { prEl.classList.add('err'); ok = false; }
+
+  const rows = document.querySelectorAll('.sku-row');
+  if (!rows.length) { alert('กรุณาเพิ่ม SKU อย่างน้อย 1 รายการ'); return false; }
+
+  rows.forEach(row => {
+    const id = row.dataset.uid;
+    let rowOk = true;
+    row.classList.remove('has-error');
+    [['sn-', !document.getElementById('sn-' + id).value.trim()],
+     ['sq-', !parseIntSafe(document.getElementById('sq-' + id).value)],
+     ['sc-', !parseIntSafe(document.getElementById('sc-' + id).value)],
+    ].forEach(([pfx, fail]) => {
+      if (fail) { document.getElementById(pfx + id).classList.add('err'); rowOk = false; }
+    });
+    if (!rowOk) { row.classList.add('has-error'); ok = false; }
+  });
+
+  if (!ok) {
+    (document.querySelector('.err') || document.querySelector('.has-error'))
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    alert('กรุณากรอกข้อมูลให้ครบ (ช่องสีแดง)');
+  }
+  return ok;
+}
+
+function clearErr(el) {
+  el.classList.remove('err');
+  const row = el.closest('.sku-row');
+  if (row && !row.querySelectorAll('input.err').length) row.classList.remove('has-error');
+}
+
+
+/* ══════════════════════════════════════════════════════
+   UX HELPERS
+══════════════════════════════════════════════════════ */
+function nextOnEnter(e, nextId) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const el = document.getElementById(nextId);
+  if (el) { el.focus(); el.select(); }
+}
+
+function backToForm() {
+  document.getElementById('preview-area').style.display = 'none';
+  document.getElementById('form-panel').style.display   = 'block';
+  document.getElementById('label-grid').innerHTML       = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('focusin', e => {
+  if (e.target.tagName === 'INPUT' && e.target.type !== 'date') e.target.select();
+});
+
+
+/* ══════════════════════════════════════════════════════
+   UTILITIES
+══════════════════════════════════════════════════════ */
+function parseIntSafe(v) { return parseInt(v) || 0; }
+function pad2(n)         { return String(n).padStart(2, '0'); }
+function clamp(v,lo,hi)  { return Math.max(lo, Math.min(hi, v)); }
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(v) {
+  if (!v) return '—';
+  const [y,m,d] = v.split('-');
+  return d + '/' + m + '/' + y.slice(2);
+}
+</script>
+</body>
+</html>
