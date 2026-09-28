@@ -72,7 +72,7 @@ export function HeaderNav({ isAdmin, pendingReports, logoutAction }: HeaderNavPr
             className={
               isActive(item.href)
                 ? "flex items-center gap-1.5 border-b-2 border-accent py-1 text-base font-semibold text-accent"
-                : "flex items-center gap-1.5 border-b-2 border-transparent py-1 text-base text-ink"
+                : "flex items-center gap-1.5 border-b-2 border-transparent py-1 text-base text-accent"
             }
           >
             {item.label}
@@ -85,7 +85,7 @@ export function HeaderNav({ isAdmin, pendingReports, logoutAction }: HeaderNavPr
             href={tool.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 border-b-2 border-transparent py-1 text-base text-ink"
+            className="flex items-center gap-1.5 border-b-2 border-transparent py-1 text-base text-accent"
           >
             {tool.label}
           </a>
@@ -146,7 +146,7 @@ export function HeaderNav({ isAdmin, pendingReports, logoutAction }: HeaderNavPr
               className={
                 isActive(item.href)
                   ? "flex items-center justify-between rounded-md bg-accent-soft px-3 py-2 text-base font-semibold text-accent"
-                  : "flex items-center justify-between rounded-md px-3 py-2 text-base text-ink"
+                  : "flex items-center justify-between rounded-md px-3 py-2 text-base text-accent"
               }
             >
               {item.label}
@@ -160,7 +160,7 @@ export function HeaderNav({ isAdmin, pendingReports, logoutAction }: HeaderNavPr
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setMobileOpen(false)}
-              className="flex items-center justify-between rounded-md px-3 py-2 text-base text-ink"
+              className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent"
             >
               {tool.label}
             </a>
