@@ -86,7 +86,7 @@ function render(){
 async function print(){
   if(state.busy||!state.lines.length)return;error('');
   const container=$('printPages');
-  try{await document.fonts.ready;container.classList.add('measure');makePages(C.documents(selectedLines()),container);await Promise.all([...container.querySelectorAll('img')].map(i=>i.decode()));container.classList.remove('measure');window.print()}
+  try{await document.fonts.ready;container.classList.add('measure');makePages(C.documents(selectedLines()),container);await Promise.all([...container.querySelectorAll('img')].map(i=>i.decode()));container.classList.remove('measure');await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));window.print()}
   catch(e){container.classList.remove('measure');error(e.message)}
 }
 function exportWorkbook(){
