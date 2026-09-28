@@ -39,6 +39,11 @@ CREATE INDEX IF NOT EXISTS products_category_idx ON products (category);
 ALTER TABLE products ADD COLUMN IF NOT EXISTS current_lot_note text;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS current_lot_updated_at timestamptz;
 
+-- Pieces per carton, sourced from the merchant SKU export's "Carton" unit
+-- conversion rule — used for warehouse packing/labeling (e.g. the box-label
+-- print tool). Null means unknown, not zero.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS qty_per_carton integer;
+
 -- Alternate barcodes some big offline retail chains (COM7, IT City, Jaymart,
 -- AIS, OfficeMate, etc.) require printed on the package before shipment,
 -- distinct from the default barcode in products.gtin. `retailer` is free
