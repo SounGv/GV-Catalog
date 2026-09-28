@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Static offline tools served as-is from public/ — third-party/minified
+    // JS not written to this project's lint rules.
+    "public/tools/**",
   ]),
 ]);
 

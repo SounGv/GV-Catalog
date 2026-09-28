@@ -17,6 +17,15 @@ const ADMIN_NAV = [
 ];
 
 /**
+ * Static offline tools (plain HTML/JS under public/tools/, no server logic)
+ * open in a new tab rather than through the Next.js router — they're not
+ * app routes, and a new tab keeps the catalog open for staff to switch back to.
+ */
+const STATIC_TOOLS = [
+  { href: "/tools/jaymart/branch-order-validator.html", label: "แปลงไฟล์ PO ลูกค้า" },
+];
+
+/**
  * Nav links + account menu, merged into the single site header (previously
  * a separate "โหมดผู้ดูแล" bar below it). A client component because active
  * link highlighting needs the current pathname and the account/mobile
@@ -69,6 +78,17 @@ export function HeaderNav({ isAdmin, pendingReports, logoutAction }: HeaderNavPr
             {item.label}
             {reportsBadge(item.href)}
           </Link>
+        ))}
+        {STATIC_TOOLS.map((tool) => (
+          <a
+            key={tool.href}
+            href={tool.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 border-b-2 border-transparent py-1 text-base text-ink"
+          >
+            {tool.label}
+          </a>
         ))}
       </nav>
 
@@ -132,6 +152,18 @@ export function HeaderNav({ isAdmin, pendingReports, logoutAction }: HeaderNavPr
               {item.label}
               {reportsBadge(item.href)}
             </Link>
+          ))}
+          {STATIC_TOOLS.map((tool) => (
+            <a
+              key={tool.href}
+              href={tool.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center justify-between rounded-md px-3 py-2 text-base text-ink"
+            >
+              {tool.label}
+            </a>
           ))}
           {isAdmin ? (
             <form action={logoutAction}>
