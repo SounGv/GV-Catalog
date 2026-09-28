@@ -23,6 +23,7 @@ const ADMIN_NAV = [
  */
 const STATIC_TOOLS = [
   { href: "/tools/jaymart/branch-order-validator.html", label: "แปลงไฟล์ PO Jaymart" },
+  { href: "/tools/ais/gv-po-label-system.html", label: "แปลงไฟล์ PO AIS" },
 ];
 
 /**
