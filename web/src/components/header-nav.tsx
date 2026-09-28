@@ -22,7 +22,7 @@ const ADMIN_NAV = [
  * app routes, and a new tab keeps the catalog open for staff to switch back to.
  */
 const STATIC_TOOLS = [
-  { href: "/tools/jaymart/branch-order-validator.html", label: "แปลงไฟล์ PO ลูกค้า" },
+  { href: "/tools/jaymart/branch-order-validator.html", label: "แปลงไฟล์ PO Jaymart" },
 ];
 
 /**
