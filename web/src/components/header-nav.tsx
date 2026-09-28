@@ -20,6 +20,9 @@ const ADMIN_NAV = [
  * Static offline tools (plain HTML/JS under public/tools/, no server logic)
  * open in a new tab rather than through the Next.js router — they're not
  * app routes, and a new tab keeps the catalog open for staff to switch back to.
+ * Gated behind the admin session the same as /admin/** (proxy.ts enforces
+ * this even if someone opens the URL directly), so only shown in the nav
+ * once logged in.
  */
 const STATIC_TOOLS = [
   { href: "/tools/jaymart/branch-order-validator.html", label: "แปลงไฟล์ PO Jaymart" },
@@ -82,17 +85,19 @@ export function HeaderNav({ isAdmin, pendingReports, logoutAction }: HeaderNavPr
             {reportsBadge(item.href)}
           </Link>
         ))}
-        {STATIC_TOOLS.map((tool) => (
-          <a
-            key={tool.href}
-            href={tool.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 border-b-2 border-transparent py-1 text-base text-accent"
-          >
-            {tool.label}
-          </a>
-        ))}
+        {isAdmin
+          ? STATIC_TOOLS.map((tool) => (
+              <a
+                key={tool.href}
+                href={tool.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 border-b-2 border-transparent py-1 text-base text-accent"
+              >
+                {tool.label}
+              </a>
+            ))
+          : null}
       </nav>
 
       <div className="flex items-center gap-3">
@@ -156,18 +161,20 @@ export function HeaderNav({ isAdmin, pendingReports, logoutAction }: HeaderNavPr
               {reportsBadge(item.href)}
             </Link>
           ))}
-          {STATIC_TOOLS.map((tool) => (
-            <a
-              key={tool.href}
-              href={tool.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setMobileOpen(false)}
-              className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent"
-            >
-              {tool.label}
-            </a>
-          ))}
+          {isAdmin
+            ? STATIC_TOOLS.map((tool) => (
+                <a
+                  key={tool.href}
+                  href={tool.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent"
+                >
+                  {tool.label}
+                </a>
+              ))
+            : null}
           {isAdmin ? (
             <form action={logoutAction}>
               <button type="submit" className="w-full rounded-md px-3 py-2 text-left text-base text-muted">

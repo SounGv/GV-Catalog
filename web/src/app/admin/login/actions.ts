@@ -10,16 +10,17 @@ import {
 } from "@/lib/admin-auth";
 
 /**
- * Where to land after login. Only ever an internal /admin/* path (never an
- * attacker-supplied external URL) — and only when it's a *specific* admin
+ * Where to land after login. Only ever an internal /admin/* or /tools/* path
+ * (never an attacker-supplied external URL) — and only when it's a *specific*
  * page someone was deep-linking to (e.g. the proxy bounced them off
- * /admin/products/edit/SKU). The bare "/admin" dashboard is deliberately not
- * treated as a real destination: admins manage everything from the public
- * site itself now, so a plain login (or one bounced off just "/admin") lands
- * on the homepage instead of that now-secondary dashboard.
+ * /admin/products/edit/SKU or a PO converter under /tools/**). The bare
+ * "/admin" dashboard is deliberately not treated as a real destination:
+ * admins manage everything from the public site itself now, so a plain login
+ * (or one bounced off just "/admin") lands on the homepage instead of that
+ * now-secondary dashboard.
  */
 function landingPathAfterLogin(next: FormDataEntryValue | null): string {
-  if (typeof next === "string" && next.startsWith("/admin/")) return next;
+  if (typeof next === "string" && (next.startsWith("/admin/") || next.startsWith("/tools/"))) return next;
   return "/";
 }
 
