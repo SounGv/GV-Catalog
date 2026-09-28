@@ -6,8 +6,9 @@
  document.head.append(style);
  const host=document.createElement('section');host.id='labelTool';host.hidden=true;
  host.innerHTML=`<h2>สติกเกอร์สินค้า 50 × 30 มม. · 2 ดวง/แถว</h2>
- <div class="label-controls"><label>สาขา<select id="labelBranch"></select></label><label>ค้นหารุ่น / บาร์โค้ด<input id="labelSearch" type="search"></label><button id="labelAll">เลือกทั้งหมด</button><button id="labelNone">ล้างการเลือก</button></div>
- <div class="label-grid"><table><thead><tr><th>พิมพ์</th><th>ITEM_CODE</th><th>ชื่อรุ่น</th><th>รายละเอียด / สี</th><th>ดวง</th></tr></thead><tbody id="labelItems"></tbody></table></div>
+ <div class="label-controls"><label>สาขา<select id="labelBranch"></select></label><label>ค้นหารุ่น / บาร์โค้ด<input id="labelSearch" type="search"></label><button id="labelAll">เลือกทั้งหมด</button><button id="labelNone">ล้างการเลือก</button><button id="labelSyncCatalog">ซิงค์บาร์โค้ดจาก Catalog</button></div>
+ <div id="labelCatalogInfo" role="status" style="margin-bottom:10px;font-size:12px"></div>
+ <div class="label-grid"><table><thead><tr><th>พิมพ์</th><th>ITEM_CODE</th><th>ชื่อรุ่น</th><th>รายละเอียด / สี</th><th>ดวง</th><th>ตรวจกับ Catalog</th></tr></thead><tbody id="labelItems"></tbody></table></div>
  <details><summary>ตั้งค่ากระดาษและตำแหน่งพิมพ์</summary><div class="label-controls">
  <label>ช่องว่างกลาง (มม.)<input id="labelGap" type="number" min="0" max="10" step="0.1" value="0"></label>
  <label>ขอบซ้าย (มม.)<input id="labelLeft" type="number" min="0" max="10" step="0.1" value="3"></label>
@@ -16,7 +17,32 @@
  </div><p>หน้าพิมพ์ 106 × 30 มม. · สเกล 100% · ขอบ None · Gap ระหว่างแถวในไดรเวอร์ 3 มม.</p></details>
  <div id="labelStatus" role="status"></div><div class="label-controls"><button id="labelPreviewBtn">ตรวจตัวอย่าง</button><button id="labelPrintBtn">พิมพ์ที่เลือก</button><button id="labelTestBtn">พิมพ์ทดสอบ 1 แถว</button></div><div id="labelPreview"></div>`;
  document.querySelector('.main').prepend(host);
- const $=id=>document.getElementById(id);let report=null,items=[],overrides=new Map();
+ const $=id=>document.getElementById(id);let report=null,items=[],overrides=new Map(),catalogByBarcode=null;
+ const compact=v=>String(v||'').replace(/[^0-9A-Za-z]/g,'').toUpperCase();
+ /**
+  * Informational only: cross-checks each ITEM_CODE against the site's live
+  * Catalog (product_barcodes, retailer 'Jaymart'). Per the Jaymart skill's
+  * invariant, ITEM_CODE stays the barcode of truth printed on the sticker —
+  * this never rewrites x.code, it only tells staff whether Catalog already
+  * has this exact barcode on file for the matching SKU.
+  */
+ async function syncCatalogBarcodes(){
+  const btn=$('labelSyncCatalog'),info=$('labelCatalogInfo');btn.disabled=true;info.textContent='กำลังซิงค์จาก Catalog…';
+  try{
+   const res=await fetch('/api/catalog/barcodes');
+   if(res.status===401){location.href='/admin/login?next='+encodeURIComponent(location.pathname);return}
+   if(!res.ok)throw Error('ซิงค์ไม่สำเร็จ (HTTP '+res.status+')');
+   const data=await res.json(),map=new Map();
+   for(const p of data.rows){const b=p.retailerBarcodes?.Jaymart;if(b)map.set(compact(b),{sku:p.sku,name:p.name})}
+   catalogByBarcode=map;info.textContent=`ซิงค์แล้ว · บาร์โค้ด Jaymart ${map.size.toLocaleString()} รายการใน Catalog`;draw();
+  }catch(e){info.textContent=e.message||'ซิงค์ไม่สำเร็จ'}
+  finally{btn.disabled=false}
+ }
+ function catalogCell(code){
+  if(!catalogByBarcode)return'—';
+  const hit=catalogByBarcode.get(compact(code));
+  return hit?`ตรงกับ SKU ${hit.sku}`:'ยังไม่มีบันทึกใน Catalog';
+ }
  function shortName(desc){
   const sku=(desc.match(/\b\d{5}(?:-?BOX|[A-Z])?\b/i)||[])[0]||'';
   const color=(desc.match(/\b(Black|White|Purple|Grey|Gray|Silver|Blue)\b/i)||[])[0]||'';
@@ -38,7 +64,7 @@
   items=[...map.values()].map(x=>Object.assign(x,overrides.get(`${$('labelBranch').value}:${x.code}`)||{}));$('labelPreview').replaceChildren();draw();
  }
  function draw(){const tbody=$('labelItems');tbody.replaceChildren();const q=$('labelSearch').value.toLowerCase();for(const x of items){if(!`${x.code} ${x.desc} ${x.title}`.toLowerCase().includes(q))continue;const row=document.createElement('tr');const cell=()=>{const td=document.createElement('td');row.append(td);return td;};const check=document.createElement('input');check.type='checkbox';check.checked=x.selected;check.setAttribute('aria-label',`พิมพ์ ${x.code}`);cell().append(check);check.onchange=()=>{x.selected=check.checked;save(x);};cell().textContent=x.code;
-   for(const key of ['title','detail','qty']){const input=document.createElement('input');input.type=key==='qty'?'number':'text';input.value=x[key];input.min='0';input.step='1';input.title=x.desc;input.setAttribute('aria-label',`${key} ${x.code}`);cell().append(input);input.onchange=()=>{x[key]=key==='qty'?Number(input.value):input.value.trim();save(x);};}tbody.append(row);}status();}
+   for(const key of ['title','detail','qty']){const input=document.createElement('input');input.type=key==='qty'?'number':'text';input.value=x[key];input.min='0';input.step='1';input.title=x.desc;input.setAttribute('aria-label',`${key} ${x.code}`);cell().append(input);input.onchange=()=>{x[key]=key==='qty'?Number(input.value):input.value.trim();save(x);};}cell().textContent=catalogCell(x.code);tbody.append(row);}status();}
  function save(x){overrides.set(`${$('labelBranch').value}:${x.code}`,{title:x.title,detail:x.detail,qty:x.qty,selected:x.selected});$('labelPreview').replaceChildren();status();}
  function status(message){const selected=items.filter(x=>x.selected);$('labelStatus').textContent=message||`${selected.length} รุ่น · ${selected.reduce((n,x)=>n+x.qty,0)} ดวง`;}
  function config(){const read=id=>{const e=$(id);if(!e.checkValidity()||e.value==='')throw Error('ตรวจสอบค่าระยะกระดาษ');return Number(e.value);};return {gap:read('labelGap'),left:read('labelLeft'),right:read('labelRight'),y:read('labelY')};}
@@ -64,5 +90,6 @@
  $('orderFile').addEventListener('change',()=>{host.hidden=true;report=null;items=[];clean();});
  $('labelBranch').onchange=rebuild;$('labelSearch').oninput=draw;
  $('labelAll').onclick=()=>{items.forEach(x=>{x.selected=true;save(x);});draw();};$('labelNone').onclick=()=>{items.forEach(x=>{x.selected=false;save(x);});draw();};
+ $('labelSyncCatalog').onclick=syncCatalogBarcodes;
  $('labelPreviewBtn').onclick=()=>{try{preview();}catch(e){$('labelPreview').replaceChildren();status(e.message);}};$('labelPrintBtn').onclick=()=>print(false);$('labelTestBtn').onclick=()=>print(true);
 })();
