@@ -1,23 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { ADMIN_SESSION_COOKIE, isValidAdminSessionToken } from "@/lib/admin-auth";
 import { countReportsByStatus } from "@/lib/reports";
-import { logoutAction } from "@/app/admin/login/actions";
 import { HeaderNav } from "@/components/header-nav";
 
 /**
- * Single site-wide header: logo/title, nav, and (for admins) an account
- * menu with logout — replaces the old plain header plus a separate
- * "โหมดผู้ดูแล" strip stacked underneath it. Staying a server component
- * lets it read the admin session cookie directly; the interactive parts
- * (active link state, dropdown/mobile menus) live in the client-side
- * HeaderNav it renders.
+ * Single site-wide header: logo/title and nav. No login gate — every staff
+ * member sees the same nav (admin pages and the PO/box-label tools) without
+ * a password.
  */
 export async function SiteHeader() {
-  const store = await cookies();
-  const isAdmin = isValidAdminSessionToken(store.get(ADMIN_SESSION_COOKIE)?.value);
-  const pending = isAdmin ? (await countReportsByStatus()).pending : 0;
+  const pending = (await countReportsByStatus()).pending;
 
   return (
     <header className="border-b border-line bg-surface shadow-[var(--shadow-sm)]">
@@ -30,7 +22,7 @@ export async function SiteHeader() {
           </span>
         </Link>
 
-        <HeaderNav isAdmin={isAdmin} pendingReports={pending} logoutAction={logoutAction} />
+        <HeaderNav pendingReports={pending} />
       </div>
     </header>
   );

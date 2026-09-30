@@ -30,7 +30,6 @@
   const btn=$('labelSyncCatalog'),info=$('labelCatalogInfo');btn.disabled=true;info.textContent='กำลังซิงค์จาก Catalog…';
   try{
    const res=await fetch('/api/catalog/barcodes');
-   if(res.status===401){location.href='/admin/login?next='+encodeURIComponent(location.pathname);return}
    if(!res.ok)throw Error('ซิงค์ไม่สำเร็จ (HTTP '+res.status+')');
    const data=await res.json(),map=new Map();
    for(const p of data.rows){const b=p.retailerBarcodes?.Jaymart;if(b)map.set(compact(b),{sku:p.sku,name:p.name})}

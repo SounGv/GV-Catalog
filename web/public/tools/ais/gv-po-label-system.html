@@ -736,7 +736,6 @@ async function syncCatalogBarcodes(){
   el.syncCatalog.disabled=true;el.catalogInfo.textContent='กำลังซิงค์จาก Catalog…';
   try{
     const res=await fetch('/api/catalog/barcodes');
-    if(res.status===401){location.href='/admin/login?next='+encodeURIComponent(location.pathname);return}
     if(!res.ok)throw Error('ซิงค์ไม่สำเร็จ (HTTP '+res.status+')');
     const data=await res.json(),byMaterial=new Map();
     for(const p of data.rows){const b=p.retailerBarcodes?.AIS;if(b)byMaterial.set(compact(b),p)}
