@@ -143,3 +143,34 @@ CREATE TRIGGER products_set_updated_at
   BEFORE UPDATE ON products
   FOR EACH ROW
   EXECUTE FUNCTION set_updated_at();
+
+-- Packaging-supply stock (warranty/MOK stickers, pouches, hooks, tape...) with a
+-- photo and a current quantity per item. `qty` is the live number; every change
+-- is also appended to sticker_stock_log so "who/when/how much" stays traceable.
+CREATE TABLE IF NOT EXISTS stickers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  detail text,
+  image_url text,
+  qty integer NOT NULL DEFAULT 0,
+  note text,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS sticker_stock_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sticker_id uuid NOT NULL REFERENCES stickers (id) ON DELETE CASCADE,
+  qty_before integer NOT NULL,
+  qty_after integer NOT NULL,
+  reason text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS sticker_stock_log_sticker_idx ON sticker_stock_log (sticker_id, created_at DESC);
+
+DROP TRIGGER IF EXISTS stickers_set_updated_at ON stickers;
+CREATE TRIGGER stickers_set_updated_at
+  BEFORE UPDATE ON stickers
+  FOR EACH ROW
+  EXECUTE FUNCTION set_updated_at();
