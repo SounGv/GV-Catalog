@@ -3,3 +3,5 @@
 @media(max-width:850px){.workspace{grid-template-columns:1fr}.sidebar{border-right:0;display:grid;grid-template-columns:1fr 1fr;gap:18px}.sidebar section{margin-bottom:0}.main{padding:14px}.stats{grid-template-columns:1fr 1fr}.sheet{margin-left:0}.tabs button{padding:10px}.view-heading{flex-wrap:wrap}}@media(max-width:480px){.sidebar{grid-template-columns:1fr}.app-header{padding:10px 14px}.stats>div{padding:12px}.stats strong{font-size:22px}}
 @page{size:A4 portrait;margin:0}@media print{body{background:white}.app-header,.workspace,.measure{display:none!important}#printPages{display:block}.sheet{width:210mm;height:296mm;margin:0;box-shadow:none;break-after:page;break-inside:avoid}.sheet:last-child{break-after:auto}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .pill.unchecked{background:#eef3f0;color:#5b6a62}
+input[type=number]{width:100%;padding:9px;border:1px solid #bdccc5;background:white;border-radius:4px;color:inherit}
+@media print{a[href="/"]{display:none!important}}

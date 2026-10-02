@@ -56,9 +56,10 @@ function rowHtml(r,index){
   return `<tr data-part="${esc(r.part)}"><td>${index}</td><td>${esc(r.part)}</td><td>${esc(r.description)}${note}</td><td>${r.qty}</td></tr>`;
 }
 function pageHtml(doc){return `<article class="sheet" data-branch="${esc(doc.branch)}"><header class="document-header"><div class="company"><img src="logo.jpeg" alt="Gadget Villa"><div><strong>บริษัท แก็ดเจ็ต วิลล่า จำกัด</strong><span>Gadget Villa Co., Ltd.</span></div></div><div class="document-title"><h2>ใบสรุปส่งของ</h2></div><address class="company-address"><span>729/28-37 ถนนรัชดาภิเษก แขวงบางโพงพาง เขตยานนาวา กรุงเทพฯ 10120</span><span>โทร. 02-284-1027 · แฟกซ์ 02-284-1027 · เลขประจำตัวผู้เสียภาษี 0105557008364</span></address></header><section class="branch"><div><h3>${esc(doc.name)}</h3><div class="branch-code">รหัสสาขา <strong>${esc(doc.branch)}</strong></div></div><dl class="meta"><dt>เลข PO</dt><dd>${esc(doc.po||'ยังไม่ยืนยัน')}</dd><dt>วันที่ PO</dt><dd>${esc(doc.date||'—')}</dd></dl></section><table class="items"><colgroup><col><col><col><col></colgroup><thead><tr><th>ลำดับ</th><th>รหัสสินค้า</th><th>รายการสินค้า</th><th>จำนวน<br>(ชิ้น)</th></tr></thead><tbody></tbody></table><div class="sheet-spacer"></div><div class="sheet-bottom"><div class="page-total"><span>รวมหน้านี้ <b class="page-items">0</b> รายการ</span><span><b class="page-qty">0</b> ชิ้น</span></div><div class="doc-total"><span>รวมเอกสารนี้ ${doc.items.length} รายการ</span><span>${C.sum(doc.items)} ชิ้น</span></div>${$('includeTrb').checked?`<div class="references"><span>TRB</span><strong>${esc(doc.trb||(doc.po?'ส่งตรงสาขา (ไม่มี TRB)':'ยังไม่ยืนยัน'))}</strong></div>`:''}<div class="signatures"><div><div class="line"></div>ผู้ส่งสินค้า<br>วันที่ ................................</div><div><div class="line"></div>ผู้รับสินค้า<br>วันที่ ................................</div></div><footer class="page-footer"><span>${esc(doc.branch)} · ${esc(doc.po||doc.file)}</span><span class="page-number"></span></footer></div></article>`}
-function makePages(docs,container){
+function copyCount(){return Math.max(1,Math.min(20,parseInt($('copies').value,10)||1))}
+function makePages(docs,container,copies=1){
   container.replaceChildren();
-  for(const doc of docs){
+  for(const doc of docs)for(let copy=0;copy<copies;copy++){
     const pages=[];
     function add(){container.insertAdjacentHTML('beforeend',pageHtml(doc));const el=container.lastElementChild;pages.push({el,rows:[]});return pages.at(-1)}
     let current=add();
@@ -86,14 +87,14 @@ function render(){
   $('branchCount').textContent=new Set(state.lines.map(r=>r.branch)).size;$('lineCount').textContent=state.lines.length;$('qtyCount').textContent=C.sum(state.lines).toLocaleString();
   $('issueCount').textContent=state.lines.filter(r=>r.check.status==='relabel').length+' / '+state.lines.filter(r=>r.check.status==='review').length;
   $('warnings').innerHTML=state.orders.flatMap(o=>o.warnings).map(w=>`<div class="alert">${esc(w)}</div>`).join('');
-  const branch=$('branchSelect').value;$('printScope').textContent=branch||'ทุกสาขา';
+  const branch=$('branchSelect').value;$('printScope').textContent=(branch||'ทุกสาขา')+' × '+copyCount()+' ใบ/สาขา';
   $('printButton').disabled=$('exportButton').disabled=!state.lines.length||state.busy;
   renderTables();renderDelivery();switchView(state.view);
 }
 async function print(){
   if(state.busy||!state.lines.length)return;error('');
   const container=$('printPages');
-  try{await document.fonts.ready;container.classList.add('measure');makePages(C.documents(selectedLines()),container);await Promise.all([...container.querySelectorAll('img')].map(i=>i.decode()));container.classList.remove('measure');await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));window.print()}
+  try{await document.fonts.ready;container.classList.add('measure');makePages(C.documents(selectedLines()),container,copyCount());await Promise.all([...container.querySelectorAll('img')].map(i=>i.decode()));container.classList.remove('measure');await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));window.print()}
   catch(e){container.classList.remove('measure');error(e.message)}
 }
 function exportWorkbook(){
@@ -113,7 +114,8 @@ $('branchSelect').addEventListener('change',()=>{error('');render()});
 for(const id of ['search','statusSelect'])$(id).addEventListener('input',()=>{clearTimeout(renderTimer);renderTimer=setTimeout(renderTables,100)});
 for(const id of ['includeTrb','includeChecks'])$(id).addEventListener('change',()=>{error('');try{renderDelivery()}catch(e){error(e.message)}});
 for(const btn of document.querySelectorAll('[data-view]'))btn.addEventListener('click',()=>switchView(btn.dataset.view));
+$('copies').addEventListener('input',()=>{$('printScope').textContent=($('branchSelect').value||'ทุกสาขา')+' × '+copyCount()+' ใบ/สาขา'});
 $('printButton').addEventListener('click',print);$('exportButton').addEventListener('click',exportWorkbook);
-window.addEventListener('beforeprint',()=>{const container=$('printPages');try{container.classList.add('measure');makePages(C.documents(selectedLines()),container)}catch(e){container.replaceChildren();error(e.message)}finally{container.classList.remove('measure')}});
+window.addEventListener('beforeprint',()=>{const container=$('printPages');try{container.classList.add('measure');makePages(C.documents(selectedLines()),container,copyCount())}catch(e){container.replaceChildren();error(e.message)}finally{container.classList.remove('measure')}});
 document.fonts.ready.then(()=>setOrders([structuredClone(IT_CITY_DEMO)],true)).catch(e=>error(e.message));
 })();
