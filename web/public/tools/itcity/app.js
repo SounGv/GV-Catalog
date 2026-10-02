@@ -3,6 +3,11 @@
 const C=window.ITCity,$=id=>document.getElementById(id),esc=v=>C.text(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const state={master:IT_CITY_MASTER.rows,masterName:IT_CITY_MASTER.file,orders:[],lines:[],view:'delivery',busy:false};
 let task=0,renderTimer;
+const kindOf=r=>r.trb?'pickpack':'direct',kindLabel={direct:'ส่งตรงสาขา',pickpack:'Pickpack'};
+function branchKinds(){const m=new Map();for(const r of state.lines)if(!m.has(r.branch))m.set(r.branch,{name:r.branchName,kind:kindOf(r)});return m}
+function fillKinds(){const m=branchKinds(),n=k=>[...m.values()].filter(b=>b.kind===k).length,keep=$('kindSelect').value;$('kindSelect').innerHTML=`<option value="">ทุกประเภท (${m.size})</option><option value="direct">ส่งตรงสาขา (${n('direct')})</option><option value="pickpack">Pickpack / TRB (${n('pickpack')})</option>`;$('kindSelect').value=keep&&n(keep)?keep:''}
+function fillBranches(){const kind=$('kindSelect').value,rows=[...branchKinds().entries()].filter(([,b])=>!kind||b.kind===kind).sort();$('branchSelect').innerHTML='<option value="">ทุกสาขา</option>'+rows.map(([id,b])=>`<option value="${esc(id)}">${esc((kind?'':'['+kindLabel[b.kind]+'] ')+id+' · '+b.name)}</option>`).join('')}
+function scopeText(){const kind=$('kindSelect').value,branch=$('branchSelect').value;return (kind?kindLabel[kind]+' · ':'')+(branch||'ทุกสาขา')+' × '+copyCount()+' ใบ/สาขา'}
 const statusLabel={match:'ตรงกัน',relabel:'ต้องเปลี่ยนบาร์โค้ด',review:'ต้องตรวจสอบ',unchecked:'ไม่มีบาร์ลูกค้า'};
 function error(message){$('error').textContent=message;$('error').hidden=!message}
 function busy(value){state.busy=value;$('loading').hidden=!value;for(const id of ['orderFiles','masterFile','sampleButton','resetMaster','syncMaster','printButton','exportButton'])$(id).disabled=value;$('printButton').disabled=$('exportButton').disabled=value||!state.lines.length}
@@ -10,7 +15,7 @@ function rematch(){const match=C.makeMatcher(state.master);state.lines=C.combine
 function setOrders(orders,sample=false){
   C.combine(orders);state.orders=orders;rematch();
   $('fileNames').textContent=(sample?'ไฟล์ตัวอย่าง · ':'')+orders.map(o=>o.file).join('\n');
-  $('branchSelect').innerHTML='<option value="">ทุกสาขา</option>'+[...new Map(state.lines.map(r=>[r.branch,r.branchName])).entries()].sort().map(([id,name])=>`<option value="${esc(id)}">${esc(id+' · '+name)}</option>`).join('');
+  fillKinds();fillBranches();
   $('search').value='';$('statusSelect').value='';render();
 }
 async function readWorkbook(file){
@@ -28,10 +33,10 @@ async function readWorkbook(file){
 async function loadOrders(files){
   if(!files.length)return;const ticket=++task;busy(true);error('');
   try{const orders=[];for(const file of files){orders.push(C.parseOrder(await readWorkbook(file),file.name))}await document.fonts.ready;if(ticket===task)setOrders(orders)}
-  catch(e){if(ticket===task){state.orders=[];state.lines=[];$('fileNames').textContent='อ่านไฟล์ไม่สำเร็จ';$('branchSelect').innerHTML='<option value="">ทุกสาขา</option>';render();error(e.message)}}
+  catch(e){if(ticket===task){state.orders=[];state.lines=[];$('fileNames').textContent='อ่านไฟล์ไม่สำเร็จ';fillKinds();fillBranches();render();error(e.message)}}
   finally{if(ticket===task)busy(false)}
 }
-function selectedLines(){const branch=$('branchSelect').value;return state.lines.filter(r=>!branch||r.branch===branch)}
+function selectedLines(){const branch=$('branchSelect').value,kind=$('kindSelect').value;return state.lines.filter(r=>(!branch||r.branch===branch)&&(!kind||kindOf(r)===kind))}
 function filteredLines(){const search=C.key($('search').value),status=$('statusSelect').value;return selectedLines().filter(r=>(!status||r.check.status===status)&&(!search||C.key([r.branch,r.part,r.description,r.check.sku,r.check.systemBarcode,r.customerBarcode].join(' ')).includes(search)))}
 function badge(check){return `<span class="pill ${check.status}">${esc(statusLabel[check.status])}</span>`}
 function matrixData(lines){
@@ -46,7 +51,7 @@ function renderTables(){
   const heads=['รหัสลูกค้า','รายการสินค้า','SKU ระบบ',...matrix.branches,'รวมชิ้น'];
   $('matrixTable').innerHTML=`<thead><tr>${heads.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${matrix.rows.map(r=>`<tr>${[r.part,r.description,r.sku||'—',...matrix.branches.map(b=>r.qty.get(b)||''),r.total].map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody><tfoot><tr><th colspan="3">รวมจำนวนสินค้า</th>${matrix.branches.map(b=>`<th>${C.sum(lines.filter(r=>r.branch===b))}</th>`).join('')}<th>${C.sum(lines)}</th></tr></tfoot>`;
   $('checkCount').textContent=`${lines.length} รายการรายสาขา · ${C.sum(lines)} ชิ้น`;
-  $('checkTable').innerHTML=`<thead><tr>${['สาขา / TRB','รหัสลูกค้า / รายการ','จำนวน','SKU ระบบ','บาร์ระบบ','บาร์ลูกค้า','ผลตรวจ'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${lines.map(r=>`<tr><td>${esc(r.branch)}<div class="small">${esc(r.trb)}</div></td><td>${esc(r.part)}<div class="small">${esc(r.description)}</div></td><td>${r.qty}</td><td>${esc(r.check.sku||'—')}</td><td>${esc(r.check.systemBarcode||'—')}</td><td>${esc(r.customerBarcode||'—')}</td><td>${badge(r.check)}<div class="small">${esc(r.check.reason)}</div>${r.check.status==='relabel'?'<div class="small">ยืนยันบาร์ลูกค้าก่อนเปลี่ยน</div>':''}</td></tr>`).join('')}</tbody>`;
+  $('checkTable').innerHTML=`<thead><tr>${['สาขา / TRB','รหัสลูกค้า / รายการ','จำนวน','SKU ระบบ','บาร์ระบบ','บาร์ลูกค้า','ผลตรวจ'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${lines.map(r=>`<tr><td>${esc(r.branch)}<div class="small">${esc(r.trb||kindLabel[kindOf(r)])}</div></td><td>${esc(r.part)}<div class="small">${esc(r.description)}</div></td><td>${r.qty}</td><td>${esc(r.check.sku||'—')}</td><td>${esc(r.check.systemBarcode||'—')}</td><td>${esc(r.customerBarcode||'—')}</td><td>${badge(r.check)}<div class="small">${esc(r.check.reason)}</div>${r.check.status==='relabel'?'<div class="small">ยืนยันบาร์ลูกค้าก่อนเปลี่ยน</div>':''}</td></tr>`).join('')}</tbody>`;
 }
 function rowHtml(r,index){
   const ck=r.check;let note='';
@@ -87,7 +92,7 @@ function render(){
   $('branchCount').textContent=new Set(state.lines.map(r=>r.branch)).size;$('lineCount').textContent=state.lines.length;$('qtyCount').textContent=C.sum(state.lines).toLocaleString();
   $('issueCount').textContent=state.lines.filter(r=>r.check.status==='relabel').length+' / '+state.lines.filter(r=>r.check.status==='review').length;
   $('warnings').innerHTML=state.orders.flatMap(o=>o.warnings).map(w=>`<div class="alert">${esc(w)}</div>`).join('');
-  const branch=$('branchSelect').value;$('printScope').textContent=(branch||'ทุกสาขา')+' × '+copyCount()+' ใบ/สาขา';
+  $('printScope').textContent=scopeText();
   $('printButton').disabled=$('exportButton').disabled=!state.lines.length||state.busy;
   renderTables();renderDelivery();switchView(state.view);
 }
@@ -102,7 +107,7 @@ function exportWorkbook(){
   const sheet=(name,rows,widths)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=widths.map(wch=>({wch}));ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length-1,c:rows[0].length-1}})};XLSX.utils.book_append_sheet(wb,ws,name)};
   sheet('Order Matrix',[['รหัสสินค้า IT CITY','รายการสินค้า','SKU ระบบ',...m.branches,'รวมชิ้น'],...m.rows.map(r=>[r.part,r.description,r.sku,...m.branches.map(b=>r.qty.get(b)||0),r.total])],[20,70,22,...m.branches.map(()=>12),14]);
   sheet('ตรวจบาร์โค้ด',[['สาขา','ชื่อสาขา','PO','TRB','รหัสลูกค้า','รายการสินค้า','จำนวน','SKU ระบบ','GTIN ระบบ','บาร์ลูกค้า','สถานะ','หมายเหตุ','ไฟล์ต้นทาง','ชีต','แถวต้นทาง'],...lines.map(r=>[r.branch,r.branchName,r.po,r.trb,r.part,r.description,r.qty,r.check.sku,r.check.systemBarcode,r.customerBarcode,statusLabel[r.check.status],r.check.reason+(r.check.status==='relabel'?' · ยืนยันบาร์ลูกค้าก่อนเปลี่ยน':''),r.file,r.sheet,r.sourceRows.join(', ')])],[12,40,25,28,20,70,10,22,22,40,24,65,70,20,16]);
-  const docs=C.documents(lines);sheet('สรุปรายสาขา',[['สาขา','ชื่อสาขา','PO','TRB','รายการ','ชิ้น','ต้องเปลี่ยนบาร์','ต้องตรวจสอบ'],...docs.map(d=>[d.branch,d.name,d.po,d.trb,d.items.length,C.sum(d.items),d.items.filter(r=>r.check.status==='relabel').length,d.items.filter(r=>r.check.status==='review').length])],[12,40,25,28,12,12,20,20]);
+  const docs=C.documents(lines);sheet('สรุปรายสาขา',[['สาขา','ชื่อสาขา','ประเภทการส่ง','PO','TRB','รายการ','ชิ้น','ต้องเปลี่ยนบาร์','ต้องตรวจสอบ'],...docs.map(d=>[d.branch,d.name,kindLabel[d.trb?'pickpack':'direct'],d.po,d.trb,d.items.length,C.sum(d.items),d.items.filter(r=>r.check.status==='relabel').length,d.items.filter(r=>r.check.status==='review').length])],[12,40,16,25,28,12,12,20,20]);
   const bytes=XLSX.write(wb,{bookType:'xlsx',type:'array'}),url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),a=document.createElement('a');a.href=url;a.download='IT-CITY_Order-Matrix.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 $('orderFiles').addEventListener('change',e=>loadOrders([...e.target.files]));
@@ -111,10 +116,11 @@ $('resetMaster').addEventListener('click',()=>{state.master=IT_CITY_MASTER.rows;
 $('syncMaster').addEventListener('click',async()=>{busy(true);error('');try{const res=await fetch('/api/catalog/barcodes');if(!res.ok)throw Error('ซิงค์ไม่สำเร็จ (HTTP '+res.status+')');const data=await res.json();state.master=data.rows;state.masterName=data.file;$('masterFile').value='';rematch();render()}catch(e){error(e.message+' · ยังคงใช้ฐาน SKU เดิม')}finally{busy(false)}});
 $('sampleButton').addEventListener('click',()=>{error('');$('orderFiles').value='';setOrders([structuredClone(IT_CITY_DEMO)],true)});
 $('branchSelect').addEventListener('change',()=>{error('');render()});
+$('kindSelect').addEventListener('change',()=>{error('');fillBranches();render()});
 for(const id of ['search','statusSelect'])$(id).addEventListener('input',()=>{clearTimeout(renderTimer);renderTimer=setTimeout(renderTables,100)});
 for(const id of ['includeTrb','includeChecks'])$(id).addEventListener('change',()=>{error('');try{renderDelivery()}catch(e){error(e.message)}});
 for(const btn of document.querySelectorAll('[data-view]'))btn.addEventListener('click',()=>switchView(btn.dataset.view));
-$('copies').addEventListener('input',()=>{$('printScope').textContent=($('branchSelect').value||'ทุกสาขา')+' × '+copyCount()+' ใบ/สาขา'});
+$('copies').addEventListener('input',()=>{$('printScope').textContent=scopeText()});
 $('printButton').addEventListener('click',print);$('exportButton').addEventListener('click',exportWorkbook);
 window.addEventListener('beforeprint',()=>{const container=$('printPages');try{container.classList.add('measure');makePages(C.documents(selectedLines()),container,copyCount())}catch(e){container.replaceChildren();error(e.message)}finally{container.classList.remove('measure')}});
 document.fonts.ready.then(()=>setOrders([structuredClone(IT_CITY_DEMO)],true)).catch(e=>error(e.message));
