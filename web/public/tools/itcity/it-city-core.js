@@ -31,20 +31,28 @@ function parseMaster(sheets){
 function parseOrder(sheets,file){
   const matrices=[],transfers=[],pos=[];
   for(const s of sheets){
-    const mh=header(s.rows,['PRODUCT_CODE','PRODUCT_NAME']);
+    const mh=header(s.rows,['PRODUCT_CODE']);
     if(mh){
       const branches=[];
       (s.rows[mh.row]||[]).forEach((v,col)=>{if(/^W[A-Z0-9]+$/i.test(text(v)))branches.push({id:key(v),col,name:text(s.rows[mh.row-1]?.[col])||key(v)})});
-      if(!branches.length)continue;
-      const title=s.rows.slice(0,mh.row+1).flat().map(text).join(' '),po=title.match(/\bPO[A-Z0-9]+\b/i)?.[0]||'',date=title.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/)?.[0]||'';
-      const trbRow=s.rows.find(r=>head(r[0])==='TRB')||[];
-      const lines=[];
-      for(let i=mh.row+1;i<s.rows.length;i++){
-        const r=s.rows[i],part=text(r[mh.index('PRODUCT_CODE')]),description=text(r[mh.index('PRODUCT_NAME')]);
-        if(!part||!description||/^(TT AMOUNT|TOTAL|TRB|GRAND TOTAL)$/i.test(part))continue;
-        for(const b of branches){const n=qty(r[b.col],`${file} / ${s.name} / แถว ${i+1}`);if(n)lines.push({branch:b.id,branchName:b.name,part,description,qty:n,trb:text(trbRow[b.col]),po,date,file,sourceRow:i+1,sheet:s.name,customerBarcode:''})}
+      if(branches.length){
+        const codeCol=mh.index('PRODUCT_CODE'),nameCol=mh.index('PRODUCT_NAME')>=0?mh.index('PRODUCT_NAME'):codeCol+1;
+        const title=s.rows.slice(0,mh.row+1).flat().map(text).join(' '),titlePo=title.match(/\bPO[A-Z0-9]+\b/i)?.[0]||'',date=title.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/)?.[0]||'';
+        // Footer rows ("TRB" / "TRB NO" / "PO NO") carry one reference per branch column.
+        const refRow=pattern=>s.rows.find(r=>pattern.test(head(r[0])))||[];
+        const trbRow=refRow(/^TRB(NO)?$/),poRow=refRow(/^PONO$/);
+        const lines=[];
+        for(let i=mh.row+1;i<s.rows.length;i++){
+          const r=s.rows[i],part=text(r[codeCol]),description=text(r[nameCol]);
+          if(!part||!description||/^(TT AMOUNT|TOTAL|TRB|TRB NO|PO NO|GRAND TOTAL)$/i.test(part))continue;
+          for(const b of branches){
+            const n=qty(r[b.col],`${file} / ${s.name} / แถว ${i+1}`);if(!n)continue;
+            const trb=/^TRB/i.test(text(trbRow[b.col]))?text(trbRow[b.col]):'',po=/^PO/i.test(text(poRow[b.col]))?text(poRow[b.col]):titlePo;
+            lines.push({branch:b.id,branchName:b.name,part,description,qty:n,trb,po,date,file,sourceRow:i+1,sheet:s.name,customerBarcode:''});
+          }
+        }
+        matrices.push({lines,branches,date,hasTrb:lines.some(l=>l.trb),sheet:s.name});
       }
-      matrices.push({lines,branches,po,date});
     }
     const th=header(s.rows,['TO_WH','PART_NO','ORDERED','ITEM_DESCRIPTION']);
     if(th)for(let i=th.row+1;i<s.rows.length;i++){
@@ -59,35 +67,61 @@ function parseOrder(sheets,file){
       const r=s.rows[i];if(text(r[ph.index('PO_NO')]))pos.push({po:text(r[ph.index('PO_NO')]),part:text(r[ph.index('Item_Code')]),qty:qty(r[ph.index('PO_Qty')],`${file} / PO / ${i+1}`)});
     }
   }
-  if(matrices.length>1)throw Error(`${file}: พบหลายตาราง PR กรุณาแยกไฟล์ตาม PO ก่อน`);
-  const matrix=matrices[0],warnings=[];
-  let lines;
+  const warnings=[],trbMatrices=matrices.filter(m=>m.hasTrb),directMatrices=matrices.filter(m=>!m.hasTrb);
+  const tally=list=>{const m=new Map();for(const r of list){const k=groupKey(r.branch,r.part);m.set(k,(m.get(k)||0)+r.qty)}return m};
+  const sameTally=(a,b)=>[...new Set([...a.keys(),...b.keys()])].filter(k=>(a.get(k)||0)!==(b.get(k)||0));
+  const lines=[];
+  let legacyBase=false;
   if(transfers.length){
-    lines=transfers;
-    if(matrix){
-      const refs=new Set(matrix.lines.map(r=>r.trb).filter(Boolean));
+    // PR tables with TRB numbers (pick-pack) must reconcile with the TRB sheet; a single
+    // PR table with no TRB row keeps the legacy behaviour of being the comparison base.
+    legacyBase=!trbMatrices.length&&matrices.length===1;
+    const compare=trbMatrices.length?trbMatrices:(legacyBase?matrices:[]);
+    const prLines=compare.flatMap(m=>m.lines);
+    if(prLines.length){
+      const refs=new Set(prLines.map(r=>r.trb).filter(Boolean));
       if(refs.size){
-        const outside=lines.filter(r=>!refs.has(r.trb));
+        const outside=transfers.filter(r=>!refs.has(r.trb));
         if(outside.length)throw Error(`${file}: มี TRB ${outside.length} แถวนอกตาราง PR กรุณาแยก PO ให้ตรงกัน`);
       }
-      const tally=list=>{const m=new Map();for(const r of list){const k=groupKey(r.branch,r.part);m.set(k,(m.get(k)||0)+r.qty)}return m};
-      const a=tally(matrix.lines),b=tally(lines),diff=[...new Set([...a.keys(),...b.keys()])].filter(k=>(a.get(k)||0)!==(b.get(k)||0));
+      const diff=sameTally(tally(prLines),tally(transfers));
       if(diff.length)throw Error(`${file}: จำนวน PR กับ TRB ไม่ตรงกัน ${diff.length} รายการ (${diff.slice(0,3).map(k=>JSON.parse(k).join(' / ')).join(', ')})`);
-      for(const r of lines){r.po=matrix.po;r.date=matrix.date||r.date;r.branchName=matrix.branches.find(b=>b.id===r.branch)?.name||r.branch}
+      const names=new Map(compare.flatMap(m=>m.branches.map(b=>[b.id,b.name])));
+      for(const r of transfers){r.branchName=names.get(r.branch)||r.branch;r.date=compare[0].date||r.date}
+      if(legacyBase)for(const r of transfers)r.po=prLines[0].po;
     }else warnings.push(`${file}: ไม่มีตาราง PR ใช้จำนวนจาก TRB และแสดงรหัสสาขาแทนชื่อ`);
-  }else if(matrix){lines=matrix.lines;warnings.push(`${file}: ไม่มีชีต TRB จึงยังตรวจบาร์โค้ดลูกค้าไม่ได้`)}
-  else throw Error(`${file}: ไม่พบตาราง PR หรือ TRB ที่ระบุสาขาปลายทาง (ชีต PO อย่างเดียวไม่ระบุยอดรายสาขา)`);
-  if(!lines.length)throw Error(`${file}: ไม่พบจำนวนสั่งที่มากกว่า 0`);
-  if(!lines[0].po){const poIds=[...new Set(pos.map(r=>r.po))];if(poIds.length===1)for(const r of lines)r.po=poIds[0];else warnings.push(`${file}: ยังยืนยันเลข PO ไม่ได้`)}
-  const activePO=lines[0].po,poLines=pos.filter(r=>r.po===activePO);
-  if(poLines.length){
-    const tally=new Map();for(const r of lines)tally.set(r.part,(tally.get(r.part)||0)+r.qty);
-    const expected=new Map();for(const r of poLines)expected.set(r.part,(expected.get(r.part)||0)+r.qty);
-    const diff=[...new Set([...tally.keys(),...expected.keys()])].filter(k=>(tally.get(k)||0)!==(expected.get(k)||0));
-    if(diff.length)throw Error(`${file}: ยอดกระจายสาขาไม่ตรงกับ PO ${activePO} จำนวน ${diff.length} รายการ`);
-    const unrelated=[...new Set(pos.filter(r=>r.po!==activePO).map(r=>r.po))];
-    if(unrelated.length)warnings.push(`${file}: ไม่รวม PO อื่นที่ไม่มีการกระจายสาขาใน PR นี้: ${unrelated.join(', ')}`);
+    lines.push(...transfers);
+  }else if(trbMatrices.length){
+    lines.push(...trbMatrices.flatMap(m=>m.lines));
+    warnings.push(`${file}: ไม่มีชีต TRB จึงยังตรวจบาร์โค้ดลูกค้าไม่ได้`);
   }
+  if(!legacyBase&&directMatrices.length){
+    const direct=directMatrices.flatMap(m=>m.lines);
+    lines.push(...direct);
+    if(direct.length)warnings.push(`${file}: ส่งตรงสาขา ${new Set(direct.map(r=>r.branch)).size} สาขา (ไม่มี TRB / ไม่มีบาร์โค้ดลูกค้าให้ตรวจ)`);
+  }
+  if(!transfers.length&&!matrices.length)throw Error(`${file}: ไม่พบตาราง PR หรือ TRB ที่ระบุสาขาปลายทาง (ชีต PO อย่างเดียวไม่ระบุยอดรายสาขา)`);
+  if(!lines.length)throw Error(`${file}: ไม่พบจำนวนสั่งที่มากกว่า 0`);
+  // Lines without a PO number (pick-pack/TRB): take the one PO in the PO sheet not already claimed by a direct branch.
+  const claimed=new Set(lines.map(r=>r.po).filter(Boolean)),poIds=[...new Set(pos.map(r=>r.po))];
+  const missingPo=lines.filter(r=>!r.po);
+  if(missingPo.length){
+    const free=poIds.filter(p=>!claimed.has(p));
+    if(free.length===1)for(const r of missingPo)r.po=free[0];
+    else if(poIds.length===1)for(const r of missingPo)r.po=poIds[0];
+    else warnings.push(`${file}: ยังยืนยันเลข PO ไม่ได้`);
+  }
+  const used=new Set(lines.map(r=>r.po).filter(Boolean));
+  for(const po of used){
+    const poLines=pos.filter(r=>r.po===po);if(!poLines.length)continue;
+    const mine=lines.filter(r=>r.po===po),got=new Map(),expected=new Map();
+    for(const r of mine)got.set(r.part,(got.get(r.part)||0)+r.qty);
+    for(const r of poLines)expected.set(r.part,(expected.get(r.part)||0)+r.qty);
+    const diff=[...new Set([...got.keys(),...expected.keys()])].filter(k=>(got.get(k)||0)!==(expected.get(k)||0));
+    if(diff.length)throw Error(`${file}: ยอดกระจายสาขาไม่ตรงกับ PO ${po} จำนวน ${diff.length} รายการ (${diff.slice(0,3).join(', ')})`);
+  }
+  const unrelated=poIds.filter(p=>!used.has(p));
+  if(unrelated.length)warnings.push(`${file}: ไม่รวม PO อื่นที่ไม่มีการกระจายสาขาใน PR นี้: ${unrelated.join(', ')}`);
   // Keep raw rows for audit; aggregate only within the same PO/TRB/branch/part.
   const grouped=new Map();
   for(const r of lines){

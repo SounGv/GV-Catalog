@@ -15,7 +15,13 @@ function setOrders(orders,sample=false){
 }
 async function readWorkbook(file){
   if(file.size>30*1024*1024)throw Error(`${file.name}: ไฟล์ใหญ่กว่า 30 MB`);
-  const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});
+  const buf=await file.arrayBuffer();
+  let wb;
+  if(/\.(csv|tsv|txt)$/i.test(file.name)){
+    // Thai CSV is often saved as ANSI (Windows-874) rather than UTF-8; raw:true keeps codes like 000123 as text.
+    let content;try{content=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch{content=new TextDecoder('windows-874').decode(buf)}
+    wb=XLSX.read(content,{type:'string',raw:true});
+  }else wb=XLSX.read(buf,{type:'array',cellDates:false});
   return wb.SheetNames.map(name=>({name,rows:XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:true,blankrows:true})}));
 }
 async function loadOrders(files){
