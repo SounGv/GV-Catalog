@@ -64,7 +64,7 @@ function parseOrder(sheets,file){
     }
     const ph=header(s.rows,['PO_NO','Item_Code','PO_Qty']);
     if(ph)for(let i=ph.row+1;i<s.rows.length;i++){
-      const r=s.rows[i];if(text(r[ph.index('PO_NO')]))pos.push({po:text(r[ph.index('PO_NO')]),part:text(r[ph.index('Item_Code')]),qty:qty(r[ph.index('PO_Qty')],`${file} / PO / ${i+1}`)});
+      const r=s.rows[i];if(text(r[ph.index('PO_NO')]))pos.push({po:text(r[ph.index('PO_NO')]),part:text(r[ph.index('Item_Code')]),qty:qty(r[ph.index('PO_Qty')],`${file} / PO / ${i+1}`),date:ph.index('PO_Date')>=0?text(r[ph.index('PO_Date')]).slice(0,10):''});
     }
   }
   const warnings=[],trbMatrices=matrices.filter(m=>m.hasTrb),directMatrices=matrices.filter(m=>!m.hasTrb);
@@ -112,6 +112,9 @@ function parseOrder(sheets,file){
     else warnings.push(`${file}: ยังยืนยันเลข PO ไม่ได้`);
   }
   const used=new Set(lines.map(r=>r.po).filter(Boolean));
+  // The PO sheet's PO_Date is the authoritative "วันที่ PO"; the TRB entry date and table titles are only fallbacks.
+  const poDate=new Map(pos.filter(r=>r.date).map(r=>[r.po,r.date]));
+  for(const r of lines)r.date=poDate.get(r.po)||r.date;
   for(const po of used){
     const poLines=pos.filter(r=>r.po===po);if(!poLines.length)continue;
     const mine=lines.filter(r=>r.po===po),got=new Map(),expected=new Map();
