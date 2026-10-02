@@ -3,7 +3,7 @@
 const C=window.ITCity,$=id=>document.getElementById(id),esc=v=>C.text(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const state={master:IT_CITY_MASTER.rows,masterName:IT_CITY_MASTER.file,orders:[],lines:[],view:'delivery',busy:false};
 let task=0,renderTimer;
-const statusLabel={match:'ตรงกัน',relabel:'ต้องเปลี่ยนบาร์โค้ด',review:'ต้องตรวจสอบ'};
+const statusLabel={match:'ตรงกัน',relabel:'ต้องเปลี่ยนบาร์โค้ด',review:'ต้องตรวจสอบ',unchecked:'ไม่มีบาร์ลูกค้า'};
 function error(message){$('error').textContent=message;$('error').hidden=!message}
 function busy(value){state.busy=value;$('loading').hidden=!value;for(const id of ['orderFiles','masterFile','sampleButton','resetMaster','syncMaster','printButton','exportButton'])$(id).disabled=value;$('printButton').disabled=$('exportButton').disabled=value||!state.lines.length}
 function rematch(){const match=C.makeMatcher(state.master);state.lines=C.combine(state.orders).map(r=>({...r,check:match(r)}))}
@@ -15,6 +15,7 @@ function setOrders(orders,sample=false){
 }
 async function readWorkbook(file){
   if(file.size>30*1024*1024)throw Error(`${file.name}: ไฟล์ใหญ่กว่า 30 MB`);
+  if(/\.pdf$/i.test(file.name))return PdfRows.read(file);
   const buf=await file.arrayBuffer();
   let wb;
   if(/\.(csv|tsv|txt)$/i.test(file.name)){
@@ -50,11 +51,11 @@ function renderTables(){
 function rowHtml(r,index){
   const ck=r.check;let note='';
   if($('includeChecks').checked){
-    if(ck.status!=='match')note+=`<div class="barcode-note ${ck.status}">${esc(statusLabel[ck.status])}${ck.status==='relabel'?' · ยืนยันบาร์ลูกค้าก่อนเปลี่ยน':''}</div><div class="barcode-note">บาร์ระบบ: ${esc(ck.systemBarcode||'ไม่มี')}<br>บาร์ลูกค้า: ${esc(r.customerBarcode||'ไม่มี')}</div>${ck.status==='review'?`<div class="barcode-note review">${esc(ck.reason)}</div>`:''}`;
+    if(ck.status!=='match'&&ck.status!=='unchecked')note+=`<div class="barcode-note ${ck.status}">${esc(statusLabel[ck.status])}${ck.status==='relabel'?' · ยืนยันบาร์ลูกค้าก่อนเปลี่ยน':''}</div><div class="barcode-note">บาร์ระบบ: ${esc(ck.systemBarcode||'ไม่มี')}<br>บาร์ลูกค้า: ${esc(r.customerBarcode||'ไม่มี')}</div>${ck.status==='review'?`<div class="barcode-note review">${esc(ck.reason)}</div>`:''}`;
   }
   return `<tr data-part="${esc(r.part)}"><td>${index}</td><td>${esc(r.part)}</td><td>${esc(r.description)}${note}</td><td>${r.qty}</td></tr>`;
 }
-function pageHtml(doc){return `<article class="sheet" data-branch="${esc(doc.branch)}"><header class="document-header"><div class="company"><img src="logo.jpeg" alt="Gadget Villa"><div><strong>บริษัท แก็ดเจ็ต วิลล่า จำกัด</strong><span>Gadget Villa Co., Ltd.</span></div></div><div class="document-title"><h2>ใบสรุปส่งของ</h2></div><address class="company-address"><span>729/28-37 ถนนรัชดาภิเษก แขวงบางโพงพาง เขตยานนาวา กรุงเทพฯ 10120</span><span>โทร. 02-284-1027 · แฟกซ์ 02-284-1027 · เลขประจำตัวผู้เสียภาษี 0105557008364</span></address></header><section class="branch"><div><h3>${esc(doc.name)}</h3><div class="branch-code">รหัสสาขา <strong>${esc(doc.branch)}</strong></div></div><dl class="meta"><dt>เลข PO</dt><dd>${esc(doc.po||'ยังไม่ยืนยัน')}</dd><dt>วันที่ PO</dt><dd>${esc(doc.date||'—')}</dd></dl></section><table class="items"><colgroup><col><col><col><col></colgroup><thead><tr><th>ลำดับ</th><th>รหัสสินค้า</th><th>รายการสินค้า</th><th>จำนวน<br>(ชิ้น)</th></tr></thead><tbody></tbody></table><div class="sheet-spacer"></div><div class="sheet-bottom"><div class="page-total"><span>รวมหน้านี้ <b class="page-items">0</b> รายการ</span><span><b class="page-qty">0</b> ชิ้น</span></div><div class="doc-total"><span>รวมเอกสารนี้ ${doc.items.length} รายการ</span><span>${C.sum(doc.items)} ชิ้น</span></div>${$('includeTrb').checked?`<div class="references"><span>TRB</span><strong>${esc(doc.trb||'ยังไม่ยืนยัน')}</strong></div>`:''}<div class="signatures"><div><div class="line"></div>ผู้ส่งสินค้า<br>วันที่ ................................</div><div><div class="line"></div>ผู้รับสินค้า<br>วันที่ ................................</div></div><footer class="page-footer"><span>${esc(doc.branch)} · ${esc(doc.po||doc.file)}</span><span class="page-number"></span></footer></div></article>`}
+function pageHtml(doc){return `<article class="sheet" data-branch="${esc(doc.branch)}"><header class="document-header"><div class="company"><img src="logo.jpeg" alt="Gadget Villa"><div><strong>บริษัท แก็ดเจ็ต วิลล่า จำกัด</strong><span>Gadget Villa Co., Ltd.</span></div></div><div class="document-title"><h2>ใบสรุปส่งของ</h2></div><address class="company-address"><span>729/28-37 ถนนรัชดาภิเษก แขวงบางโพงพาง เขตยานนาวา กรุงเทพฯ 10120</span><span>โทร. 02-284-1027 · แฟกซ์ 02-284-1027 · เลขประจำตัวผู้เสียภาษี 0105557008364</span></address></header><section class="branch"><div><h3>${esc(doc.name)}</h3><div class="branch-code">รหัสสาขา <strong>${esc(doc.branch)}</strong></div></div><dl class="meta"><dt>เลข PO</dt><dd>${esc(doc.po||'ยังไม่ยืนยัน')}</dd><dt>วันที่ PO</dt><dd>${esc(doc.date||'—')}</dd></dl></section><table class="items"><colgroup><col><col><col><col></colgroup><thead><tr><th>ลำดับ</th><th>รหัสสินค้า</th><th>รายการสินค้า</th><th>จำนวน<br>(ชิ้น)</th></tr></thead><tbody></tbody></table><div class="sheet-spacer"></div><div class="sheet-bottom"><div class="page-total"><span>รวมหน้านี้ <b class="page-items">0</b> รายการ</span><span><b class="page-qty">0</b> ชิ้น</span></div><div class="doc-total"><span>รวมเอกสารนี้ ${doc.items.length} รายการ</span><span>${C.sum(doc.items)} ชิ้น</span></div>${$('includeTrb').checked?`<div class="references"><span>TRB</span><strong>${esc(doc.trb||(doc.po?'ส่งตรงสาขา (ไม่มี TRB)':'ยังไม่ยืนยัน'))}</strong></div>`:''}<div class="signatures"><div><div class="line"></div>ผู้ส่งสินค้า<br>วันที่ ................................</div><div><div class="line"></div>ผู้รับสินค้า<br>วันที่ ................................</div></div><footer class="page-footer"><span>${esc(doc.branch)} · ${esc(doc.po||doc.file)}</span><span class="page-number"></span></footer></div></article>`}
 function makePages(docs,container){
   container.replaceChildren();
   for(const doc of docs){

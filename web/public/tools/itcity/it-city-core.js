@@ -161,7 +161,7 @@ function makeMatcher(master){
     const result={sku:hit?.sku||'',systemBarcode:hit?.gtin||'',customerBarcode:row.customerBarcode||'',status:'review',reason,target:'',candidates:candidates.map(c=>c.sku)};
     if(!hit)return result;
     if(!hit.gtin){result.reason='SKU ระบบไม่มี GTIN';return result}
-    if(!customer.length){result.reason='ไม่มีบาร์โค้ดลูกค้า';return result}
+    if(!customer.length){result.status='unchecked';result.reason='ไม่มีบาร์โค้ดลูกค้าให้ตรวจ (ส่งตรงสาขา)';return result}
     if(customer.includes(hit.gtin)){result.status='match';result.reason=customer.length>1?'ตรงกับหนึ่งในบาร์โค้ดลูกค้า':'SKU และบาร์โค้ดตรงกัน';return result}
     if(barHits.some(r=>key(r.sku)!==key(hit.sku))){result.reason='รุ่นในชื่อสินค้าและบาร์โค้ดชี้ไปคนละ SKU';return result}
     if(customer.length!==1||/[eE][+-]\d+/.test(customer[0])){result.reason='มีหลายบาร์โค้ดหรือรูปแบบบาร์ไม่ชัดเจน ต้องยืนยันบาร์ที่จะใช้';return result}
