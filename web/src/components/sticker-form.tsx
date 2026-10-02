@@ -53,14 +53,6 @@ export function StickerForm({ sticker, log = [], error }: StickerFormProps) {
           <span className="text-base text-muted">จำนวนคงเหลือ (ชิ้น) * — กดปุ่ม −/+ ปรับจากเลขเดิมได้ หรือพิมพ์จำนวนที่นับได้</span>
           <StickerQtyField initial={sticker?.qty ?? 0} />
         </div>
-        <label className="flex flex-col gap-1">
-          <span className="text-base text-muted">เหตุผลที่ปรับจำนวน (เช่น รับเข้า / เบิกใช้ / นับสต็อก)</span>
-          <input name="reason" className={inputClass} />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-base text-muted">หมายเหตุ (เช่น สั่งเพิ่มวันที่ / ETA)</span>
-          <textarea name="note" rows={2} defaultValue={sticker?.note ?? ""} className={inputClass} />
-        </label>
         <StickerSaveButton />
       </form>
 

@@ -73,17 +73,11 @@ export default async function StickersPage({ searchParams }: StickersPageProps) 
                   {sticker.detail ? (
                     <span className="line-clamp-3 whitespace-pre-line text-sm text-muted">{sticker.detail}</span>
                   ) : null}
-                  {sticker.note ? <span className="line-clamp-2 text-sm text-muted">{sticker.note}</span> : null}
                 </div>
               </Link>
-              <div className="mt-auto flex flex-col gap-2 border-t border-line p-3">
-                <span
-                  className={"flex items-baseline gap-1 " + (sticker.qty === 0 ? "text-red-600" : "text-accent")}
-                >
-                  <span className="text-2xl font-bold">{sticker.qty.toLocaleString("th-TH")}</span>
-                  <span className="text-sm">{sticker.qty === 0 ? "หมด" : "ชิ้น"}</span>
-                </span>
-                <StickerQuickAdjust id={sticker.id} />
+              <div className="mt-auto flex flex-col gap-1 border-t border-line p-3">
+                <span className="text-sm text-muted">{sticker.qty === 0 ? <span className="text-red-600">หมด</span> : "คงเหลือ (ชิ้น)"}</span>
+                <StickerQuickAdjust key={`${sticker.id}-${sticker.qty}`} id={sticker.id} qty={sticker.qty} />
               </div>
             </li>
           ))}

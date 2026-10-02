@@ -1,59 +1,66 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
-import { adjustStickerAction, type AdjustResult } from "@/app/stickers/actions";
+import { useActionState, useState } from "react";
+import { saveStickerQtyAction, type AdjustResult } from "@/app/stickers/actions";
 
 /**
- * One-tap stock in/out on a list card: type an amount, press เบิกใช้ (−) or
- * รับเข้า (+). The page re-renders in place (no navigation), so the scroll
- * position and search stay put while staff work down the list.
+ * Quantity on a list card: − / + change a draft number (or type the counted
+ * number), then บันทึก saves it. Remount with a new `key` after each save
+ * (the parent keys on the saved quantity) so the draft resets to the new value.
  */
-export function StickerQuickAdjust({ id }: { id: string }) {
+export function StickerQuickAdjust({ id, qty }: { id: string; qty: number }) {
+  const [draft, setDraft] = useState(String(qty));
   const [state, formAction, pending] = useActionState<AdjustResult | null, FormData>(
-    adjustStickerAction.bind(null, id),
+    saveStickerQtyAction.bind(null, id),
     null,
   );
-  const formRef = useRef<HTMLFormElement>(null);
-
-  useEffect(() => {
-    if (state?.ok) formRef.current?.reset();
-  }, [state]);
+  const draftNumber = Number(draft);
+  const valid = draft !== "" && Number.isInteger(draftNumber) && draftNumber >= 0;
+  const changed = valid && draftNumber !== qty;
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-1.5">
+    <form action={formAction} className="flex flex-col gap-1.5">
+      <input type="hidden" name="base" value={qty} />
       <div className="flex items-stretch gap-1.5">
         <button
-          type="submit"
-          name="direction"
-          value="out"
-          disabled={pending}
-          aria-label="เบิกใช้ ลดจำนวน"
-          className="h-11 w-11 shrink-0 rounded-[10px] border border-line text-xl font-semibold text-red-600 disabled:opacity-50"
+          type="button"
+          onClick={() => setDraft((v) => String(Math.max(0, (Number(v) || 0) - 1)))}
+          aria-label="ลดจำนวน"
+          className="h-11 w-11 shrink-0 rounded-[10px] border border-line text-xl font-semibold text-red-600"
         >
           −
         </button>
         <input
-          name="amount"
+          name="qty"
           type="number"
-          min={1}
+          min={0}
           step={1}
           inputMode="numeric"
           required
-          placeholder="จำนวน"
-          aria-label="จำนวนที่เบิกหรือรับเข้า"
-          className="h-11 min-w-0 flex-1 rounded-[10px] border border-line bg-surface px-2 text-center text-base outline-none focus:border-accent"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          aria-label="จำนวนคงเหลือ"
+          className={
+            "h-11 min-w-0 flex-1 rounded-[10px] border bg-surface px-2 text-center text-xl font-bold outline-none focus:border-accent " +
+            (qty === 0 ? "border-red-300 text-red-600" : "border-line text-accent")
+          }
         />
         <button
-          type="submit"
-          name="direction"
-          value="in"
-          disabled={pending}
-          aria-label="รับเข้า เพิ่มจำนวน"
-          className="h-11 w-11 shrink-0 rounded-[10px] border border-line text-xl font-semibold text-accent disabled:opacity-50"
+          type="button"
+          onClick={() => setDraft((v) => String((Number(v) || 0) + 1))}
+          aria-label="เพิ่มจำนวน"
+          className="h-11 w-11 shrink-0 rounded-[10px] border border-line text-xl font-semibold text-accent"
         >
           +
         </button>
       </div>
+      <button
+        type="submit"
+        disabled={!changed || pending}
+        className="h-11 rounded-[10px] bg-accent text-base font-medium text-white disabled:bg-neutral-200 disabled:text-muted"
+      >
+        {pending ? "กำลังบันทึก..." : "บันทึก"}
+      </button>
       {state && !state.ok ? <p className="text-sm text-red-600">{state.message}</p> : null}
     </form>
   );
