@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { StickerQuickAdjust } from "@/components/sticker-quick-adjust";
 import { listStickers } from "@/lib/stickers";
 
 type StickersPageProps = {
@@ -49,11 +50,11 @@ export default async function StickersPage({ searchParams }: StickersPageProps) 
       ) : (
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {stickers.map((sticker) => (
-            <li key={sticker.id}>
-              <Link
-                href={`/stickers/${sticker.id}`}
-                className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-sm)] transition-shadow hover:border-accent/50 hover:shadow-md"
-              >
+            <li
+              key={sticker.id}
+              className="flex h-full flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-sm)] transition-shadow hover:border-accent/50 hover:shadow-md"
+            >
+              <Link href={`/stickers/${sticker.id}`} className="flex flex-1 flex-col">
                 <div className="relative aspect-square bg-neutral-100">
                   {sticker.imageUrl ? (
                     <Image
@@ -67,23 +68,23 @@ export default async function StickersPage({ searchParams }: StickersPageProps) 
                     <span className="absolute inset-0 flex items-center justify-center text-sm text-muted">ยังไม่มีรูป</span>
                   )}
                 </div>
-                <div className="flex flex-1 flex-col gap-1.5 p-3">
+                <div className="flex flex-col gap-1.5 p-3 pb-2">
                   <span className="whitespace-pre-line text-base font-medium leading-snug text-ink">{sticker.name}</span>
                   {sticker.detail ? (
                     <span className="line-clamp-3 whitespace-pre-line text-sm text-muted">{sticker.detail}</span>
                   ) : null}
-                  <span
-                    className={
-                      "mt-auto flex items-baseline gap-1 border-t border-line pt-2 " +
-                      (sticker.qty === 0 ? "text-red-600" : "text-accent")
-                    }
-                  >
-                    <span className="text-2xl font-bold">{sticker.qty.toLocaleString("th-TH")}</span>
-                    <span className="text-sm">{sticker.qty === 0 ? "หมด" : "ชิ้น"}</span>
-                  </span>
                   {sticker.note ? <span className="line-clamp-2 text-sm text-muted">{sticker.note}</span> : null}
                 </div>
               </Link>
+              <div className="mt-auto flex flex-col gap-2 border-t border-line p-3">
+                <span
+                  className={"flex items-baseline gap-1 " + (sticker.qty === 0 ? "text-red-600" : "text-accent")}
+                >
+                  <span className="text-2xl font-bold">{sticker.qty.toLocaleString("th-TH")}</span>
+                  <span className="text-sm">{sticker.qty === 0 ? "หมด" : "ชิ้น"}</span>
+                </span>
+                <StickerQuickAdjust id={sticker.id} />
+              </div>
             </li>
           ))}
         </ul>

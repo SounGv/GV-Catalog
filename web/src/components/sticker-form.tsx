@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Sticker, StickerLogEntry } from "@/lib/stickers";
 import { saveStickerAction, deleteStickerAction } from "@/app/stickers/actions";
 import { StickerDeleteButton, StickerSaveButton } from "@/components/sticker-form-buttons";
+import { StickerQtyField } from "@/components/sticker-qty-field";
 
 const inputClass =
   "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-base outline-none focus:border-accent";
@@ -48,19 +49,10 @@ export function StickerForm({ sticker, log = [], error }: StickerFormProps) {
           <span className="text-base text-muted">รายละเอียด (ขนาด / ใช้กับสินค้าอะไร)</span>
           <textarea name="detail" rows={3} defaultValue={sticker?.detail ?? ""} className={inputClass} />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-base text-muted">จำนวนคงเหลือ (ชิ้น) *</span>
-          <input
-            name="qty"
-            type="number"
-            min={0}
-            step={1}
-            required
-            inputMode="numeric"
-            defaultValue={sticker?.qty ?? 0}
-            className={inputClass + " max-w-[200px]"}
-          />
-        </label>
+        <div className="flex flex-col gap-1">
+          <span className="text-base text-muted">จำนวนคงเหลือ (ชิ้น) * — กดปุ่ม −/+ ปรับจากเลขเดิมได้ หรือพิมพ์จำนวนที่นับได้</span>
+          <StickerQtyField initial={sticker?.qty ?? 0} />
+        </div>
         <label className="flex flex-col gap-1">
           <span className="text-base text-muted">เหตุผลที่ปรับจำนวน (เช่น รับเข้า / เบิกใช้ / นับสต็อก)</span>
           <input name="reason" className={inputClass} />

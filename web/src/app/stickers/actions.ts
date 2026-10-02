@@ -102,3 +102,36 @@ export async function deleteStickerAction(id: string): Promise<void> {
   revalidatePath("/stickers");
   redirect("/stickers");
 }
+
+export type AdjustResult = { ok: boolean; message?: string; at: number };
+
+/**
+ * Quick stock in/out from the list: applies ±amount atomically (the guard in the
+ * UPDATE stops it going below zero even if two people adjust at once) and logs it.
+ */
+export async function adjustStickerAction(
+  id: string,
+  _previous: AdjustResult | null,
+  formData: FormData,
+): Promise<AdjustResult> {
+  if (!STICKER_ID_PATTERN.test(id)) throw new Error("Invalid sticker id");
+  const direction = text(formData, "direction");
+  const amount = Number(text(formData, "amount"));
+  if (direction !== "in" && direction !== "out") return { ok: false, message: "เลือกเบิกใช้หรือรับเข้า", at: Date.now() };
+  if (!Number.isInteger(amount) || amount < 1) return { ok: false, message: "กรอกจำนวนเป็นจำนวนเต็ม 1 ขึ้นไป", at: Date.now() };
+
+  const delta = direction === "in" ? amount : -amount;
+  const { rows } = await pool.query<{ qty: number }>(
+    "UPDATE stickers SET qty = qty + $2 WHERE id = $1 AND qty + $2 >= 0 RETURNING qty",
+    [id, delta],
+  );
+  if (!rows[0]) return { ok: false, message: "จำนวนคงเหลือไม่พอให้เบิก", at: Date.now() };
+
+  await pool.query(
+    "INSERT INTO sticker_stock_log (sticker_id, qty_before, qty_after, reason) VALUES ($1, $2, $3, $4)",
+    [id, rows[0].qty - delta, rows[0].qty, direction === "in" ? "รับเข้า (ปุ่มด่วน)" : "เบิกใช้ (ปุ่มด่วน)"],
+  );
+  revalidatePath("/stickers");
+  revalidatePath(`/stickers/${id}`);
+  return { ok: true, at: Date.now() };
+}
