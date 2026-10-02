@@ -48,7 +48,7 @@ function parseOrder(sheets,file){
           for(const b of branches){
             const n=qty(r[b.col],`${file} / ${s.name} / แถว ${i+1}`);if(!n)continue;
             const trb=/^TRB/i.test(text(trbRow[b.col]))?text(trbRow[b.col]):'',po=/^PO/i.test(text(poRow[b.col]))?text(poRow[b.col]):titlePo;
-            lines.push({branch:b.id,branchName:b.name,part,description,qty:n,trb,po,date,file,sourceRow:i+1,sheet:s.name,customerBarcode:''});
+            lines.push({branch:b.id,branchName:b.name,part,description,qty:n,trb,po,date,file,sourceRow:i+1,sheet:s.name,customerBarcode:'',refLabel:trb?'':text(poRow[0]),refValue:trb?'':text(poRow[b.col])});
           }
         }
         matrices.push({lines,branches,date,hasTrb:lines.some(l=>l.trb),sheet:s.name});
@@ -173,7 +173,7 @@ function makeMatcher(master){
 }
 function documents(lines){
   const grouped=new Map();
-  for(const r of lines){const id=groupKey(r.file,r.po,r.trb,r.branch);if(!grouped.has(id))grouped.set(id,{id,branch:r.branch,name:r.branchName,po:r.po,date:r.date,trb:r.trb,file:r.file,items:[]});grouped.get(id).items.push(r)}
+  for(const r of lines){const id=groupKey(r.file,r.po,r.trb,r.branch);if(!grouped.has(id))grouped.set(id,{id,branch:r.branch,name:r.branchName,po:r.po,date:r.date,trb:r.trb,refLabel:r.refLabel||'',refValue:r.refValue||'',file:r.file,items:[]});grouped.get(id).items.push(r)}
   return [...grouped.values()].sort((a,b)=>a.branch.localeCompare(b.branch)||a.po.localeCompare(b.po)||a.trb.localeCompare(b.trb));
 }
 const api={text,key,bars,header,parseMaster,parseOrder,combine,makeMatcher,documents,sum};
