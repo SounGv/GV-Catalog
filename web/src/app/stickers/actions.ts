@@ -104,34 +104,31 @@ export async function deleteStickerAction(id: string): Promise<void> {
 export type AdjustResult = { ok: boolean; message?: string; at: number };
 
 /**
- * Saves a quantity edited with the −/+ buttons on a list card. The form sends the
- * quantity the card was showing (`base`) and the new number; applying the
- * difference atomically (instead of overwriting) keeps other people's changes
- * made in the meantime, and the guard stops the stock going below zero.
+ * เพิ่ม / ลด from a list card: the staff member types how many to add or take
+ * out and presses the matching button. Applied as a difference in one UPDATE
+ * (so simultaneous edits are kept and stock can never go below zero) and logged.
  */
-export async function saveStickerQtyAction(
+export async function changeStickerQtyAction(
   id: string,
   _previous: AdjustResult | null,
   formData: FormData,
 ): Promise<AdjustResult> {
   if (!STICKER_ID_PATTERN.test(id)) throw new Error("Invalid sticker id");
-  const base = Number(text(formData, "base"));
-  const next = Number(text(formData, "qty"));
-  if (!Number.isInteger(base) || !Number.isInteger(next) || next < 0) {
-    return { ok: false, message: "จำนวนต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป", at: Date.now() };
-  }
-  const delta = next - base;
-  if (delta === 0) return { ok: true, at: Date.now() };
+  const direction = text(formData, "direction");
+  const amount = Number(text(formData, "amount"));
+  if (direction !== "add" && direction !== "remove") return { ok: false, message: "เลือกเพิ่มหรือลด", at: Date.now() };
+  if (!Number.isInteger(amount) || amount < 1) return { ok: false, message: "ใส่จำนวนที่จะเพิ่ม/ลด (เลขจำนวนเต็ม 1 ขึ้นไป)", at: Date.now() };
 
+  const delta = direction === "add" ? amount : -amount;
   const { rows } = await pool.query<{ qty: number }>(
     "UPDATE stickers SET qty = qty + $2 WHERE id = $1 AND qty + $2 >= 0 RETURNING qty",
     [id, delta],
   );
-  if (!rows[0]) return { ok: false, message: "จำนวนคงเหลือไม่พอ (มีคนปรับไปก่อนหน้านี้) รีเฟรชแล้วลองใหม่", at: Date.now() };
+  if (!rows[0]) return { ok: false, message: "จำนวนคงเหลือไม่พอให้ลด", at: Date.now() };
 
   await pool.query(
     "INSERT INTO sticker_stock_log (sticker_id, qty_before, qty_after, reason) VALUES ($1, $2, $3, $4)",
-    [id, rows[0].qty - delta, rows[0].qty, delta > 0 ? "เพิ่ม (หน้ารายการ)" : "ลด (หน้ารายการ)"],
+    [id, rows[0].qty - delta, rows[0].qty, direction === "add" ? "เพิ่ม (หน้ารายการ)" : "ลด (หน้ารายการ)"],
   );
   revalidatePath("/stickers");
   revalidatePath(`/stickers/${id}`);
