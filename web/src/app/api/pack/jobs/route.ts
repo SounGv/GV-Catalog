@@ -1,4 +1,4 @@
-import { createPackJob, previewPackJob, type IncomingPackLine } from "@/lib/pack";
+import { createPackJob, listPackJobs, previewPackJob, type IncomingPackLine } from "@/lib/pack";
 
 type CreateJobBody = {
   customer?: string;
@@ -9,6 +9,14 @@ type CreateJobBody = {
 };
 
 const MAX_LINES = 20000;
+
+export const dynamic = "force-dynamic";
+
+/** Scan jobs for one retailer tool's scan tab (`?customer=ITCity`), newest first. */
+export async function GET(request: Request) {
+  const customer = new URL(request.url).searchParams.get("customer")?.trim() || undefined;
+  return Response.json({ jobs: await listPackJobs(customer) });
+}
 
 /**
  * Creates a scan-to-pack job from a converter's parsed lines.

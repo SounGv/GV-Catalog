@@ -184,7 +184,7 @@ export type PackJobSummary = {
   scanned: number;
 };
 
-export async function listPackJobs(): Promise<PackJobSummary[]> {
+export async function listPackJobs(customer?: string): Promise<PackJobSummary[]> {
   const { rows } = await pool.query<{
     id: string;
     customer: string;
@@ -201,7 +201,8 @@ export async function listPackJobs(): Promise<PackJobSummary[]> {
             (SELECT count(*)::int FROM branch_closures WHERE job_id = j.id AND reopened_at IS NULL) AS closed_count,
             (SELECT coalesce(sum(qty_required), 0)::int FROM pack_lines WHERE job_id = j.id) AS required,
             (SELECT count(*)::int FROM scan_events WHERE job_id = j.id AND result = 'counted') AS scanned
-     FROM pack_jobs j ORDER BY j.created_at DESC LIMIT 100`,
+     FROM pack_jobs j WHERE $1::text IS NULL OR j.customer = $1 ORDER BY j.created_at DESC LIMIT 100`,
+    [customer ?? null],
   );
   return rows.map((r) => ({
     id: r.id,

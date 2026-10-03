@@ -86,7 +86,7 @@ function renderDelivery(){
   try{makePages(docs,el);$('pageCount').textContent=`${docs.length} เอกสาร · ${el.children.length} หน้า`;if(!docs.length)el.innerHTML='<p class="empty">ไม่มีรายการส่งของ</p>'}
   finally{view.hidden=wasHidden}
 }
-function switchView(view){state.view=view;for(const name of ['delivery','matrix','checks'])$(name+'View').hidden=name!==view;for(const btn of document.querySelectorAll('[data-view]'))btn.setAttribute('aria-pressed',String(btn.dataset.view===view))}
+function switchView(view){state.view=view;for(const name of ['delivery','matrix','checks','pack'])$(name+'View').hidden=name!==view;for(const btn of document.querySelectorAll('[data-view]'))btn.setAttribute('aria-pressed',String(btn.dataset.view===view))}
 function render(){
   $('masterName').textContent=`${state.masterName} · ${state.master.length.toLocaleString()} SKU`;
   $('branchCount').textContent=new Set(state.lines.map(r=>r.branch)).size;$('lineCount').textContent=state.lines.length;$('qtyCount').textContent=C.sum(state.lines).toLocaleString();
@@ -128,10 +128,27 @@ async function createPackJob(){
     const msg=`ตรวจก่อนสร้างงานยิงสแกน (DryRun)\n\nrows_in: ${p.rows_in}\nmatched: ${p.matched}\nto_insert: ${p.to_insert}\nto_update: ${p.to_update}\nskipped: ${p.skipped}\nnull_count: ${p.null_count}\nduplicate_count: ${p.duplicate_count}\n\n${p.branch_count} สาขา · รวม ${p.qty_total} ชิ้น\nsample_diff:\n${sample}${skipped}${dup}\n\nยืนยันสร้างงาน?`;
     if(!confirm(msg))return;
     const {jobId}=await send(false);
-    window.open('/pack/'+jobId,'_blank');
+    openPackJob(jobId);
   }catch(e){error('สร้างงานยิงสแกนไม่สำเร็จ: '+e.message)}
   finally{button.disabled=false}
 }
+// Scan jobs live on the server; the tab lists IT City jobs and opens the scan screen in place.
+async function loadPackJobs(){
+  const table=$('packJobs');$('packJobCount').textContent='กำลังโหลด…';
+  try{
+    const res=await fetch('/api/pack/jobs?customer=ITCity',{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||('HTTP '+res.status));
+    const when=iso=>new Date(iso).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'short',timeStyle:'short'});
+    $('packJobCount').textContent=data.jobs.length+' งาน';
+    table.innerHTML=data.jobs.length?'<thead><tr><th>ไฟล์ PO</th><th>สร้างเมื่อ</th><th>สแกนแล้ว / ต้องการ</th><th>สาขาที่ปิดแล้ว</th><th></th></tr></thead><tbody>'+data.jobs.map(j=>`<tr><td>${esc(j.sourceFile)}</td><td>${esc(when(j.createdAt)+(j.createdBy?' · '+j.createdBy:''))}</td><td class="num">${j.scanned.toLocaleString()} / ${j.required.toLocaleString()}</td><td class="num">${j.closedCount} / ${j.branchCount}</td><td><button type="button" data-pack-job="${esc(j.id)}">เปิดสแกน</button></td></tr>`).join('')+'</tbody>':'<tbody><tr><td class="empty">ยังไม่มีงานสแกน — เปิดไฟล์ออเดอร์แล้วกด "สร้างงานยิงสแกนจากไฟล์ที่เปิดอยู่"</td></tr></tbody>';
+  }catch(e){$('packJobCount').textContent='';error('โหลดรายการงานสแกนไม่สำเร็จ: '+e.message)}
+}
+function openPackJob(jobId){
+  switchView('pack');$('packList').hidden=true;$('packScreen').hidden=false;$('packScreen').scrollIntoView({block:'start'});
+  const frame=$('packFrame');frame.onload=()=>frame.focus();frame.src='/pack/'+encodeURIComponent(jobId)+'?embed=1';
+}
+function closePackJob(){$('packFrame').src='about:blank';$('packScreen').hidden=true;$('packList').hidden=false;loadPackJobs()}
+$('packJobs').addEventListener('click',e=>{const id=e.target.closest('[data-pack-job]')?.dataset.packJob;if(id)openPackJob(id)});
+$('packRefresh').addEventListener('click',loadPackJobs);$('packBack').addEventListener('click',closePackJob);
 $('orderFiles').addEventListener('change',e=>loadOrders([...e.target.files]));
 $('masterFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;busy(true);error('');try{const master=C.parseMaster(await readWorkbook(file));state.master=master;state.masterName=file.name;rematch();render()}catch(e){error(e.message+' · ยังคงใช้ฐาน SKU เดิม')}finally{busy(false)}});
 $('resetMaster').addEventListener('click',()=>{state.master=IT_CITY_MASTER.rows;state.masterName=IT_CITY_MASTER.file;$('masterFile').value='';error('');rematch();render()});
@@ -141,7 +158,7 @@ $('branchSelect').addEventListener('change',()=>{error('');render()});
 $('kindSelect').addEventListener('change',()=>{error('');fillBranches();render()});
 for(const id of ['search','statusSelect'])$(id).addEventListener('input',()=>{clearTimeout(renderTimer);renderTimer=setTimeout(renderTables,100)});
 for(const id of ['includeTrb','includeChecks'])$(id).addEventListener('change',()=>{error('');try{renderDelivery()}catch(e){error(e.message)}});
-for(const btn of document.querySelectorAll('[data-view]'))btn.addEventListener('click',()=>switchView(btn.dataset.view));
+for(const btn of document.querySelectorAll('[data-view]'))btn.addEventListener('click',()=>{switchView(btn.dataset.view);if(btn.dataset.view==='pack'&&$('packScreen').hidden)loadPackJobs()});
 $('copies').addEventListener('input',()=>{$('printScope').textContent=scopeText()});
 $('printButton').addEventListener('click',print);$('exportButton').addEventListener('click',exportWorkbook);$('packJobButton').addEventListener('click',createPackJob);
 window.addEventListener('beforeprint',()=>{const container=$('printPages');try{container.classList.add('measure');makePages(C.documents(selectedLines()),container,copyCount())}catch(e){container.replaceChildren();error(e.message)}finally{container.classList.remove('measure')}});

@@ -28,7 +28,7 @@ export function StickyTopBar({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div ref={ref} className="sticky top-0 z-40 bg-bg">
+    <div ref={ref} data-site-chrome className="sticky top-0 z-40 bg-bg">
       {children}
     </div>
   );

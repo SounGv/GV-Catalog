@@ -14,7 +14,11 @@ export default async function PackJobsPage() {
       <div>
         <h1 className="text-xl font-semibold">ยิงสแกนลงลัง</h1>
         <p className="text-base text-muted">
-          สร้างงานจากเครื่องมือ &quot;แปลงไฟล์ PO IT City&quot; (ปุ่ม &quot;สร้างงานยิงสแกน&quot;) แล้วเลือกงานด้านล่างเพื่อเริ่มสแกน
+          ปกติใช้งานจากแท็บ &quot;ยิงสแกนลงลัง&quot; ในเครื่องมือแปลงไฟล์ของแต่ละร้าน (เช่น{" "}
+          <a href="/tools/itcity/index.html" className="text-accent underline">
+            แปลงไฟล์ PO IT City
+          </a>
+          )
         </p>
       </div>
       {jobs.length === 0 ? (

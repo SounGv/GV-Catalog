@@ -100,9 +100,11 @@ type PackScannerProps = {
   sourceFile: string;
   customer: string;
   initialBranches: BranchSummary[];
+  /** Rendered inside a retailer tool's iframe: hide the site header and the job-list link. */
+  embedded?: boolean;
 };
 
-export function PackScanner({ jobId, sourceFile, customer, initialBranches }: PackScannerProps) {
+export function PackScanner({ jobId, sourceFile, customer, initialBranches, embedded = false }: PackScannerProps) {
   const [branches, setBranches] = useState(initialBranches);
   const [branchFilter, setBranchFilter] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
@@ -348,11 +350,15 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches }: Pa
 
   return (
     <main className="mx-auto flex max-w-[1680px] flex-col gap-4 px-4 py-5 md:px-8">
+      {/* Inside a retailer tool's scan tab the tool already provides the header and job list. */}
+      {embedded && <style>{"[data-site-chrome]{display:none}"}</style>}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Link href="/pack" className="text-sm text-muted underline">
-            ‹ งานสแกนทั้งหมด
-          </Link>
+          {!embedded && (
+            <Link href="/pack" className="text-sm text-muted underline">
+              ‹ งานสแกนทั้งหมด
+            </Link>
+          )}
           <h1 className="text-xl font-semibold">
             ยิงสแกนลงลัง · {customer} <span className="text-base font-normal text-muted">{sourceFile}</span>
           </h1>
