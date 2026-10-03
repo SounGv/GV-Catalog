@@ -326,6 +326,12 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
 
   const total = detail ? summarize(detail) : null;
   const totalDone = branches.filter((b) => b.isClosed).length;
+  const statusCounts = {
+    closed: totalDone,
+    complete: branches.filter((b) => !b.isClosed && b.scanned >= b.required).length,
+    inProgress: branches.filter((b) => !b.isClosed && b.scanned > 0 && b.scanned < b.required).length,
+    notStarted: branches.filter((b) => !b.isClosed && b.scanned === 0).length,
+  };
   const canScan = Boolean(selected && detail && !detail.isClosed && scannerName && !isLoadingBranch);
 
   const recordingBranch = detail && !detail.isClosed ? detail.branch : null;
@@ -420,17 +426,33 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
             placeholder="พิมพ์ค้นหา สาขา / เลข PO / เลขบิล (TRB) แล้วกด Enter"
             className="h-10 rounded-[10px] border border-line px-3 text-base outline-none focus:border-accent"
           />
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-line bg-surface" />ยังไม่ยิง {statusCounts.notStarted}</span>
+            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-500" />กำลังยิง {statusCounts.inProgress}</span>
+            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-emerald-600" />ครบ {statusCounts.complete}</span>
+            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-neutral-500" />ปิดแล้ว {statusCounts.closed}</span>
+          </div>
           <ul className="flex flex-col gap-1 overflow-y-auto">
             {visibleBranches.map((b) => {
               const isComplete = b.scanned >= b.required;
+              const isStarted = b.scanned > 0;
+              // Row colour = status at a glance: grey closed, green complete, amber in progress, white not started.
+              const statusClass = b.isClosed
+                ? "border-l-neutral-500 bg-neutral-200/70 text-neutral-500"
+                : isComplete
+                  ? "border-l-emerald-600 bg-emerald-50"
+                  : isStarted
+                    ? "border-l-amber-500 bg-amber-50"
+                    : "border-l-transparent hover:bg-neutral-100";
               return (
                 <li key={b.branch}>
                   <button
                     type="button"
                     onClick={() => void selectBranch(b.branch)}
                     className={
-                      "flex w-full items-center justify-between gap-2 rounded-[8px] px-2.5 py-2 text-left " +
-                      (b.branch === selected ? "bg-accent-soft ring-1 ring-accent" : "hover:bg-neutral-100")
+                      "flex w-full items-center justify-between gap-2 rounded-[8px] border-l-4 px-2.5 py-2 text-left " +
+                      statusClass +
+                      (b.branch === selected ? " ring-2 ring-accent" : "")
                     }
                   >
                     <span className="min-w-0">
@@ -445,7 +467,9 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                       {b.isClosed ? (
                         <span className="rounded bg-neutral-900 px-1.5 text-xs text-white">ปิดแล้ว</span>
                       ) : isComplete ? (
-                        <span className="rounded bg-accent px-1.5 text-xs text-white">ครบ</span>
+                        <span className="rounded bg-emerald-600 px-1.5 text-xs text-white">ครบ</span>
+                      ) : isStarted ? (
+                        <span className="rounded bg-amber-500 px-1.5 text-xs text-white">กำลังยิง</span>
                       ) : null}
                     </span>
                   </button>
