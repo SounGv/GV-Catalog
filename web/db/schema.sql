@@ -174,3 +174,66 @@ CREATE TRIGGER stickers_set_updated_at
   BEFORE UPDATE ON stickers
   FOR EACH ROW
   EXECUTE FUNCTION set_updated_at();
+
+-- Scan-to-pack: staff scan each unit against one branch's share of a customer PO
+-- file before it goes into the carton. "Scanned" is never stored as a number —
+-- it is always count(scan_events WHERE result = 'counted') per pack line, so the
+-- total can't drift from the audit trail.
+CREATE TABLE IF NOT EXISTS pack_jobs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer text NOT NULL,
+  source_file text NOT NULL,
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+  created_by text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS pack_lines (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id uuid NOT NULL REFERENCES pack_jobs (id) ON DELETE CASCADE,
+  branch text NOT NULL,
+  branch_name text NOT NULL DEFAULT '',
+  po_number text,
+  trb text,
+  part text NOT NULL,
+  sku text,
+  description text NOT NULL DEFAULT '',
+  -- Barcodes that count for this line: the customer's barcode when the PO has one,
+  -- otherwise the system GTIN. `gtin` is kept only to explain a rejected scan.
+  barcodes text[] NOT NULL,
+  gtin text,
+  qty_required integer NOT NULL CHECK (qty_required > 0)
+);
+CREATE INDEX IF NOT EXISTS pack_lines_job_branch_idx ON pack_lines (job_id, branch);
+
+CREATE TABLE IF NOT EXISTS scan_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id uuid NOT NULL REFERENCES pack_jobs (id) ON DELETE CASCADE,
+  branch text NOT NULL,
+  barcode text NOT NULL,
+  pack_line_id uuid REFERENCES pack_lines (id) ON DELETE CASCADE,
+  result text NOT NULL CHECK (result IN ('counted', 'over', 'unknown', 'ambiguous')),
+  scanned_by text,
+  scanned_at timestamptz NOT NULL DEFAULT now(),
+  station_id text,
+  clip_offset_sec numeric
+);
+CREATE INDEX IF NOT EXISTS scan_events_job_branch_idx ON scan_events (job_id, branch, scanned_at DESC);
+CREATE INDEX IF NOT EXISTS scan_events_counted_idx ON scan_events (pack_line_id) WHERE result = 'counted';
+
+-- A branch is closed while it has a closure row with reopened_at IS NULL.
+CREATE TABLE IF NOT EXISTS branch_closures (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id uuid NOT NULL REFERENCES pack_jobs (id) ON DELETE CASCADE,
+  branch text NOT NULL,
+  closed_by text,
+  closed_at timestamptz NOT NULL DEFAULT now(),
+  reopened_by text,
+  reopened_at timestamptz,
+  reopen_reason text
+);
+CREATE UNIQUE INDEX IF NOT EXISTS branch_closures_one_open_idx ON branch_closures (job_id, branch) WHERE reopened_at IS NULL;
+
+-- Evidence video recorded at the packing station: the file name (saved on the
+-- station's own disk) and the second within it at which this barcode was read.
+ALTER TABLE scan_events ADD COLUMN IF NOT EXISTS video_file text;

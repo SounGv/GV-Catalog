@@ -13,7 +13,7 @@ function error(message){$('error').textContent=message;$('error').hidden=!messag
 function busy(value){state.busy=value;$('loading').hidden=!value;for(const id of ['orderFiles','masterFile','sampleButton','resetMaster','syncMaster','printButton','exportButton'])$(id).disabled=value;$('printButton').disabled=$('exportButton').disabled=value||!state.lines.length}
 function rematch(){const match=C.makeMatcher(state.master);state.lines=C.combine(state.orders).map(r=>({...r,check:match(r)}))}
 function setOrders(orders,sample=false){
-  C.combine(orders);state.orders=orders;rematch();
+  C.combine(orders);state.orders=orders;state.isSample=sample;rematch();
   $('fileNames').textContent=(sample?'ไฟล์ตัวอย่าง · ':'')+orders.map(o=>o.file).join('\n');
   fillKinds();fillBranches();
   $('search').value='';$('statusSelect').value='';render();
@@ -110,6 +110,28 @@ function exportWorkbook(){
   const docs=C.documents(lines);sheet('สรุปรายสาขา',[['สาขา','ชื่อสาขา','ประเภทการส่ง','PO','TRB','รายการ','ชิ้น','ต้องเปลี่ยนบาร์','ต้องตรวจสอบ'],...docs.map(d=>[d.branch,d.name,kindLabel[d.trb?'pickpack':'direct'],d.po,d.trb,d.items.length,C.sum(d.items),d.items.filter(r=>r.check.status==='relabel').length,d.items.filter(r=>r.check.status==='review').length])],[12,40,16,25,28,12,12,20,20]);
   const bytes=XLSX.write(wb,{bookType:'xlsx',type:'array'}),url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),a=document.createElement('a');a.href=url;a.download='IT-CITY_Order-Matrix.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
+// Hands the whole parsed file (not the current filter) to the scan-to-pack page.
+// The server answers a DryRun first; nothing is written until the user confirms.
+async function createPackJob(){
+  if(!state.lines.length)return error('ยังไม่มีรายการ กรุณาเลือกไฟล์ออเดอร์ก่อน');
+  if(state.isSample)return error('กำลังแสดงไฟล์ตัวอย่าง — เลือกไฟล์ออเดอร์จริงก่อนสร้างงานยิงสแกน');
+  const button=$('packJobButton');button.disabled=true;error('');
+  const sourceFile=state.orders.map(o=>o.file).join(' + ');
+  let createdBy='';try{createdBy=localStorage.getItem('gv-pack-scanner-name')||''}catch{}
+  const lines=state.lines.map(r=>({branch:r.branch,branchName:r.branchName,po:r.po,trb:r.trb,part:r.part,sku:r.check.sku,description:r.description,customerBarcode:r.customerBarcode,systemBarcode:r.check.systemBarcode,qty:r.qty}));
+  const send=async dryRun=>{const res=await fetch('/api/pack/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:'ITCity',sourceFile,createdBy,dryRun,lines})});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||('HTTP '+res.status));return data};
+  try{
+    const p=(await send(true)).preview;
+    const sample=p.sample_diff.map(s=>`  ${s.branch} ${s.part} × ${s.qty_required} (บาร์ ${s.barcodes.join(', ')})`).join('\n');
+    const skipped=p.skipped_rows.length?`\nรายการที่ข้าม:\n${p.skipped_rows.map(s=>`  ${s.branch} ${s.part}: ${s.reason}`).join('\n')}`:'';
+    const dup=p.existing_job_ids.length?`\n\n⚠ เคยสร้างงานจากไฟล์นี้แล้ว ${p.existing_job_ids.length} งาน — กดยืนยันจะได้งานใหม่แยกอีกงาน`:'';
+    const msg=`ตรวจก่อนสร้างงานยิงสแกน (DryRun)\n\nrows_in: ${p.rows_in}\nmatched: ${p.matched}\nto_insert: ${p.to_insert}\nto_update: ${p.to_update}\nskipped: ${p.skipped}\nnull_count: ${p.null_count}\nduplicate_count: ${p.duplicate_count}\n\n${p.branch_count} สาขา · รวม ${p.qty_total} ชิ้น\nsample_diff:\n${sample}${skipped}${dup}\n\nยืนยันสร้างงาน?`;
+    if(!confirm(msg))return;
+    const {jobId}=await send(false);
+    window.open('/pack/'+jobId,'_blank');
+  }catch(e){error('สร้างงานยิงสแกนไม่สำเร็จ: '+e.message)}
+  finally{button.disabled=false}
+}
 $('orderFiles').addEventListener('change',e=>loadOrders([...e.target.files]));
 $('masterFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;busy(true);error('');try{const master=C.parseMaster(await readWorkbook(file));state.master=master;state.masterName=file.name;rematch();render()}catch(e){error(e.message+' · ยังคงใช้ฐาน SKU เดิม')}finally{busy(false)}});
 $('resetMaster').addEventListener('click',()=>{state.master=IT_CITY_MASTER.rows;state.masterName=IT_CITY_MASTER.file;$('masterFile').value='';error('');rematch();render()});
@@ -121,7 +143,7 @@ for(const id of ['search','statusSelect'])$(id).addEventListener('input',()=>{cl
 for(const id of ['includeTrb','includeChecks'])$(id).addEventListener('change',()=>{error('');try{renderDelivery()}catch(e){error(e.message)}});
 for(const btn of document.querySelectorAll('[data-view]'))btn.addEventListener('click',()=>switchView(btn.dataset.view));
 $('copies').addEventListener('input',()=>{$('printScope').textContent=scopeText()});
-$('printButton').addEventListener('click',print);$('exportButton').addEventListener('click',exportWorkbook);
+$('printButton').addEventListener('click',print);$('exportButton').addEventListener('click',exportWorkbook);$('packJobButton').addEventListener('click',createPackJob);
 window.addEventListener('beforeprint',()=>{const container=$('printPages');try{container.classList.add('measure');makePages(C.documents(selectedLines()),container,copyCount())}catch(e){container.replaceChildren();error(e.message)}finally{container.classList.remove('measure')}});
 document.fonts.ready.then(()=>setOrders([structuredClone(IT_CITY_DEMO)],true)).catch(e=>error(e.message));
 })();

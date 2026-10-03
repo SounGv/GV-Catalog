@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/admin/products", label: "จัดการสินค้า" },
   { href: "/admin/reports", label: "รายงานความต่าง" },
   { href: "/stickers", label: "สต็อกสติกเกอร์" },
+  { href: "/pack", label: "ยิงสแกนลงลัง" },
 ];
 
 /**
