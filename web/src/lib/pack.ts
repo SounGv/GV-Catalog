@@ -422,6 +422,16 @@ async function holdBranch(db: Pick<PoolClient, "query">, jobId: string, branch: 
   return other[0]?.claimed_by ?? "สถานีอื่น";
 }
 
+/** Name of whoever else holds the branch (row-locked for the caller's transaction), or null. */
+async function otherHolder(db: Pick<PoolClient, "query">, jobId: string, branch: string, holder: BranchHolder): Promise<string | null> {
+  const { rows } = await db.query<{ station_id: string; claimed_by: string }>(
+    "SELECT station_id, claimed_by FROM branch_claims WHERE job_id = $1 AND branch = $2 FOR UPDATE",
+    [jobId, branch],
+  );
+  const held = rows[0];
+  return held && held.station_id !== holder.stationId && held.claimed_by.toLowerCase() !== holder.name.toLowerCase() ? held.claimed_by : null;
+}
+
 export type ClaimOutcome = { detail: BranchDetail | null; heldBy: string | null };
 
 /** Opens a branch for this station. A closed branch opens read-only without taking it. */
@@ -493,7 +503,7 @@ export async function recordScan(jobId: string, branch: string, barcodeRaw: stri
     );
     if (closed.length) {
       await client.query("ROLLBACK");
-      return { result: "closed", message: "สาขานี้ปิดรายการแล้ว ต้องเปิดใหม่ก่อนจึงจะสแกนได้", part: null, detail: await getBranchDetail(jobId, branch, client) };
+      return { result: "closed", message: "สาขานี้บันทึกครบแพ็คแล้ว — กดแก้ไขก่อนจึงจะสแกนได้", part: null, detail: await getBranchDetail(jobId, branch, client) };
     }
     const holder = toHolder(context.stationId, context.scannedBy);
     const heldBy = holder ? await holdBranch(client, jobId, branch, holder) : null;
@@ -566,7 +576,8 @@ export async function closeBranch(jobId: string, branch: string, holder: BranchH
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const heldBy = await holdBranch(client, jobId, branch, holder);
+    // Saving a finished branch from the list must not move this station off the branch it is packing.
+    const heldBy = await otherHolder(client, jobId, branch, holder);
     if (heldBy) throw new Error(heldMessage(heldBy));
     // Locking the branch's lines makes a close and a concurrent scan of the same branch serialize.
     const { rows: lines } = await client.query<{ id: string; part: string; description: string; qty_required: number }>(
@@ -588,7 +599,7 @@ export async function closeBranch(jobId: string, branch: string, holder: BranchH
       const total = shortages.reduce((n, s) => n + s.missing, 0);
       return {
         isClosed: false,
-        message: `ไม่สามารถปิดรายการได้ ยังขาดอีก ${total} ชิ้น`,
+        message: `ยังบันทึกครบแพ็คไม่ได้ ยังขาดอีก ${total} ชิ้น`,
         shortages,
         detail: await getBranchDetail(jobId, branch, client),
       };
@@ -603,7 +614,7 @@ export async function closeBranch(jobId: string, branch: string, holder: BranchH
     // Done with this branch: free the station (and the branch) for the next one.
     await client.query("DELETE FROM branch_claims WHERE job_id = $1 AND branch = $2", [jobId, branch]);
     await client.query("COMMIT");
-    return { isClosed: true, message: "ปิดรายการสาขานี้แล้ว", shortages: [], detail: await getBranchDetail(jobId, branch, client) };
+    return { isClosed: true, message: "บันทึกครบแพ็คแล้ว", shortages: [], detail: await getBranchDetail(jobId, branch, client) };
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
     throw error;
@@ -623,7 +634,7 @@ export async function reopenBranch(jobId: string, branch: string, holder: Branch
        WHERE job_id = $1 AND branch = $2 AND reopened_at IS NULL`,
       [jobId, branch, holder.name, reason],
     );
-    if (!rowCount) throw new Error("สาขานี้ยังไม่ได้ปิดรายการ");
+    if (!rowCount) throw new Error("สาขานี้ยังไม่ได้บันทึกครบแพ็ค");
     await client.query("COMMIT");
     return getBranchDetail(jobId, branch, client);
   } catch (error) {

@@ -303,7 +303,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
           const isBranchComplete = Boolean(outcome.detail && outcome.detail.lines.every((l) => l.scanned >= l.required));
           setFeedback({
             tone: isCounted ? "ok" : "warn",
-            text: `${barcode} · ${outcome.message}${isCounted && isBranchComplete ? " · ครบทุกรายการแล้ว กดปิดรายการได้" : ""}`,
+            text: `${barcode} · ${outcome.message}${isCounted && isBranchComplete ? " · ครบทุกรายการแล้ว กด บันทึกครบแพ็คแล้ว ได้" : ""}`,
           });
           if (isCounted && isBranchComplete) playComplete();
           else playTone(isCounted ? "ok" : "warn");
@@ -349,29 +349,59 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
     focusScanInput();
   };
 
-  const closeSelectedBranch = async () => {
-    if (!selected) return;
+  /** "บันทึกครบแพ็คแล้ว": stored on the server, so it survives a refresh and shows on every station. */
+  const savePacked = async (branch: string) => {
+    if (!scannerName) {
+      setBlockedNotice("พิมพ์ชื่อผู้สแกนที่มุมขวาบนก่อนบันทึก");
+      playTone("warn");
+      return;
+    }
+    const isSelected = branch === selectedRef.current;
     try {
-      const outcome = await api<CloseOutcome>(`/branches/${encodeURIComponent(selected)}/close`, {
+      const outcome = await api<CloseOutcome>(`/branches/${encodeURIComponent(branch)}/close`, {
         method: "POST",
         body: JSON.stringify({ closedBy: scannerName, stationId: stationId() }),
       });
-      applyDetail(outcome.detail);
-      setFeedback({ tone: outcome.isClosed ? "ok" : "warn", text: outcome.message, shortages: outcome.shortages });
+      if (isSelected) {
+        applyDetail(outcome.detail);
+        setFeedback({ tone: outcome.isClosed ? "ok" : "warn", text: outcome.isClosed ? "บันทึกครบแพ็คแล้ว" : outcome.message, shortages: outcome.shortages });
+      } else if (!outcome.isClosed) {
+        setBlockedNotice(`${branch}: ${outcome.message}`);
+      } else {
+        setBlockedNotice(null);
+      }
       if (outcome.isClosed) {
         playComplete();
         void refreshBranches(); // the branch was released for the next one
       } else playTone("warn");
     } catch (error) {
-      setFeedback({ tone: "warn", text: error instanceof Error ? error.message : "ปิดรายการไม่สำเร็จ" });
+      const text = error instanceof Error ? error.message : "บันทึกไม่สำเร็จ";
+      if (isSelected) setFeedback({ tone: "warn", text });
+      else setBlockedNotice(`${branch}: ${text}`);
+      playTone("warn");
     }
     focusScanInput();
   };
 
+  /** "แก้ไข" on a saved branch: open it and put the cursor in the reason box. */
+  const reopenInputRef = useRef<HTMLInputElement>(null);
+  const wantsReasonFocusRef = useRef(false);
+  const editPacked = async (branch: string) => {
+    wantsReasonFocusRef.current = true;
+    await selectBranch(branch);
+  };
+  // The reason box only exists once the saved branch has rendered, so focus it from here.
+  useEffect(() => {
+    if (!wantsReasonFocusRef.current || !detail?.isClosed) return;
+    wantsReasonFocusRef.current = false;
+    reopenInputRef.current?.scrollIntoView({ block: "center" });
+    reopenInputRef.current?.focus();
+  }, [detail]);
+
   const reopenSelectedBranch = async () => {
     if (!selected) return;
     if (!reopenReason.trim()) {
-      setFeedback({ tone: "warn", text: "ต้องกรอกเหตุผลก่อนเปิดรายการใหม่" });
+      setFeedback({ tone: "warn", text: "ต้องกรอกเหตุผลก่อนแก้ไข" });
       return;
     }
     try {
@@ -381,9 +411,9 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
       });
       applyDetail(data.detail);
       setReopenReason("");
-      setFeedback({ tone: "info", text: "เปิดรายการสาขาใหม่แล้ว สแกนต่อได้" });
+      setFeedback({ tone: "info", text: "ยกเลิก 'ครบแพ็คแล้ว' แล้ว สแกนต่อได้" });
     } catch (error) {
-      setFeedback({ tone: "warn", text: error instanceof Error ? error.message : "เปิดรายการไม่สำเร็จ" });
+      setFeedback({ tone: "warn", text: error instanceof Error ? error.message : "แก้ไขไม่สำเร็จ" });
     }
     focusScanInput();
   };
@@ -463,7 +493,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
             ยิงสแกนลงลัง · {customer} <span className="text-base font-normal text-muted">{sourceFile}</span>
           </h1>
           <p className="text-sm text-muted">
-            ปิดแล้ว {totalDone} / {branches.length} สาขา
+            ครบแพ็คแล้ว {totalDone} / {branches.length} สาขา
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -510,7 +540,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
             <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-line bg-surface" />ยังไม่ยิง {statusCounts.notStarted}</span>
             <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-500" />กำลังยิง {statusCounts.inProgress}</span>
             <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-emerald-600" />ครบ {statusCounts.complete}</span>
-            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-neutral-500" />ปิดแล้ว {statusCounts.closed}</span>
+            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-neutral-500" />ครบแพ็คแล้ว {statusCounts.closed}</span>
             <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-rose-600" />คนอื่นกำลังทำ {statusCounts.held}</span>
           </div>
           <ul className="flex flex-col gap-1 overflow-y-auto">
@@ -530,15 +560,16 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                     ? "border-l-amber-500 bg-amber-50"
                     : "border-l-transparent hover:bg-neutral-100";
               return (
-                <li key={b.branch}>
+                <li
+                  key={b.branch}
+                  className={
+                    "flex flex-col gap-1 rounded-[8px] border-l-4 px-2.5 py-2 " + statusClass + (b.branch === selected ? " ring-2 ring-accent" : "")
+                  }
+                >
                   <button
                     type="button"
                     onClick={() => void selectBranch(b.branch)}
-                    className={
-                      "flex w-full items-center justify-between gap-2 rounded-[8px] border-l-4 px-2.5 py-2 text-left " +
-                      statusClass +
-                      (b.branch === selected ? " ring-2 ring-accent" : "")
-                    }
+                    className="flex w-full items-center justify-between gap-2 text-left"
                   >
                     <span className="min-w-0">
                       <span className="block font-mono text-sm font-semibold">{b.branch}</span>
@@ -555,7 +586,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                         {b.scanned}/{b.required}
                       </span>
                       {b.isClosed ? (
-                        <span className="rounded bg-neutral-900 px-1.5 text-xs text-white">ปิดแล้ว</span>
+                        <span className="rounded bg-neutral-900 px-1.5 text-xs text-white">✓ ครบแพ็คแล้ว</span>
                       ) : isComplete ? (
                         <span className="rounded bg-emerald-600 px-1.5 text-xs text-white">ครบ</span>
                       ) : isStarted ? (
@@ -563,6 +594,23 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                       ) : null}
                     </span>
                   </button>
+                  {b.isClosed ? (
+                    <button
+                      type="button"
+                      onClick={() => void editPacked(b.branch)}
+                      className="self-end rounded-[6px] border border-line bg-surface px-2 py-0.5 text-xs text-ink"
+                    >
+                      แก้ไข
+                    </button>
+                  ) : isComplete && !heldByOther ? (
+                    <button
+                      type="button"
+                      onClick={() => void savePacked(b.branch)}
+                      className="self-end rounded-[6px] bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white"
+                    >
+                      บันทึกครบแพ็คแล้ว
+                    </button>
+                  ) : null}
                 </li>
               );
             })}
@@ -670,7 +718,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                   autoComplete="off"
                   disabled={!canScan}
                   onKeyDown={onScanKeyDown}
-                  placeholder={detail?.isClosed ? "สาขานี้ปิดรายการแล้ว" : canScan ? "พร้อมสแกน" : "เลือกสาขาและพิมพ์ชื่อผู้สแกนก่อน"}
+                  placeholder={detail?.isClosed ? "สาขานี้บันทึกครบแพ็คแล้ว — กดแก้ไขถ้าต้องยิงเพิ่ม" : canScan ? "พร้อมสแกน" : "เลือกสาขาและพิมพ์ชื่อผู้สแกนก่อน"}
                   className="h-14 rounded-[10px] border-2 border-accent bg-surface px-4 font-mono text-2xl outline-none disabled:border-line disabled:bg-neutral-100"
                 />
                 {feedback ? (
@@ -740,25 +788,26 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                 {detail?.isClosed ? (
                   <>
                     <span className="rounded-[10px] bg-neutral-900 px-3 py-2 text-base text-white">
-                      ปิดรายการแล้ว{detail.closedBy ? ` โดย ${detail.closedBy}` : ""}
+                      ✓ ครบแพ็คแล้ว{detail.closedBy ? ` · บันทึกโดย ${detail.closedBy}` : ""}
                     </span>
                     <input
+                      ref={reopenInputRef}
                       value={reopenReason}
                       onChange={(e) => setReopenReason(e.target.value)}
-                      placeholder="เหตุผลที่ต้องเปิดใหม่ (บังคับ)"
+                      placeholder="เหตุผลที่ต้องแก้ไข (บังคับ)"
                       className="h-11 min-w-[260px] rounded-[10px] border border-line bg-surface px-3 text-base outline-none focus:border-accent"
                     />
                     <button type="button" onClick={() => void reopenSelectedBranch()} className="h-11 rounded-[10px] border border-ink px-4 text-base">
-                      เปิดรายการใหม่
+                      แก้ไข (ยกเลิกครบแพ็ค)
                     </button>
                   </>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => void closeSelectedBranch()}
+                    onClick={() => void savePacked(detail?.branch ?? "")}
                     className="h-11 rounded-[10px] bg-accent px-5 text-base font-medium text-white"
                   >
-                    ปิดรายการสาขานี้
+                    บันทึกครบแพ็คแล้ว
                   </button>
                 )}
                 {detail && !detail.isClosed ? (
