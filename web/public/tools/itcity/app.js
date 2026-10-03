@@ -148,7 +148,7 @@ function openPackJob(jobId){
 }
 function closePackJob(){$('packFrame').src='about:blank';$('packScreen').hidden=true;$('packList').hidden=false;loadPackJobs()}
 $('packJobs').addEventListener('click',e=>{const id=e.target.closest('[data-pack-job]')?.dataset.packJob;if(id)openPackJob(id)});
-$('packRefresh').addEventListener('click',loadPackJobs);$('packBack').addEventListener('click',closePackJob);
+$('packRefresh').addEventListener('click',loadPackJobs);$('packOpenButton').addEventListener('click',()=>{document.querySelector('[data-view=pack]').click();$('packView').scrollIntoView({block:'start'})});$('packBack').addEventListener('click',closePackJob);
 $('orderFiles').addEventListener('change',e=>loadOrders([...e.target.files]));
 $('masterFile').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;busy(true);error('');try{const master=C.parseMaster(await readWorkbook(file));state.master=master;state.masterName=file.name;rematch();render()}catch(e){error(e.message+' · ยังคงใช้ฐาน SKU เดิม')}finally{busy(false)}});
 $('resetMaster').addEventListener('click',()=>{state.master=IT_CITY_MASTER.rows;state.masterName=IT_CITY_MASTER.file;$('masterFile').value='';error('');rematch();render()});
