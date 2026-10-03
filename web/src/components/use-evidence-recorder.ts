@@ -120,7 +120,7 @@ export function useEvidenceRecorder() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawTimerRef = useRef<number | null>(null);
-  const overlayRef = useRef<{ lines: string[]; tone: OverlayTone }>({ lines: [], tone: "info" });
+  const overlayRef = useRef<{ lines: string[]; tone: OverlayTone; highlight: string[] }>({ lines: [], tone: "info", highlight: [] });
   const recorderRef = useRef<MediaRecorder | null>(null);
   const sessionRef = useRef<{ fileName: string; startedAt: number } | null>(null);
 
@@ -227,18 +227,29 @@ export function useEvidenceRecorder() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     if (video.readyState >= 2) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const { lines, tone } = overlayRef.current;
+    const { lines, tone, highlight } = overlayRef.current;
+    const scale = canvas.width / 1280;
     const now = new Date().toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
-    const text = [now, ...lines];
-    const lineHeight = 30;
+    const text = [now, ...lines.filter(Boolean)];
+    const lineHeight = 36 * scale;
     ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, 0, canvas.width, 14 + lineHeight * text.length);
-    ctx.font = "bold 24px sans-serif";
+    ctx.fillRect(0, 0, canvas.width, 16 * scale + lineHeight * text.length);
+    ctx.font = `bold ${Math.round(28 * scale)}px sans-serif`;
     text.forEach((line, i) => {
       const isLast = i === text.length - 1 && i > 0;
       ctx.fillStyle = isLast ? (tone === "ok" ? "#7CFC9A" : tone === "warn" ? "#FF7A7A" : "#FFFFFF") : "#FFFFFF";
-      ctx.fillText(line, 14, 34 + i * lineHeight);
+      ctx.fillText(line, 14 * scale, 38 * scale + i * lineHeight);
     });
+    // Last scanned model + barcode: large red text on a light band so the footage is easy to check later.
+    if (highlight.length) {
+      const bigLine = 56 * scale;
+      const top = canvas.height - (20 * scale + bigLine * highlight.length);
+      ctx.fillStyle = "rgba(255,255,255,0.88)";
+      ctx.fillRect(0, top, canvas.width, canvas.height - top);
+      ctx.font = `bold ${Math.round(44 * scale)}px sans-serif`;
+      ctx.fillStyle = "#D10000";
+      highlight.forEach((line, i) => ctx.fillText(line, 16 * scale, top + 48 * scale + i * bigLine, canvas.width - 32 * scale));
+    }
   }, []);
 
   const stop = useCallback(async () => {
@@ -343,8 +354,8 @@ export function useEvidenceRecorder() {
     [flush, openCamera, patch, status.cameraId, stop],
   );
 
-  const setOverlay = useCallback((lines: string[], tone: OverlayTone = "info") => {
-    overlayRef.current = { lines, tone };
+  const setOverlay = useCallback((lines: string[], tone: OverlayTone = "info", highlight: string[] = []) => {
+    overlayRef.current = { lines, tone, highlight };
   }, []);
 
   /** Where "now" is in the current clip — sent with every scan so the report can point at the footage. */

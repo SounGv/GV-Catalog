@@ -13,6 +13,7 @@ const RESULT_LABEL: Record<string, string> = {
   over: "เกิน PO",
   unknown: "ไม่อยู่ใน PO",
   ambiguous: "ไม่ชัดเจน",
+  closed: "สาขาปิดแล้ว",
 };
 
 // Short high beep = counted; two low buzzes = anything that was not counted.
@@ -113,6 +114,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
   const scannerName = useSyncExternalStore(subscribeScannerName, readScannerName, () => "");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [lastPart, setLastPart] = useState<string | null>(null);
+  const [lastScan, setLastScan] = useState<{ model: string; barcode: string; result: string } | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [reopenReason, setReopenReason] = useState("");
 
@@ -182,6 +184,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
       setSelected(branch);
       setFeedback(null);
       setLastPart(null);
+      setLastScan(null);
       setReopenReason("");
       setIsLoadingBranch(true);
       try {
@@ -214,6 +217,12 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
           });
           applyDetail(outcome.detail);
           setLastPart(outcome.part);
+          const line = outcome.detail?.lines.find((l) => l.part === outcome.part);
+          setLastScan({
+            model: line ? `${line.sku ?? line.part} · ${line.description}` : outcome.result === "unknown" ? "ไม่อยู่ใน PO" : (outcome.part ?? "-"),
+            barcode,
+            result: `${RESULT_LABEL[outcome.result] ?? outcome.result}${line ? ` ${line.scanned}/${line.required}` : ""}`,
+          });
           const isCounted = outcome.result === "counted";
           const isBranchComplete = Boolean(outcome.detail && outcome.detail.lines.every((l) => l.scanned >= l.required));
           setFeedback({
@@ -343,8 +352,9 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
         feedback?.text ?? "",
       ],
       feedback?.tone ?? "info",
+      lastScan ? [`รุ่น: ${lastScan.model}`, `บาร์โค้ด: ${lastScan.barcode}  ·  ${lastScan.result}`] : [],
     );
-  }, [detail, feedback, scannerName, setOverlay]);
+  }, [detail, feedback, lastScan, scannerName, setOverlay]);
 
   // The scan box is disabled while a branch loads, so focusing it from the click
   // handler is too early; focus it the moment it becomes usable instead.
@@ -502,7 +512,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                 เลือกกล้อง และโฟลเดอร์เก็บวิดีโอ แล้วกด &quot;ยืนยันการตั้งค่ากล้อง&quot; — ระบบจะเริ่มบันทึกเองเมื่อเปิดสาขา (สแกนได้ตามปกติแม้ยังไม่บันทึก)
               </p>
             ) : null}
-            <div ref={attachPreview} hidden={!recorderStatus.isRecording && !recorderStatus.isPreviewing} className="max-w-[420px]" />
+            <div ref={attachPreview} hidden={!recorderStatus.isRecording && !recorderStatus.isPreviewing} className="w-full max-w-[960px]" />
           </div>
 
           {!selected ? (
