@@ -20,6 +20,8 @@ type DirectoryHandle = FileSystemDirectoryHandle & {
 type WritableFile = FileSystemWritableFileStream & { seek(position: number): Promise<void> };
 
 const CAMERA_KEY = "gv-pack-camera-id";
+/** Camera id the station last confirmed with the confirm button; recording waits for it. */
+const CONFIRMED_KEY = "gv-pack-camera-confirmed";
 const STATION_KEY = "gv-pack-station-id";
 const DB_NAME = "gv-pack";
 const STORE = "handles";
@@ -91,6 +93,9 @@ export type RecorderStatus = {
   folderName: string | null;
   needsFolderPermission: boolean;
   isRecording: boolean;
+  /** Live camera view shown after confirming, before any branch is recording. */
+  isPreviewing: boolean;
+  isConfirmed: boolean;
   fileName: string | null;
   error: string | null;
 };
@@ -103,6 +108,8 @@ export function useEvidenceRecorder() {
     folderName: null,
     needsFolderPermission: false,
     isRecording: false,
+    isPreviewing: false,
+    isConfirmed: false,
     fileName: null,
     error: null,
   });
@@ -154,7 +161,12 @@ export function useEvidenceRecorder() {
       const cameras = devices.map((d, i) => ({ id: d.deviceId, label: d.label || `กล้อง ${i + 1}` }));
       const saved = readLocal(CAMERA_KEY);
       const cameraId = cameras.some((c) => c.id === saved) ? saved : (cameras[0]?.id ?? "");
-      patch({ cameras, cameraId, error: cameras.length ? null : "ไม่พบกล้องที่เครื่องนี้" });
+      patch({
+        cameras,
+        cameraId,
+        isConfirmed: Boolean(cameraId) && readLocal(CONFIRMED_KEY) === cameraId,
+        error: cameras.length ? null : "ไม่พบกล้องที่เครื่องนี้",
+      });
     } catch (error) {
       patch({ error: `เปิดกล้องไม่ได้: ${error instanceof Error ? error.message : String(error)} — อนุญาตการใช้กล้องในเบราว์เซอร์` });
     }
@@ -163,7 +175,8 @@ export function useEvidenceRecorder() {
   const selectCamera = useCallback(
     (id: string) => {
       writeLocal(CAMERA_KEY, id);
-      patch({ cameraId: id });
+      // A different camera has to be confirmed again before recording uses it.
+      patch({ cameraId: id, isConfirmed: Boolean(id) && readLocal(CONFIRMED_KEY) === id });
     },
     [patch],
   );
@@ -246,8 +259,52 @@ export function useEvidenceRecorder() {
     drawTimerRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
-    patch({ isRecording: false, fileName: null });
+    patch({ isRecording: false, isPreviewing: false, fileName: null });
   }, [flush, patch]);
+
+  const openCamera = useCallback(
+    async (cameraId: string) => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: cameraId }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      const video = (videoRef.current ??= document.createElement("video"));
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      await video.play();
+      const settings = stream.getVideoTracks()[0]?.getSettings() ?? {};
+      const canvas = (canvasRef.current ??= document.createElement("canvas"));
+      canvas.width = settings.width ?? 1280;
+      canvas.height = settings.height ?? 720;
+      drawTimerRef.current = window.setInterval(draw, 1000 / FPS);
+    },
+    [draw],
+  );
+
+  /** Confirm button: checks camera + folder access now (while the user is clicking) and shows the live view. */
+  const confirm = useCallback(async () => {
+    const folder = folderRef.current;
+    const cameraId = status.cameraId;
+    if (!cameraId) return patch({ error: "ยังไม่ได้เลือกกล้อง — กด ค้นหากล้อง ก่อน" });
+    if (!folder) return patch({ error: "ยังไม่ได้เลือกโฟลเดอร์เก็บวิดีโอ" });
+    try {
+      if ((await folder.requestPermission({ mode: "readwrite" })) !== "granted") {
+        return patch({ needsFolderPermission: true, error: "ยังไม่ได้อนุญาตให้บันทึกลงโฟลเดอร์" });
+      }
+      if (!recorderRef.current) {
+        await stop();
+        await openCamera(cameraId);
+        patch({ isPreviewing: true });
+      }
+      writeLocal(CONFIRMED_KEY, cameraId);
+      patch({ isConfirmed: true, needsFolderPermission: false, error: null });
+    } catch (error) {
+      await stop();
+      patch({ isConfirmed: false, error: `เปิดกล้องไม่ได้: ${error instanceof Error ? error.message : String(error)}` });
+    }
+  }, [openCamera, patch, status.cameraId, stop]);
 
   /** Starts a new clip for one branch session. Silently does nothing until camera + folder are ready. */
   const start = useCallback(
@@ -260,21 +317,8 @@ export function useEvidenceRecorder() {
         return;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: status.cameraId }, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false,
-        });
-        streamRef.current = stream;
-        const video = (videoRef.current ??= document.createElement("video"));
-        video.muted = true;
-        video.playsInline = true;
-        video.srcObject = stream;
-        await video.play();
-        const settings = stream.getVideoTracks()[0]?.getSettings() ?? {};
-        const canvas = (canvasRef.current ??= document.createElement("canvas"));
-        canvas.width = settings.width ?? 1280;
-        canvas.height = settings.height ?? 720;
-        drawTimerRef.current = window.setInterval(draw, 1000 / FPS);
+        await openCamera(status.cameraId);
+        const canvas = canvasRef.current!;
 
         const fileName = `${stamp(new Date())}_${safeName(label.branch)}_${safeName(label.reference || "ไม่มีเลข")}.webm`;
         const handle = await folder.getFileHandle(fileName, { create: true });
@@ -296,7 +340,7 @@ export function useEvidenceRecorder() {
         await stop();
       }
     },
-    [draw, flush, patch, status.cameraId, stop],
+    [flush, openCamera, patch, status.cameraId, stop],
   );
 
   const setOverlay = useCallback((lines: string[], tone: OverlayTone = "info") => {
@@ -337,5 +381,5 @@ export function useEvidenceRecorder() {
 
   useEffect(() => () => void stop(), [stop]);
 
-  return { status, scanCameras, selectCamera, pickFolder, grantFolder, start, stop, setOverlay, clipReference, attachPreview };
+  return { status, scanCameras, selectCamera, pickFolder, grantFolder, confirm, start, stop, setOverlay, clipReference, attachPreview };
 }

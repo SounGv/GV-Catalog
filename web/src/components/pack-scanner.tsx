@@ -123,7 +123,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
     scanCameras,
     selectCamera,
     pickFolder,
-    grantFolder,
+    confirm: confirmRecorder,
     start: startRecording,
     stop: stopRecording,
     setOverlay,
@@ -321,10 +321,14 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
 
   const recordingBranch = detail && !detail.isClosed ? detail.branch : null;
   const recordingReference = detail ? (detail.trb ?? detail.poNumber ?? "") : "";
-  const isRecorderReady = Boolean(recorderStatus.folderName && !recorderStatus.needsFolderPermission && recorderStatus.cameraId);
+  const isRecorderReady = Boolean(
+    recorderStatus.folderName && !recorderStatus.needsFolderPermission && recorderStatus.cameraId && recorderStatus.isConfirmed,
+  );
+  const cameraLabel = recorderStatus.cameras.find((c) => c.id === recorderStatus.cameraId)?.label ?? "";
   useEffect(() => {
     if (recordingBranch && isRecorderReady) void startRecording({ branch: recordingBranch, reference: recordingReference });
-    else void stopRecording();
+    // Leave the post-confirm live preview running; only end a real recording.
+    else if (recorderStatus.isRecording) void stopRecording();
     // Restart only when the branch (or recorder readiness) changes — not on every scan.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordingBranch, isRecorderReady, recorderStatus.cameraId]);
@@ -477,18 +481,28 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
               <button type="button" onClick={() => void pickFolder()} className="h-9 rounded-[8px] border border-line px-3 text-sm">
                 {recorderStatus.folderName ? `โฟลเดอร์: ${recorderStatus.folderName}` : "เลือกโฟลเดอร์เก็บวิดีโอ"}
               </button>
-              {recorderStatus.needsFolderPermission ? (
-                <button type="button" onClick={() => void grantFolder()} className="h-9 rounded-[8px] bg-amber-500 px-3 text-sm text-white">
-                  อนุญาตให้บันทึกลงโฟลเดอร์
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => void confirmRecorder()}
+                className={`h-9 rounded-[8px] px-3 text-sm font-semibold text-white ${isRecorderReady ? "bg-neutral-500" : "bg-accent"}`}
+              >
+                {isRecorderReady ? "ทดสอบกล้องอีกครั้ง" : "ยืนยันการตั้งค่ากล้อง"}
+              </button>
             </div>
             {recorderStatus.fileName ? <p className="font-mono text-xs text-muted">กำลังบันทึก: {recorderStatus.fileName}</p> : null}
             {recorderStatus.error ? <p className="text-sm text-red-600">{recorderStatus.error}</p> : null}
-            {!isRecorderReady && !recorderStatus.error ? (
-              <p className="text-sm text-amber-700">ตั้งค่ากล้องและโฟลเดอร์ก่อน — ระบบจะเริ่มบันทึกเองเมื่อเปิดสาขา (สแกนได้ตามปกติแม้ยังไม่บันทึก)</p>
+            {isRecorderReady && !recorderStatus.error ? (
+              <p className="text-sm text-emerald-700">
+                ✓ ตั้งค่าแล้ว: {cameraLabel} → โฟลเดอร์ {recorderStatus.folderName}
+                {recorderStatus.isRecording ? "" : " — จะเริ่มบันทึกเองเมื่อเปิดสาขา"}
+              </p>
             ) : null}
-            <div ref={attachPreview} className="max-w-[420px]" />
+            {!isRecorderReady && !recorderStatus.error ? (
+              <p className="text-sm text-amber-700">
+                เลือกกล้อง และโฟลเดอร์เก็บวิดีโอ แล้วกด &quot;ยืนยันการตั้งค่ากล้อง&quot; — ระบบจะเริ่มบันทึกเองเมื่อเปิดสาขา (สแกนได้ตามปกติแม้ยังไม่บันทึก)
+              </p>
+            ) : null}
+            <div ref={attachPreview} hidden={!recorderStatus.isRecording && !recorderStatus.isPreviewing} className="max-w-[420px]" />
           </div>
 
           {!selected ? (
