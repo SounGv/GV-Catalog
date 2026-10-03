@@ -237,3 +237,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS branch_closures_one_open_idx ON branch_closure
 -- Evidence video recorded at the packing station: the file name (saved on the
 -- station's own disk) and the second within it at which this barcode was read.
 ALTER TABLE scan_events ADD COLUMN IF NOT EXISTS video_file text;
+
+-- Who is packing a branch right now: one holder per branch, one branch per
+-- station per job. Nobody else can open, scan, close or reopen a held branch.
+-- Released only by the holder (switching branch, closing it, or "leave");
+-- never by timeout. The same station or the same scanner name may return to it.
+CREATE TABLE IF NOT EXISTS branch_claims (
+  job_id uuid NOT NULL REFERENCES pack_jobs (id) ON DELETE CASCADE,
+  branch text NOT NULL,
+  station_id text NOT NULL,
+  claimed_by text NOT NULL,
+  claimed_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (job_id, branch)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS branch_claims_station_idx ON branch_claims (job_id, station_id);

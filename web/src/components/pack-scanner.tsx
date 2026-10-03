@@ -14,7 +14,10 @@ const RESULT_LABEL: Record<string, string> = {
   unknown: "ไม่อยู่ใน PO",
   ambiguous: "ไม่ชัดเจน",
   closed: "สาขาปิดแล้ว",
+  held: "มีคนอื่นทำอยู่",
 };
+const BRANCH_POLL_MS = 5000;
+const noSubscribe = () => () => {};
 
 // Short high beep = counted; two low buzzes = anything that was not counted.
 // Generated with Web Audio so no sound files or libraries are needed.
@@ -93,6 +96,8 @@ function summarize(detail: BranchDetail): BranchSummary {
     required: detail.lines.reduce((n, l) => n + l.required, 0),
     scanned: detail.lines.reduce((n, l) => n + l.scanned, 0),
     isClosed: detail.isClosed,
+    claimedBy: detail.claimedBy,
+    claimStation: detail.claimStation,
   };
 }
 
@@ -117,6 +122,9 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
   const [lastScan, setLastScan] = useState<{ model: string; barcode: string; result: string } | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [reopenReason, setReopenReason] = useState("");
+  /** Why the last branch pick was refused (someone else is packing it). */
+  const [blockedNotice, setBlockedNotice] = useState<string | null>(null);
+  const myStation = useSyncExternalStore(noSubscribe, stationId, () => "");
 
   const scanInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -180,25 +188,93 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
   const selectBranch = useCallback(
     async (branch: string) => {
       if (queueRef.current.length) return; // finish pending scans for the current branch first
-      selectedRef.current = branch;
-      setSelected(branch);
-      setFeedback(null);
-      setLastPart(null);
-      setLastScan(null);
-      setReopenReason("");
+      if (!scannerName) {
+        setBlockedNotice("พิมพ์ชื่อผู้สแกนที่มุมขวาบนก่อนเลือกสาขา");
+        playTone("warn");
+        return;
+      }
       setIsLoadingBranch(true);
       try {
-        const data = await api<{ detail: BranchDetail }>(`/branches/${encodeURIComponent(branch)}`);
-        if (selectedRef.current === branch) applyDetail(data.detail);
+        // Taking the branch is what marks it as "being packed" for every other station.
+        const data = await api<{ detail: BranchDetail }>(`/branches/${encodeURIComponent(branch)}/claim`, {
+          method: "POST",
+          body: JSON.stringify({ stationId: stationId(), scannedBy: scannerName }),
+        });
+        selectedRef.current = branch;
+        setSelected(branch);
+        setFeedback(null);
+        setLastPart(null);
+        setLastScan(null);
+        setReopenReason("");
+        setBlockedNotice(null);
+        applyDetail(data.detail);
+        setBranches((list) =>
+          list.map((b) =>
+            b.branch === branch || b.claimStation !== data.detail.claimStation || !data.detail.claimStation
+              ? b
+              : { ...b, claimedBy: null, claimStation: null },
+          ),
+        );
       } catch (error) {
-        setFeedback({ tone: "warn", text: error instanceof Error ? error.message : "โหลดสาขาไม่สำเร็จ" });
+        setBlockedNotice(error instanceof Error ? error.message : "เปิดสาขาไม่สำเร็จ");
+        playTone("warn");
       } finally {
         setIsLoadingBranch(false);
         focusScanInput();
       }
     },
-    [api, applyDetail, focusScanInput],
+    [api, applyDetail, focusScanInput, scannerName],
   );
+
+  const refreshBranches = useCallback(async () => {
+    try {
+      const data = await api<{ branches: BranchSummary[] }>("/branches");
+      setBranches(data.branches);
+      return data.branches;
+    } catch {
+      return null; // keep showing the last list; the next poll retries
+    }
+  }, [api]);
+
+  // Other stations take, scan and close branches too: poll so every list shows who is packing what.
+  // The first answer also reopens the branch this station was holding (e.g. after a reload).
+  const hasResumedRef = useRef(false);
+  useEffect(() => {
+    if (!scannerName || !myStation) return;
+    let isActive = true;
+    const tick = async () => {
+      const list = await refreshBranches();
+      if (!isActive || !list || hasResumedRef.current) return;
+      hasResumedRef.current = true;
+      const mine = list.find((b) => b.claimStation === myStation && !b.isClosed);
+      if (mine && !selectedRef.current) void selectBranch(mine.branch);
+    };
+    void tick();
+    const timer = window.setInterval(() => void tick(), BRANCH_POLL_MS);
+    return () => {
+      isActive = false;
+      window.clearInterval(timer);
+    };
+  }, [myStation, refreshBranches, scannerName, selectBranch]);
+
+  const leaveSelectedBranch = async () => {
+    const branch = selectedRef.current;
+    if (!branch || queueRef.current.length) return;
+    try {
+      await api(`/branches/${encodeURIComponent(branch)}/release`, {
+        method: "POST",
+        body: JSON.stringify({ stationId: stationId(), scannedBy: scannerName }),
+      });
+      selectedRef.current = null;
+      setSelected(null);
+      setDetail(null);
+      setFeedback(null);
+      setLastScan(null);
+      await refreshBranches();
+    } catch (error) {
+      setFeedback({ tone: "warn", text: error instanceof Error ? error.message : "ออกจากสาขาไม่สำเร็จ" });
+    }
+  };
 
   // Scans are sent one at a time in the order they were read, so a burst from the
   // scanner can't race itself; the server additionally row-locks each line.
@@ -278,12 +354,14 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
     try {
       const outcome = await api<CloseOutcome>(`/branches/${encodeURIComponent(selected)}/close`, {
         method: "POST",
-        body: JSON.stringify({ closedBy: scannerName }),
+        body: JSON.stringify({ closedBy: scannerName, stationId: stationId() }),
       });
       applyDetail(outcome.detail);
       setFeedback({ tone: outcome.isClosed ? "ok" : "warn", text: outcome.message, shortages: outcome.shortages });
-      if (outcome.isClosed) playComplete();
-      else playTone("warn");
+      if (outcome.isClosed) {
+        playComplete();
+        void refreshBranches(); // the branch was released for the next one
+      } else playTone("warn");
     } catch (error) {
       setFeedback({ tone: "warn", text: error instanceof Error ? error.message : "ปิดรายการไม่สำเร็จ" });
     }
@@ -299,7 +377,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
     try {
       const data = await api<{ detail: BranchDetail }>(`/branches/${encodeURIComponent(selected)}/reopen`, {
         method: "POST",
-        body: JSON.stringify({ reopenedBy: scannerName, reason: reopenReason.trim() }),
+        body: JSON.stringify({ reopenedBy: scannerName, stationId: stationId(), reason: reopenReason.trim() }),
       });
       applyDetail(data.detail);
       setReopenReason("");
@@ -326,7 +404,9 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
 
   const total = detail ? summarize(detail) : null;
   const totalDone = branches.filter((b) => b.isClosed).length;
+  const isHeldByOther = (b: BranchSummary) => Boolean(b.claimStation && b.claimStation !== myStation && !b.isClosed);
   const statusCounts = {
+    held: branches.filter(isHeldByOther).length,
     closed: totalDone,
     complete: branches.filter((b) => !b.isClosed && b.scanned >= b.required).length,
     inProgress: branches.filter((b) => !b.isClosed && b.scanned > 0 && b.scanned < b.required).length,
@@ -431,15 +511,20 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
             <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-500" />กำลังยิง {statusCounts.inProgress}</span>
             <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-emerald-600" />ครบ {statusCounts.complete}</span>
             <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-neutral-500" />ปิดแล้ว {statusCounts.closed}</span>
+            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-rose-600" />คนอื่นกำลังทำ {statusCounts.held}</span>
           </div>
           <ul className="flex flex-col gap-1 overflow-y-auto">
             {visibleBranches.map((b) => {
               const isComplete = b.scanned >= b.required;
               const isStarted = b.scanned > 0;
+              const heldByOther = isHeldByOther(b);
+              const isMine = Boolean(b.claimStation && b.claimStation === myStation && !b.isClosed);
               // Row colour = status at a glance: grey closed, green complete, amber in progress, white not started.
               const statusClass = b.isClosed
                 ? "border-l-neutral-500 bg-neutral-200/70 text-neutral-500"
-                : isComplete
+                : heldByOther
+                  ? "cursor-not-allowed border-l-rose-600 bg-rose-50"
+                  : isComplete
                   ? "border-l-emerald-600 bg-emerald-50"
                   : isStarted
                     ? "border-l-amber-500 bg-amber-50"
@@ -459,6 +544,11 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                       <span className="block font-mono text-sm font-semibold">{b.branch}</span>
                       <span className="block truncate text-sm text-muted">{b.branchName}</span>
                       <span className="block truncate font-mono text-xs text-muted">{b.trb ? `TRB ${b.trb}` : b.poNumber ? `PO ${b.poNumber}` : ""}</span>
+                      {heldByOther ? (
+                        <span className="block truncate text-xs font-semibold text-rose-700">🔒 {b.claimedBy} กำลังทำ</span>
+                      ) : isMine ? (
+                        <span className="block truncate text-xs font-semibold text-accent">● เครื่องนี้กำลังทำ</span>
+                      ) : null}
                     </span>
                     <span className="flex shrink-0 flex-col items-end gap-0.5">
                       <span className="font-mono text-sm">
@@ -480,6 +570,11 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
         </aside>
 
         <section className="flex min-w-0 flex-col gap-3">
+          {blockedNotice ? (
+            <p role="alert" className="rounded-[10px] bg-red-600 px-4 py-3 text-lg font-semibold text-white">
+              {blockedNotice}
+            </p>
+          ) : null}
           {!scannerName ? (
             <p className="rounded-[10px] border border-amber-300 bg-amber-50 px-4 py-3 text-base text-amber-900">
               พิมพ์ชื่อผู้สแกนที่มุมขวาบนก่อนเริ่มสแกน (ระบบจำไว้ในเครื่องนี้)
@@ -666,6 +761,15 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                     ปิดรายการสาขานี้
                   </button>
                 )}
+                {detail && !detail.isClosed ? (
+                  <button
+                    type="button"
+                    onClick={() => void leaveSelectedBranch()}
+                    className="h-11 rounded-[10px] border border-line px-4 text-base text-muted"
+                  >
+                    ออกจากสาขานี้ (ให้คนอื่นทำต่อ)
+                  </button>
+                ) : null}
               </div>
 
               {detail?.recentEvents.length ? (

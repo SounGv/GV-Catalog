@@ -234,6 +234,9 @@ export type BranchSummary = {
   required: number;
   scanned: number;
   isClosed: boolean;
+  /** Scanner name and station holding this branch right now (see branch_claims). */
+  claimedBy: string | null;
+  claimStation: string | null;
 };
 
 export async function getBranchSummaries(jobId: string, db: Pick<PoolClient, "query"> = pool): Promise<BranchSummary[]> {
@@ -245,8 +248,11 @@ export async function getBranchSummaries(jobId: string, db: Pick<PoolClient, "qu
     required: number;
     scanned: number;
     is_closed: boolean;
+    claimed_by: string | null;
+    claim_station: string | null;
   }>(
     `SELECT l.branch, max(l.branch_name) AS branch_name,
+            max(bcl.claimed_by) AS claimed_by, max(bcl.station_id) AS claim_station,
             string_agg(DISTINCT l.po_number, ', ') AS po_number, string_agg(DISTINCT l.trb, ', ') AS trb,
             sum(l.qty_required)::int AS required,
             coalesce(sum(c.counted), 0)::int AS scanned,
@@ -254,6 +260,7 @@ export async function getBranchSummaries(jobId: string, db: Pick<PoolClient, "qu
      FROM pack_lines l
      LEFT JOIN (SELECT pack_line_id, count(*) AS counted FROM scan_events WHERE job_id = $1 AND result = 'counted' GROUP BY pack_line_id) c
        ON c.pack_line_id = l.id
+     LEFT JOIN branch_claims bcl ON bcl.job_id = l.job_id AND bcl.branch = l.branch
      WHERE l.job_id = $1
      GROUP BY l.job_id, l.branch
      ORDER BY l.branch`,
@@ -267,6 +274,8 @@ export async function getBranchSummaries(jobId: string, db: Pick<PoolClient, "qu
     required: r.required,
     scanned: r.scanned,
     isClosed: r.is_closed,
+    claimedBy: r.claimed_by,
+    claimStation: r.claim_station,
   }));
 }
 
@@ -298,6 +307,8 @@ export type BranchDetail = {
   isClosed: boolean;
   closedBy: string | null;
   closedAt: string | null;
+  claimedBy: string | null;
+  claimStation: string | null;
   lines: PackLineState[];
   recentEvents: ScanEventView[];
 };
@@ -321,7 +332,7 @@ export async function getBranchDetail(jobId: string, branch: string, db: Pick<Po
     [jobId, branch],
   );
   if (!lines.length) return null;
-  const [{ rows: closure }, { rows: events }] = await Promise.all([
+  const [{ rows: closure }, { rows: events }, { rows: claim }] = await Promise.all([
     db.query<{ closed_by: string | null; closed_at: Date }>(
       "SELECT closed_by, closed_at FROM branch_closures WHERE job_id = $1 AND branch = $2 AND reopened_at IS NULL",
       [jobId, branch],
@@ -340,6 +351,10 @@ export async function getBranchDetail(jobId: string, branch: string, db: Pick<Po
        WHERE e.job_id = $1 AND e.branch = $2 ORDER BY e.scanned_at DESC LIMIT 15`,
       [jobId, branch],
     ),
+    db.query<{ claimed_by: string; station_id: string }>(
+      "SELECT claimed_by, station_id FROM branch_claims WHERE job_id = $1 AND branch = $2",
+      [jobId, branch],
+    ),
   ]);
   return {
     branch,
@@ -349,6 +364,8 @@ export async function getBranchDetail(jobId: string, branch: string, db: Pick<Po
     isClosed: closure.length > 0,
     closedBy: closure[0]?.closed_by ?? null,
     closedAt: closure[0]?.closed_at.toISOString() ?? null,
+    claimedBy: claim[0]?.claimed_by ?? null,
+    claimStation: claim[0]?.station_id ?? null,
     lines: lines.map((l) => ({ id: l.id, part: l.part, sku: l.sku, description: l.description, barcodes: l.barcodes, required: l.qty_required, scanned: l.scanned })),
     recentEvents: events.map((e) => ({
       barcode: e.barcode,
@@ -362,8 +379,81 @@ export async function getBranchDetail(jobId: string, branch: string, db: Pick<Po
   };
 }
 
+/** The packing station asking to work on a branch, and the scanner name typed there. */
+export type BranchHolder = { stationId: string; name: string };
+
+export function toHolder(stationId: unknown, name: unknown): BranchHolder | null {
+  const station = String(stationId ?? "").trim().slice(0, 80);
+  const who = String(name ?? "").trim().slice(0, 80);
+  return station && who ? { stationId: station, name: who } : null;
+}
+
+const heldMessage = (name: string) => `สาขานี้ ${name} กำลังทำอยู่ — เลือกสาขาอื่น`;
+
+/**
+ * Takes the branch for this station (or keeps it), inside the caller's transaction.
+ * Returns the other holder's name when someone else has it; the caller must then
+ * ROLLBACK so this station's previous branch, released here, is restored.
+ */
+async function holdBranch(db: Pick<PoolClient, "query">, jobId: string, branch: string, holder: BranchHolder): Promise<string | null> {
+  const { rows: current } = await db.query<{ station_id: string; claimed_by: string }>(
+    "SELECT station_id, claimed_by FROM branch_claims WHERE job_id = $1 AND branch = $2 FOR UPDATE",
+    [jobId, branch],
+  );
+  const held = current[0];
+  if (held && held.station_id !== holder.stationId && held.claimed_by.toLowerCase() !== holder.name.toLowerCase()) {
+    return held.claimed_by;
+  }
+  // One branch at a time per station: moving on releases the previous one.
+  await db.query("DELETE FROM branch_claims WHERE job_id = $1 AND station_id = $2 AND branch <> $3", [jobId, holder.stationId, branch]);
+  const { rows } = await db.query<{ claimed_by: string }>(
+    `INSERT INTO branch_claims AS c (job_id, branch, station_id, claimed_by) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (job_id, branch) DO UPDATE SET station_id = EXCLUDED.station_id, claimed_by = EXCLUDED.claimed_by
+       WHERE c.station_id = EXCLUDED.station_id OR lower(c.claimed_by) = lower(EXCLUDED.claimed_by)
+     RETURNING claimed_by`,
+    [jobId, branch, holder.stationId, holder.name],
+  );
+  if (rows.length) return null;
+  // Lost a race for a free branch to another station.
+  const { rows: other } = await db.query<{ claimed_by: string }>(
+    "SELECT claimed_by FROM branch_claims WHERE job_id = $1 AND branch = $2",
+    [jobId, branch],
+  );
+  return other[0]?.claimed_by ?? "สถานีอื่น";
+}
+
+export type ClaimOutcome = { detail: BranchDetail | null; heldBy: string | null };
+
+/** Opens a branch for this station. A closed branch opens read-only without taking it. */
+export async function claimBranch(jobId: string, branch: string, holder: BranchHolder): Promise<ClaimOutcome> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows: closed } = await client.query(
+      "SELECT 1 FROM branch_closures WHERE job_id = $1 AND branch = $2 AND reopened_at IS NULL",
+      [jobId, branch],
+    );
+    const heldBy = closed.length ? null : await holdBranch(client, jobId, branch, holder);
+    await client.query(heldBy ? "ROLLBACK" : "COMMIT");
+    return { heldBy, detail: heldBy ? null : await getBranchDetail(jobId, branch, client) };
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/** The holder leaves a branch so someone else may pack it. */
+export async function releaseBranch(jobId: string, branch: string, holder: BranchHolder): Promise<void> {
+  await pool.query(
+    "DELETE FROM branch_claims WHERE job_id = $1 AND branch = $2 AND (station_id = $3 OR lower(claimed_by) = lower($4))",
+    [jobId, branch, holder.stationId, holder.name],
+  );
+}
+
 export type ScanOutcome = {
-  result: "counted" | "over" | "unknown" | "ambiguous" | "closed";
+  result: "counted" | "over" | "unknown" | "ambiguous" | "closed" | "held";
   message: string;
   part: string | null;
   detail: BranchDetail | null;
@@ -404,6 +494,12 @@ export async function recordScan(jobId: string, branch: string, barcodeRaw: stri
     if (closed.length) {
       await client.query("ROLLBACK");
       return { result: "closed", message: "สาขานี้ปิดรายการแล้ว ต้องเปิดใหม่ก่อนจึงจะสแกนได้", part: null, detail: await getBranchDetail(jobId, branch, client) };
+    }
+    const holder = toHolder(context.stationId, context.scannedBy);
+    const heldBy = holder ? await holdBranch(client, jobId, branch, holder) : null;
+    if (!holder || heldBy) {
+      await client.query("ROLLBACK");
+      return { result: "held", message: heldBy ? heldMessage(heldBy) : "ต้องใส่ชื่อผู้สแกนก่อน", part: null, detail: null };
     }
 
     let result: ScanOutcome["result"];
@@ -465,10 +561,13 @@ export type CloseOutcome = {
 };
 
 /** Closes a branch only when every line is complete; otherwise reports exactly what is missing. */
-export async function closeBranch(jobId: string, branch: string, closedBy: string | null): Promise<CloseOutcome> {
+export async function closeBranch(jobId: string, branch: string, holder: BranchHolder): Promise<CloseOutcome> {
+  const closedBy = holder.name;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    const heldBy = await holdBranch(client, jobId, branch, holder);
+    if (heldBy) throw new Error(heldMessage(heldBy));
     // Locking the branch's lines makes a close and a concurrent scan of the same branch serialize.
     const { rows: lines } = await client.query<{ id: string; part: string; description: string; qty_required: number }>(
       "SELECT id, part, description, qty_required FROM pack_lines WHERE job_id = $1 AND branch = $2 ORDER BY part FOR UPDATE",
@@ -501,6 +600,8 @@ export async function closeBranch(jobId: string, branch: string, closedBy: strin
     if (!already.length) {
       await client.query("INSERT INTO branch_closures (job_id, branch, closed_by) VALUES ($1, $2, $3)", [jobId, branch, closedBy]);
     }
+    // Done with this branch: free the station (and the branch) for the next one.
+    await client.query("DELETE FROM branch_claims WHERE job_id = $1 AND branch = $2", [jobId, branch]);
     await client.query("COMMIT");
     return { isClosed: true, message: "ปิดรายการสาขานี้แล้ว", shortages: [], detail: await getBranchDetail(jobId, branch, client) };
   } catch (error) {
@@ -511,14 +612,26 @@ export async function closeBranch(jobId: string, branch: string, closedBy: strin
   }
 }
 
-export async function reopenBranch(jobId: string, branch: string, reopenedBy: string | null, reason: string): Promise<BranchDetail | null> {
-  const { rowCount } = await pool.query(
-    `UPDATE branch_closures SET reopened_by = $3, reopened_at = now(), reopen_reason = $4
-     WHERE job_id = $1 AND branch = $2 AND reopened_at IS NULL`,
-    [jobId, branch, reopenedBy, reason],
-  );
-  if (!rowCount) throw new Error("สาขานี้ยังไม่ได้ปิดรายการ");
-  return getBranchDetail(jobId, branch);
+export async function reopenBranch(jobId: string, branch: string, holder: BranchHolder, reason: string): Promise<BranchDetail | null> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const heldBy = await holdBranch(client, jobId, branch, holder);
+    if (heldBy) throw new Error(heldMessage(heldBy));
+    const { rowCount } = await client.query(
+      `UPDATE branch_closures SET reopened_by = $3, reopened_at = now(), reopen_reason = $4
+       WHERE job_id = $1 AND branch = $2 AND reopened_at IS NULL`,
+      [jobId, branch, holder.name, reason],
+    );
+    if (!rowCount) throw new Error("สาขานี้ยังไม่ได้ปิดรายการ");
+    await client.query("COMMIT");
+    return getBranchDetail(jobId, branch, client);
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export type PackReportRow = {
