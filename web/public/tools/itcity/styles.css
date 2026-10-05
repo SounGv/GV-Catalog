@@ -5,5 +5,5 @@
 .pill.unchecked{background:#eef3f0;color:#5b6a62}
 input[type=number]{width:100%;padding:9px;border:1px solid #bdccc5;background:white;border-radius:4px;color:inherit}
 @media print{a[href="/"]{display:none!important}}
-.pack-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}#packFrame{display:block;width:100%;height:calc(100vh - 120px);min-height:640px;border:1px solid #d7dde3;border-radius:6px;background:#fff}#packJobs td.num{text-align:right;font-variant-numeric:tabular-nums}
+.pack-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}/* The scan screen takes the whole window: only bills, scanning and the camera. */#packScreen{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;background:#f7f8fa}#packScreen[hidden]{display:none}.pack-bar{display:flex;align-items:center;gap:12px;padding:6px 12px;border-bottom:1px solid #d7dde3;background:#fff;font-weight:700}.pack-bar button{padding:6px 12px}#packFrame{display:block;flex:1;width:100%;min-height:0;border:0;background:#f7f8fa}body.pack-open{overflow:hidden}#packJobs td.num{text-align:right;font-variant-numeric:tabular-nums}
 .tabs button.tab-pack{margin-left:8px;background:#185c45;color:#fff;border-radius:5px 5px 0 0;font-weight:700}.tabs button.tab-pack[aria-pressed=true]{background:#123b2c;color:#fff;border-color:#123b2c}

@@ -479,24 +479,25 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
   }, [canScan, selected]);
 
   return (
-    <main className="mx-auto flex max-w-[1680px] flex-col gap-4 px-4 py-5 md:px-8">
-      {/* Inside a retailer tool's scan tab the tool already provides the header and job list. */}
+    // Fills the screen below the site header (or the whole frame inside a tool) and never scrolls
+    // as a page: each column scrolls on its own, so the camera stays in view while scanning.
+    <main className="flex flex-col gap-2 px-3 py-2 lg:h-[calc(100dvh-var(--sticky-top-offset,0px))] lg:overflow-hidden">
+      {/* Inside a retailer tool the tool already provides the header and job list. */}
       {embedded && <style>{"[data-site-chrome]{display:none}"}</style>}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 items-baseline gap-3">
           {!embedded && (
-            <Link href="/pack" className="text-sm text-muted underline">
+            <Link href="/pack" className="shrink-0 text-sm text-muted underline">
               ‹ งานสแกนทั้งหมด
             </Link>
           )}
-          <h1 className="text-xl font-semibold">
-            ยิงสแกนลงลัง · {customer} <span className="text-base font-normal text-muted">{sourceFile}</span>
-          </h1>
-          <p className="text-sm text-muted">
-            ครบแพ็คแล้ว {totalDone} / {branches.length} สาขา
-          </p>
+          <h1 className="shrink-0 text-lg font-semibold">ยิงสแกนลงลัง · {customer}</h1>
+          <span className="truncate text-sm text-muted">{sourceFile}</span>
+          <span className="shrink-0 rounded bg-neutral-100 px-2 py-0.5 text-sm">
+            ครบแพ็คแล้ว <b>{totalDone}</b> / {branches.length} สาขา
+          </span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <label className="flex items-center gap-2 text-sm text-muted">
             ผู้สแกน
             <input
@@ -505,20 +506,32 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
               onKeyDown={(e) => e.key === "Enter" && saveScannerName(e.currentTarget.value)}
               onBlur={(e) => saveScannerName(e.currentTarget.value)}
               placeholder="พิมพ์ชื่อ"
-              className="h-10 w-40 rounded-[10px] border border-line bg-surface px-3 text-base text-ink outline-none focus:border-accent"
+              className={
+                "h-9 w-36 rounded-[8px] border bg-surface px-2 text-base text-ink outline-none focus:border-accent " +
+                (scannerName ? "border-line" : "border-amber-500 ring-2 ring-amber-300")
+              }
             />
           </label>
-          <a
-            href={`/api/pack/jobs/${jobId}/report`}
-            className="inline-flex h-10 items-center rounded-[10px] border border-line px-3 text-base"
-          >
-            ส่งออกรายงานผลสแกน
+          <a href={`/api/pack/jobs/${jobId}/report`} className="inline-flex h-9 items-center rounded-[8px] border border-line px-3 text-sm">
+            ส่งออกรายงาน
           </a>
         </div>
-      </div>
+      </header>
 
-      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="flex max-h-[78vh] flex-col gap-2 overflow-hidden rounded-[10px] border border-line bg-surface p-3">
+      {blockedNotice ? (
+        <p role="alert" className="rounded-[10px] bg-red-600 px-4 py-2 text-base font-semibold text-white">
+          {blockedNotice}
+        </p>
+      ) : null}
+      {!scannerName ? (
+        <p className="rounded-[10px] border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          พิมพ์ชื่อผู้สแกนที่มุมขวาบนก่อนเริ่มสแกน (ระบบจำไว้ในเครื่องนี้)
+        </p>
+      ) : null}
+
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)_minmax(340px,32%)]">
+        {/* ── Bills / branches ── */}
+        <aside className="flex min-h-0 flex-col gap-2 overflow-hidden rounded-[10px] border border-line bg-surface p-2.5 max-lg:max-h-[60vh]">
           <input
             type="search"
             value={branchFilter}
@@ -533,48 +546,42 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                 void selectBranch(target);
               }
             }}
-            placeholder="พิมพ์ค้นหา สาขา / เลข PO / เลขบิล (TRB) แล้วกด Enter"
-            className="h-10 rounded-[10px] border border-line px-3 text-base outline-none focus:border-accent"
+            placeholder="ค้นหา สาขา / PO / เลขบิล แล้ว Enter"
+            className="h-9 rounded-[8px] border border-line px-2.5 text-sm outline-none focus:border-accent"
           />
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
-            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-line bg-surface" />ยังไม่ยิง {statusCounts.notStarted}</span>
-            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-amber-500" />กำลังยิง {statusCounts.inProgress}</span>
-            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-emerald-600" />ครบ {statusCounts.complete}</span>
-            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-neutral-500" />ครบแพ็คแล้ว {statusCounts.closed}</span>
-            <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-rose-600" />คนอื่นกำลังทำ {statusCounts.held}</span>
+          <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11px] text-muted">
+            <span><span className="mr-1 inline-block h-2 w-2 rounded-sm border border-line bg-surface" />ยังไม่ยิง {statusCounts.notStarted}</span>
+            <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-amber-500" />กำลังยิง {statusCounts.inProgress}</span>
+            <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-emerald-600" />ครบ {statusCounts.complete}</span>
+            <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-neutral-500" />ครบแพ็คแล้ว {statusCounts.closed}</span>
+            <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-rose-600" />คนอื่นทำ {statusCounts.held}</span>
           </div>
-          <ul className="flex flex-col gap-1 overflow-y-auto">
+          <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto pr-0.5">
             {visibleBranches.map((b) => {
               const isComplete = b.scanned >= b.required;
               const isStarted = b.scanned > 0;
               const heldByOther = isHeldByOther(b);
               const isMine = Boolean(b.claimStation && b.claimStation === myStation && !b.isClosed);
-              // Row colour = status at a glance: grey closed, green complete, amber in progress, white not started.
+              // Row colour = status at a glance: grey packed, red someone else, green complete, amber in progress.
               const statusClass = b.isClosed
                 ? "border-l-neutral-500 bg-neutral-200/70 text-neutral-500"
                 : heldByOther
                   ? "cursor-not-allowed border-l-rose-600 bg-rose-50"
                   : isComplete
-                  ? "border-l-emerald-600 bg-emerald-50"
-                  : isStarted
-                    ? "border-l-amber-500 bg-amber-50"
-                    : "border-l-transparent hover:bg-neutral-100";
+                    ? "border-l-emerald-600 bg-emerald-50"
+                    : isStarted
+                      ? "border-l-amber-500 bg-amber-50"
+                      : "border-l-transparent hover:bg-neutral-100";
               return (
                 <li
                   key={b.branch}
-                  className={
-                    "flex flex-col gap-1 rounded-[8px] border-l-4 px-2.5 py-2 " + statusClass + (b.branch === selected ? " ring-2 ring-accent" : "")
-                  }
+                  className={"flex flex-col gap-1 rounded-[8px] border-l-4 px-2 py-1.5 " + statusClass + (b.branch === selected ? " ring-2 ring-accent" : "")}
                 >
-                  <button
-                    type="button"
-                    onClick={() => void selectBranch(b.branch)}
-                    className="flex w-full items-center justify-between gap-2 text-left"
-                  >
+                  <button type="button" onClick={() => void selectBranch(b.branch)} className="flex w-full items-center justify-between gap-2 text-left">
                     <span className="min-w-0">
                       <span className="block font-mono text-sm font-semibold">{b.branch}</span>
-                      <span className="block truncate text-sm text-muted">{b.branchName}</span>
-                      <span className="block truncate font-mono text-xs text-muted">{b.trb ? `TRB ${b.trb}` : b.poNumber ? `PO ${b.poNumber}` : ""}</span>
+                      <span className="block truncate text-xs text-muted">{b.branchName}</span>
+                      <span className="block truncate font-mono text-[11px] text-muted">{b.trb ? `TRB ${b.trb}` : b.poNumber ? `PO ${b.poNumber}` : ""}</span>
                       {heldByOther ? (
                         <span className="block truncate text-xs font-semibold text-rose-700">🔒 {b.claimedBy} กำลังทำ</span>
                       ) : isMine ? (
@@ -586,11 +593,11 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                         {b.scanned}/{b.required}
                       </span>
                       {b.isClosed ? (
-                        <span className="rounded bg-neutral-900 px-1.5 text-xs text-white">✓ ครบแพ็คแล้ว</span>
+                        <span className="rounded bg-neutral-900 px-1.5 text-[11px] text-white">✓ ครบแพ็คแล้ว</span>
                       ) : isComplete ? (
-                        <span className="rounded bg-emerald-600 px-1.5 text-xs text-white">ครบ</span>
+                        <span className="rounded bg-emerald-600 px-1.5 text-[11px] text-white">ครบ</span>
                       ) : isStarted ? (
-                        <span className="rounded bg-amber-500 px-1.5 text-xs text-white">กำลังยิง</span>
+                        <span className="rounded bg-amber-500 px-1.5 text-[11px] text-white">กำลังยิง</span>
                       ) : null}
                     </span>
                   </button>
@@ -617,125 +624,56 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
           </ul>
         </aside>
 
-        <section className="flex min-w-0 flex-col gap-3">
-          {blockedNotice ? (
-            <p role="alert" className="rounded-[10px] bg-red-600 px-4 py-3 text-lg font-semibold text-white">
-              {blockedNotice}
-            </p>
-          ) : null}
-          {!scannerName ? (
-            <p className="rounded-[10px] border border-amber-300 bg-amber-50 px-4 py-3 text-base text-amber-900">
-              พิมพ์ชื่อผู้สแกนที่มุมขวาบนก่อนเริ่มสแกน (ระบบจำไว้ในเครื่องนี้)
-            </p>
-          ) : null}
-
-          <div className="flex flex-col gap-2 rounded-[10px] border border-line bg-surface p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold">กล้องบันทึกหลักฐาน</span>
-              {recorderStatus.isRecording ? (
-                <span className="inline-flex items-center gap-1.5 rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-white" aria-hidden="true" /> REC
-                </span>
-              ) : (
-                <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-muted">ยังไม่บันทึก</span>
-              )}
-              <select
-                value={recorderStatus.cameraId}
-                onChange={(e) => selectCamera(e.target.value)}
-                className="h-9 max-w-[260px] rounded-[8px] border border-line bg-surface px-2 text-sm"
-                aria-label="เลือกกล้อง"
-              >
-                {recorderStatus.cameras.length ? null : <option value="">ยังไม่พบกล้อง</option>}
-                {recorderStatus.cameras.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-              <button type="button" onClick={() => void scanCameras()} className="h-9 rounded-[8px] border border-line px-3 text-sm">
-                ค้นหากล้อง
-              </button>
-              <button type="button" onClick={() => void pickFolder()} className="h-9 rounded-[8px] border border-line px-3 text-sm">
-                {recorderStatus.folderName ? `โฟลเดอร์: ${recorderStatus.folderName}` : "เลือกโฟลเดอร์เก็บวิดีโอ"}
-              </button>
-              <button
-                type="button"
-                onClick={() => void confirmRecorder()}
-                className={`h-9 rounded-[8px] px-3 text-sm font-semibold text-white ${isRecorderReady ? "bg-neutral-500" : "bg-accent"}`}
-              >
-                {isRecorderReady ? "ทดสอบกล้องอีกครั้ง" : "ยืนยันการตั้งค่ากล้อง"}
-              </button>
-            </div>
-            {recorderStatus.fileName ? <p className="font-mono text-xs text-muted">กำลังบันทึก: {recorderStatus.fileName}</p> : null}
-            {recorderStatus.error ? <p className="text-sm text-red-600">{recorderStatus.error}</p> : null}
-            {isRecorderReady && !recorderStatus.error ? (
-              <p className="text-sm text-emerald-700">
-                ✓ ตั้งค่าแล้ว: {cameraLabel} → โฟลเดอร์ {recorderStatus.folderName}
-                {recorderStatus.isRecording ? "" : " — จะเริ่มบันทึกเองเมื่อเปิดสาขา"}
-              </p>
-            ) : null}
-            {!isRecorderReady && !recorderStatus.error ? (
-              <p className="text-sm text-amber-700">
-                เลือกกล้อง และโฟลเดอร์เก็บวิดีโอ แล้วกด &quot;ยืนยันการตั้งค่ากล้อง&quot; — ระบบจะเริ่มบันทึกเองเมื่อเปิดสาขา (สแกนได้ตามปกติแม้ยังไม่บันทึก)
-              </p>
-            ) : null}
-            <div ref={attachPreview} hidden={!recorderStatus.isRecording && !recorderStatus.isPreviewing} className="w-full max-w-[960px]" />
-          </div>
-
+        {/* ── The bill being packed ── */}
+        <section className="flex min-h-0 min-w-0 flex-col gap-2">
           {!selected ? (
-            <p className="rounded-[10px] border border-line bg-surface px-4 py-16 text-center text-lg text-muted">
-              เลือกสาขาจากรายการด้านซ้ายเพื่อเริ่มสแกน
+            <p className="flex flex-1 items-center justify-center rounded-[10px] border border-line bg-surface px-4 py-16 text-center text-lg text-muted">
+              เลือกสาขา / บิลจากรายการด้านซ้าย หรือยิงเลขบิลที่ช่องค้นหา
             </p>
           ) : (
             <>
-              <div className="flex flex-wrap items-end justify-between gap-4 rounded-[10px] border border-line bg-surface p-4">
-                <div className="min-w-0">
-                  <p className="font-mono text-sm text-muted">
-                    {selected}
-                    {detail?.poNumber ? ` · PO ${detail.poNumber}` : ""}
-                    {detail?.trb ? ` · TRB ${detail.trb}` : ""}
+              <div className="flex shrink-0 flex-col gap-2 rounded-[10px] border border-line bg-surface p-3">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-sm text-muted">
+                      {selected}
+                      {detail?.poNumber ? ` · PO ${detail.poNumber}` : ""}
+                      {detail?.trb ? ` · TRB ${detail.trb}` : ""}
+                    </p>
+                    <p className="truncate text-lg font-semibold">{detail?.branchName ?? "…"}</p>
+                  </div>
+                  <p className={"shrink-0 font-mono text-5xl font-bold leading-none " + (total && total.scanned >= total.required ? "text-accent" : "text-ink")}>
+                    {total ? `${total.scanned}/${total.required}` : "…"}
                   </p>
-                  <p className="truncate text-lg font-semibold">{detail?.branchName ?? "…"}</p>
                 </div>
-                <p
-                  className={
-                    "font-mono text-5xl font-bold leading-none " +
-                    (total && total.scanned >= total.required ? "text-accent" : "text-ink")
-                  }
-                >
-                  {total ? `${total.scanned}/${total.required}` : "…"}
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-[10px] border border-line bg-surface p-4">
-                <label htmlFor="scan-input" className="text-sm text-muted">
-                  ยิงบาร์โค้ดที่ช่องนี้ (กด Enter อัตโนมัติจากเครื่องสแกน){pendingCount > 1 ? ` · รอส่ง ${pendingCount - 1}` : ""}
-                </label>
                 <input
                   id="scan-input"
+                  aria-label="ช่องยิงบาร์โค้ด"
                   ref={scanInputRef}
                   autoFocus
                   autoComplete="off"
                   disabled={!canScan}
                   onKeyDown={onScanKeyDown}
-                  placeholder={detail?.isClosed ? "สาขานี้บันทึกครบแพ็คแล้ว — กดแก้ไขถ้าต้องยิงเพิ่ม" : canScan ? "พร้อมสแกน" : "เลือกสาขาและพิมพ์ชื่อผู้สแกนก่อน"}
+                  placeholder={
+                    detail?.isClosed
+                      ? "สาขานี้บันทึกครบแพ็คแล้ว — กดแก้ไขถ้าต้องยิงเพิ่ม"
+                      : canScan
+                        ? `พร้อมสแกน — ยิงบาร์โค้ดสินค้า${pendingCount > 1 ? ` (รอส่ง ${pendingCount - 1})` : ""}`
+                        : "เลือกสาขาและพิมพ์ชื่อผู้สแกนก่อน"
+                  }
                   className="h-14 rounded-[10px] border-2 border-accent bg-surface px-4 font-mono text-2xl outline-none disabled:border-line disabled:bg-neutral-100"
                 />
                 {feedback ? (
                   <div
                     role="status"
                     className={
-                      "rounded-[10px] px-4 py-3 text-lg font-semibold " +
-                      (feedback.tone === "ok"
-                        ? "bg-accent text-white"
-                        : feedback.tone === "warn"
-                          ? "bg-red-600 text-white"
-                          : "bg-accent-soft text-accent")
+                      "max-h-40 overflow-y-auto rounded-[10px] px-4 py-2.5 text-lg font-semibold " +
+                      (feedback.tone === "ok" ? "bg-accent text-white" : feedback.tone === "warn" ? "bg-red-600 text-white" : "bg-accent-soft text-accent")
                     }
                   >
                     {feedback.text}
                     {feedback.shortages?.length ? (
-                      <ul className="mt-2 list-disc pl-6 text-base font-normal">
+                      <ul className="mt-1 list-disc pl-6 text-base font-normal">
                         {feedback.shortages.map((s) => (
                           <li key={s.part}>
                             {s.part} {s.description} — ขาด {s.missing} ชิ้น
@@ -747,9 +685,9 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                 ) : null}
               </div>
 
-              <div className="overflow-x-auto rounded-[10px] border border-line bg-surface">
+              <div className="min-h-0 flex-1 overflow-auto rounded-[10px] border border-line bg-surface">
                 <table className="w-full text-left text-base">
-                  <thead className="bg-neutral-100 text-sm text-muted">
+                  <thead className="sticky top-0 bg-neutral-100 text-sm text-muted">
                     <tr>
                       <th className="px-3 py-2">สินค้า</th>
                       <th className="px-3 py-2">บาร์โค้ด</th>
@@ -763,19 +701,15 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                       const missing = line.required - line.scanned;
                       return (
                         <tr key={line.id} className={"border-t border-line " + (line.part === lastPart ? "bg-accent-soft" : "")}>
-                          <td className="px-3 py-2">
-                            <span className="font-mono text-sm text-muted">{line.part}</span>
-                            <span className="block">{line.description}</span>
+                          <td className="px-3 py-1.5">
+                            <span className="font-mono text-xs text-muted">{line.part}</span>
+                            <span className="block text-sm">{line.description}</span>
                           </td>
-                          <td className="px-3 py-2 font-mono text-sm">{line.barcodes.join(", ")}</td>
-                          <td className="px-3 py-2 text-right font-mono">{line.required}</td>
-                          <td className="px-3 py-2 text-right font-mono font-semibold">{line.scanned}</td>
-                          <td className="px-3 py-2">
-                            {missing <= 0 ? (
-                              <span className="font-semibold text-accent">✓ ครบ</span>
-                            ) : (
-                              <span className="font-semibold text-red-600">ขาด {missing}</span>
-                            )}
+                          <td className="px-3 py-1.5 font-mono text-sm">{line.barcodes.join(", ")}</td>
+                          <td className="px-3 py-1.5 text-right font-mono">{line.required}</td>
+                          <td className="px-3 py-1.5 text-right font-mono font-semibold">{line.scanned}</td>
+                          <td className="px-3 py-1.5">
+                            {missing <= 0 ? <span className="font-semibold text-accent">✓ ครบ</span> : <span className="font-semibold text-red-600">ขาด {missing}</span>}
                           </td>
                         </tr>
                       );
@@ -784,10 +718,10 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                 </table>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
                 {detail?.isClosed ? (
                   <>
-                    <span className="rounded-[10px] bg-neutral-900 px-3 py-2 text-base text-white">
+                    <span className="rounded-[10px] bg-neutral-900 px-3 py-2 text-sm text-white">
                       ✓ ครบแพ็คแล้ว{detail.closedBy ? ` · บันทึกโดย ${detail.closedBy}` : ""}
                     </span>
                     <input
@@ -795,53 +729,109 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                       value={reopenReason}
                       onChange={(e) => setReopenReason(e.target.value)}
                       placeholder="เหตุผลที่ต้องแก้ไข (บังคับ)"
-                      className="h-11 min-w-[260px] rounded-[10px] border border-line bg-surface px-3 text-base outline-none focus:border-accent"
+                      className="h-10 min-w-[240px] flex-1 rounded-[10px] border border-line bg-surface px-3 text-base outline-none focus:border-accent"
                     />
-                    <button type="button" onClick={() => void reopenSelectedBranch()} className="h-11 rounded-[10px] border border-ink px-4 text-base">
+                    <button type="button" onClick={() => void reopenSelectedBranch()} className="h-10 rounded-[10px] border border-ink px-4 text-sm">
                       แก้ไข (ยกเลิกครบแพ็ค)
                     </button>
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => void savePacked(detail?.branch ?? "")}
-                    className="h-11 rounded-[10px] bg-accent px-5 text-base font-medium text-white"
-                  >
+                  <button type="button" onClick={() => void savePacked(detail?.branch ?? "")} className="h-10 rounded-[10px] bg-accent px-5 text-base font-medium text-white">
                     บันทึกครบแพ็คแล้ว
                   </button>
                 )}
                 {detail && !detail.isClosed ? (
-                  <button
-                    type="button"
-                    onClick={() => void leaveSelectedBranch()}
-                    className="h-11 rounded-[10px] border border-line px-4 text-base text-muted"
-                  >
+                  <button type="button" onClick={() => void leaveSelectedBranch()} className="h-10 rounded-[10px] border border-line px-4 text-sm text-muted">
                     ออกจากสาขานี้ (ให้คนอื่นทำต่อ)
                   </button>
                 ) : null}
               </div>
-
-              {detail?.recentEvents.length ? (
-                <div className="rounded-[10px] border border-line bg-surface p-3">
-                  <p className="mb-1 text-sm text-muted">สแกนล่าสุดในสาขานี้</p>
-                  <ul className="flex flex-col gap-0.5 text-sm">
-                    {detail.recentEvents.map((e, i) => (
-                      <li key={i} className={e.result === "counted" ? "" : "text-red-600"}>
-                        {new Date(e.scannedAt).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok" })} · {e.barcode} ·{" "}
-                        {RESULT_LABEL[e.result] ?? e.result}
-                        {e.part ? ` · ${e.part}` : ""}
-                        {e.scannedBy ? ` · ${e.scannedBy}` : ""}
-                        {e.clipOffsetSec !== null
-                          ? ` · คลิป ${String(Math.floor(e.clipOffsetSec / 60)).padStart(2, "0")}:${String(Math.floor(e.clipOffsetSec % 60)).padStart(2, "0")}`
-                          : ""}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
             </>
           )}
         </section>
+
+        {/* ── Evidence camera: always on screen ── */}
+        <aside className="flex min-h-0 flex-col gap-2 overflow-y-auto rounded-[10px] border border-line bg-surface p-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">กล้องบันทึกหลักฐาน</span>
+            {recorderStatus.isRecording ? (
+              <span className="inline-flex items-center gap-1.5 rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-white" aria-hidden="true" /> REC
+              </span>
+            ) : (
+              <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-muted">ยังไม่บันทึก</span>
+            )}
+          </div>
+          <div ref={attachPreview} hidden={!recorderStatus.isRecording && !recorderStatus.isPreviewing} className="w-full shrink-0" />
+          {!recorderStatus.isRecording && !recorderStatus.isPreviewing ? (
+            <div className="flex aspect-video w-full shrink-0 items-center justify-center rounded-[10px] bg-neutral-900 px-4 text-center text-sm text-neutral-300">
+              {isRecorderReady ? "กล้องพร้อม — จะเริ่มบันทึกเมื่อเปิดสาขา" : "ยังไม่ได้ตั้งค่ากล้อง — ตั้งค่าด้านล่าง"}
+            </div>
+          ) : null}
+          {recorderStatus.fileName ? <p className="truncate font-mono text-[11px] text-muted">กำลังบันทึก: {recorderStatus.fileName}</p> : null}
+          {recorderStatus.error ? <p className="text-sm text-red-600">{recorderStatus.error}</p> : null}
+          {isRecorderReady && !recorderStatus.error ? (
+            <p className="truncate text-xs text-emerald-700">
+              ✓ {cameraLabel} → โฟลเดอร์ {recorderStatus.folderName}
+            </p>
+          ) : null}
+
+          {/* Settings fold away once the camera is confirmed, leaving the picture as the main thing. */}
+          <details key={isRecorderReady ? "ready" : "setup"} open={!isRecorderReady} className="rounded-[8px] border border-line px-2.5 py-1.5">
+            <summary className="cursor-pointer text-sm font-medium">ตั้งค่ากล้อง</summary>
+            <div className="mt-2 flex flex-col gap-2">
+              <select
+                value={recorderStatus.cameraId}
+                onChange={(e) => selectCamera(e.target.value)}
+                className="h-9 rounded-[8px] border border-line bg-surface px-2 text-sm"
+                aria-label="เลือกกล้อง"
+              >
+                {recorderStatus.cameras.length ? null : <option value="">ยังไม่พบกล้อง</option>}
+                {recorderStatus.cameras.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => void scanCameras()} className="h-9 rounded-[8px] border border-line px-3 text-sm">
+                  ค้นหากล้อง
+                </button>
+                <button type="button" onClick={() => void pickFolder()} className="h-9 min-w-0 truncate rounded-[8px] border border-line px-3 text-sm">
+                  {recorderStatus.folderName ? `โฟลเดอร์: ${recorderStatus.folderName}` : "เลือกโฟลเดอร์เก็บวิดีโอ"}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => void confirmRecorder()}
+                className={`h-9 rounded-[8px] px-3 text-sm font-semibold text-white ${isRecorderReady ? "bg-neutral-500" : "bg-accent"}`}
+              >
+                {isRecorderReady ? "ทดสอบกล้องอีกครั้ง" : "ยืนยันการตั้งค่ากล้อง"}
+              </button>
+              {!isRecorderReady ? (
+                <p className="text-xs text-amber-700">เลือกกล้องและโฟลเดอร์ แล้วกดยืนยัน — สแกนได้ตามปกติแม้ยังไม่บันทึก</p>
+              ) : null}
+            </div>
+          </details>
+
+          {detail?.recentEvents.length ? (
+            <div className="min-h-0">
+              <p className="mb-1 text-xs font-medium text-muted">ยิงล่าสุดในสาขานี้</p>
+              <ul className="flex flex-col gap-0.5 text-xs">
+                {detail.recentEvents.map((e, i) => (
+                  <li key={i} className={e.result === "counted" ? "" : "text-red-600"}>
+                    {new Date(e.scannedAt).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok" })} · {e.barcode} · {RESULT_LABEL[e.result] ?? e.result}
+                    {e.part ? ` · ${e.part}` : ""}
+                    {e.scannedBy ? ` · ${e.scannedBy}` : ""}
+                    {e.clipOffsetSec !== null
+                      ? ` · คลิป ${String(Math.floor(e.clipOffsetSec / 60)).padStart(2, "0")}:${String(Math.floor(e.clipOffsetSec % 60)).padStart(2, "0")}`
+                      : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </aside>
       </div>
     </main>
   );

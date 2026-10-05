@@ -32,7 +32,7 @@ export default async function PackJobsPage() {
                 <th className="px-3 py-2">ลูกค้า</th>
                 <th className="px-3 py-2">สร้างเมื่อ</th>
                 <th className="px-3 py-2 text-right">สแกนแล้ว / ต้องการ</th>
-                <th className="px-3 py-2 text-right">สาขาที่ปิดแล้ว</th>
+                <th className="px-3 py-2 text-right">ครบแพ็คแล้ว</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
