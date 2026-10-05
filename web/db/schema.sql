@@ -259,3 +259,12 @@ ALTER TABLE scan_events ADD COLUMN IF NOT EXISTS removed_at timestamptz;
 ALTER TABLE scan_events ADD COLUMN IF NOT EXISTS removed_by text;
 ALTER TABLE scan_events DROP CONSTRAINT IF EXISTS scan_events_result_check;
 ALTER TABLE scan_events ADD CONSTRAINT scan_events_result_check CHECK (result IN ('counted', 'over', 'unknown', 'ambiguous', 'removed'));
+
+-- Sticker stock synced one way from the team's Google Sheet ("plan sticker" tab,
+-- CSV link in env STICKER_SHEET_CSV_URL): the latest weekly count and its date,
+-- the raw cell when it is not a plain number, and the order / incoming notes.
+ALTER TABLE stickers ADD COLUMN IF NOT EXISTS counted_on date;
+ALTER TABLE stickers ADD COLUMN IF NOT EXISTS count_text text;
+ALTER TABLE stickers ADD COLUMN IF NOT EXISTS order_note text;
+ALTER TABLE stickers ADD COLUMN IF NOT EXISTS incoming_note text;
+ALTER TABLE stickers ADD COLUMN IF NOT EXISTS sheet_synced_at timestamptz;

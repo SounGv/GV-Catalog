@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { StickerQuickAdjust } from "@/components/sticker-quick-adjust";
-import { listStickers } from "@/lib/stickers";
+import { StickerSheetSync } from "@/components/sticker-sheet-sync";
+import { listStickers, thaiShortDate } from "@/lib/stickers";
 
 type StickersPageProps = {
   searchParams: Promise<{ q?: string }>;
@@ -11,6 +12,8 @@ export default async function StickersPage({ searchParams }: StickersPageProps) 
   const q = ((await searchParams).q ?? "").trim();
   const stickers = await listStickers(q);
   const outOfStock = stickers.filter((s) => s.qty === 0).length;
+  const lastSynced = stickers.reduce<string | null>((latest, s) => (s.sheetSyncedAt && (!latest || s.sheetSyncedAt > latest) ? s.sheetSyncedAt : latest), null);
+  const lastCount = stickers.reduce<string | null>((latest, s) => (s.countedOn && (!latest || s.countedOn > latest) ? s.countedOn : latest), null);
 
   return (
     <main className="mx-auto flex max-w-[1680px] flex-col gap-4 px-4 py-8 md:px-8 lg:px-12 xl:px-16">
@@ -22,12 +25,18 @@ export default async function StickersPage({ searchParams }: StickersPageProps) 
             {outOfStock ? <span className="text-red-600"> · หมด {outOfStock} รายการ</span> : null}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <StickerSheetSync
+          lastSynced={lastSynced ? new Date(lastSynced).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "short", timeStyle: "short" }) : null}
+          lastCount={lastCount ? thaiShortDate(lastCount) : null}
+        />
         <Link
           href="/stickers/new"
           className="inline-flex h-11 items-center rounded-[10px] bg-accent px-4 text-base font-medium text-white"
         >
           + เพิ่มรายการ
         </Link>
+        </div>
       </div>
 
       <form action="/stickers" method="get" className="flex gap-2">
@@ -80,6 +89,22 @@ export default async function StickersPage({ searchParams }: StickersPageProps) 
                   <span className="text-2xl font-bold">{sticker.qty.toLocaleString("th-TH")}</span>
                   <span className="text-sm">{sticker.qty === 0 ? "หมด" : "ชิ้น"}</span>
                 </span>
+                {sticker.countedOn ? (
+                  <span className={"text-xs font-medium " + (sticker.countedOn === lastCount ? "text-emerald-700" : "text-amber-700")}>
+                    {sticker.countedOn === lastCount ? "✓ นับเสร็จ" : "นับล่าสุด"} {thaiShortDate(sticker.countedOn)}
+                    {sticker.countText && !/^[\d,]+$/.test(sticker.countText) ? ` · ชีต: ${sticker.countText}` : ""}
+                  </span>
+                ) : null}
+                {sticker.orderNote ? (
+                  <span className="rounded-[6px] bg-amber-50 px-2 py-1 text-xs leading-snug text-amber-900">
+                    <b>สั่งของ:</b> {sticker.orderNote}
+                  </span>
+                ) : null}
+                {sticker.incomingNote ? (
+                  <span className="rounded-[6px] bg-sky-50 px-2 py-1 text-xs leading-snug text-sky-900">
+                    <b>กำลังมา:</b> {sticker.incomingNote}
+                  </span>
+                ) : null}
                 <StickerQuickAdjust id={sticker.id} />
               </div>
             </li>

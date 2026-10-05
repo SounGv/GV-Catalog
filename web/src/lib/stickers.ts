@@ -8,6 +8,12 @@ export type Sticker = {
   qty: number;
   note: string | null;
   updatedAt: string;
+  /** From the Google Sheet sync (see sticker-sheet.ts); null until first synced. */
+  countedOn: string | null;
+  countText: string | null;
+  orderNote: string | null;
+  incomingNote: string | null;
+  sheetSyncedAt: string | null;
 };
 
 export type StickerLogEntry = {
@@ -25,6 +31,11 @@ type StickerRow = {
   qty: number;
   note: string | null;
   updated_at: Date;
+  counted_on: string | null;
+  count_text: string | null;
+  order_note: string | null;
+  incoming_note: string | null;
+  sheet_synced_at: Date | null;
 };
 
 function rowToSticker(row: StickerRow): Sticker {
@@ -36,12 +47,17 @@ function rowToSticker(row: StickerRow): Sticker {
     qty: row.qty,
     note: row.note,
     updatedAt: row.updated_at.toISOString(),
+    countedOn: row.counted_on,
+    countText: row.count_text,
+    orderNote: row.order_note,
+    incomingNote: row.incoming_note,
+    sheetSyncedAt: row.sheet_synced_at?.toISOString() ?? null,
   };
 }
 
 export async function listStickers(q: string): Promise<Sticker[]> {
   const { rows } = await pool.query<StickerRow>(
-    `SELECT id, name, detail, image_url, qty, note, updated_at FROM stickers
+    `SELECT id, name, detail, image_url, qty, note, updated_at, to_char(counted_on, 'YYYY-MM-DD') AS counted_on, count_text, order_note, incoming_note, sheet_synced_at FROM stickers
      WHERE $1 = '' OR name ILIKE $2 OR detail ILIKE $2 OR note ILIKE $2
      ORDER BY sort_order, name`,
     [q, `%${q}%`],
@@ -51,7 +67,7 @@ export async function listStickers(q: string): Promise<Sticker[]> {
 
 export async function getSticker(id: string): Promise<Sticker | undefined> {
   const { rows } = await pool.query<StickerRow>(
-    "SELECT id, name, detail, image_url, qty, note, updated_at FROM stickers WHERE id = $1",
+    "SELECT id, name, detail, image_url, qty, note, updated_at, to_char(counted_on, 'YYYY-MM-DD') AS counted_on, count_text, order_note, incoming_note, sheet_synced_at FROM stickers WHERE id = $1",
     [id],
   );
   return rows[0] ? rowToSticker(rows[0]) : undefined;
@@ -74,6 +90,13 @@ export async function getStickerLog(id: string, limit = 15): Promise<StickerLogE
     reason: r.reason,
     createdAt: r.created_at.toISOString(),
   }));
+}
+
+/** "2026-10-05" → "5/10/69", the sheet's own date style. */
+export function thaiShortDate(iso: string | null): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return `${d}/${m}/${String(y + 543).slice(-2)}`;
 }
 
 export const STICKER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
