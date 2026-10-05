@@ -144,7 +144,7 @@ async function loadPackJobs(){
 }
 function openPackJob(jobId){
   switchView('pack');$('packScreen').hidden=false;document.body.classList.add('pack-open');
-  const frame=$('packFrame');frame.onload=()=>frame.focus();frame.src='/pack/'+encodeURIComponent(jobId)+'?embed=1';
+  const frame=$('packFrame');frame.onload=()=>frame.focus();const kind=$('kindSelect').value;frame.src='/pack/'+encodeURIComponent(jobId)+'?embed=1'+(kind?'&kind='+encodeURIComponent(kind):'');
 }
 function closePackJob(){$('packFrame').src='about:blank';$('packScreen').hidden=true;document.body.classList.remove('pack-open');loadPackJobs()}
 $('packJobs').addEventListener('click',e=>{const id=e.target.closest('[data-pack-job]')?.dataset.packJob;if(id)openPackJob(id)});

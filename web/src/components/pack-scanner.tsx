@@ -125,6 +125,11 @@ function summarize(detail: BranchDetail): BranchSummary {
   };
 }
 
+/** Same split as the IT City converter: a bill with a TRB goes via Pickpack, otherwise straight to the branch. */
+type DeliveryKind = "" | "direct" | "pickpack";
+const KIND_LABEL: Record<Exclude<DeliveryKind, "">, string> = { direct: "ส่งตรงสาขา", pickpack: "Pickpack / TRB" };
+const kindOf = (b: BranchSummary): Exclude<DeliveryKind, ""> => (b.trb ? "pickpack" : "direct");
+
 type PackScannerProps = {
   jobId: string;
   sourceFile: string;
@@ -132,11 +137,14 @@ type PackScannerProps = {
   initialBranches: BranchSummary[];
   /** Rendered inside a retailer tool's iframe: hide the site header and the job-list link. */
   embedded?: boolean;
+  /** Delivery type already chosen in the retailer tool, so the list opens filtered. */
+  initialKind?: string;
 };
 
-export function PackScanner({ jobId, sourceFile, customer, initialBranches, embedded = false }: PackScannerProps) {
+export function PackScanner({ jobId, sourceFile, customer, initialBranches, embedded = false, initialKind = "" }: PackScannerProps) {
   const [branches, setBranches] = useState(initialBranches);
   const [branchFilter, setBranchFilter] = useState("");
+  const [kindFilter, setKindFilter] = useState<DeliveryKind>(initialKind === "direct" || initialKind === "pickpack" ? initialKind : "");
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<BranchDetail | null>(null);
   const [isLoadingBranch, setIsLoadingBranch] = useState(false);
@@ -487,22 +495,25 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
     )?.branch;
   };
 
+  // The delivery type narrows everything on screen: the list, its counts and the header total.
+  const kindBranches = useMemo(() => (kindFilter ? branches.filter((b) => kindOf(b) === kindFilter) : branches), [branches, kindFilter]);
+  const kindCount = (kind: Exclude<DeliveryKind, "">) => branches.filter((b) => kindOf(b) === kind).length;
   const visibleBranches = useMemo(() => {
     const q = branchFilter.trim().toLowerCase();
     return q
-      ? branches.filter((b) => `${b.branch} ${b.branchName} ${b.poNumber ?? ""} ${b.trb ?? ""}`.toLowerCase().includes(q))
-      : branches;
-  }, [branches, branchFilter]);
+      ? kindBranches.filter((b) => `${b.branch} ${b.branchName} ${b.poNumber ?? ""} ${b.trb ?? ""}`.toLowerCase().includes(q))
+      : kindBranches;
+  }, [kindBranches, branchFilter]);
 
   const total = detail ? summarize(detail) : null;
-  const totalDone = branches.filter((b) => b.isClosed).length;
+  const totalDone = kindBranches.filter((b) => b.isClosed).length;
   const isHeldByOther = (b: BranchSummary) => Boolean(b.claimStation && b.claimStation !== myStation && !b.isClosed);
   const statusCounts = {
-    held: branches.filter(isHeldByOther).length,
+    held: kindBranches.filter(isHeldByOther).length,
     closed: totalDone,
-    complete: branches.filter((b) => !b.isClosed && b.scanned >= b.required).length,
-    inProgress: branches.filter((b) => !b.isClosed && b.scanned > 0 && b.scanned < b.required).length,
-    notStarted: branches.filter((b) => !b.isClosed && b.scanned === 0).length,
+    complete: kindBranches.filter((b) => !b.isClosed && b.scanned >= b.required).length,
+    inProgress: kindBranches.filter((b) => !b.isClosed && b.scanned > 0 && b.scanned < b.required).length,
+    notStarted: kindBranches.filter((b) => !b.isClosed && b.scanned === 0).length,
   };
   const canScan = Boolean(selected && detail && !detail.isClosed && scannerName && !isLoadingBranch);
 
@@ -559,7 +570,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
           <h1 className="shrink-0 text-lg font-semibold">ยิงสแกนลงลัง · {customer}</h1>
           <span className="truncate text-sm text-muted">{sourceFile}</span>
           <span className="shrink-0 rounded bg-neutral-100 px-2 py-0.5 text-sm">
-            ครบแพ็คแล้ว <b>{totalDone}</b> / {branches.length} สาขา
+            {kindFilter ? `${KIND_LABEL[kindFilter]} · ` : ""}ครบแพ็คแล้ว <b>{totalDone}</b> / {kindBranches.length} สาขา
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -597,6 +608,16 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)_minmax(340px,32%)]">
         {/* ── Bills / branches ── */}
         <aside className="flex min-h-0 flex-col gap-2 overflow-hidden rounded-[10px] border border-line bg-surface p-2.5 max-lg:max-h-[60vh]">
+          <select
+            value={kindFilter}
+            onChange={(e) => setKindFilter(e.target.value as DeliveryKind)}
+            aria-label="ประเภทการส่ง"
+            className={"h-9 rounded-[8px] border px-2 text-sm font-medium " + (kindFilter ? "border-accent bg-accent-soft text-accent" : "border-line bg-surface")}
+          >
+            <option value="">ทุกประเภท ({branches.length})</option>
+            <option value="direct">ส่งตรงสาขา ({kindCount("direct")})</option>
+            <option value="pickpack">Pickpack / TRB ({kindCount("pickpack")})</option>
+          </select>
           <input
             type="search"
             value={branchFilter}
