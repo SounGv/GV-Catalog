@@ -15,7 +15,7 @@
  <label>ปรับตำแหน่งเนื้อหา (มม.)<input id="labelY" type="number" min="-2" max="2" step="0.1" value="0"></label>
  </div><p>หน้าพิมพ์ 106 × 30 มม. · สเกล 100% · ขอบ None · Gap ระหว่างแถวในไดรเวอร์ 3 มม.</p></details>
  <div id="labelStatus" role="status"></div><div class="label-controls"><button id="labelPreviewBtn">ตรวจตัวอย่าง</button><button id="labelPrintBtn">พิมพ์ที่เลือก</button><button id="labelTestBtn">พิมพ์ทดสอบ 1 แถว</button></div><div id="labelPreview"></div>`;
- document.querySelector('.main').prepend(host);
+ document.getElementById('workPanels').append(host);
  const $=id=>document.getElementById(id);let report=null,items=[],overrides=new Map();
  function shortName(desc){
   const sku=(desc.match(/\b\d{5}(?:-?BOX|[A-Z])?\b/i)||[])[0]||'';
@@ -60,8 +60,8 @@
  function clean(){document.getElementById('labelPrintDocument')?.remove();document.getElementById('labelPrintStyle')?.remove();}
  async function print(test){try{clean();const {roll,cfg}=preview(test);await document.fonts.ready;const doc=document.createElement('div');doc.id='labelPrintDocument';doc.append(roll.cloneNode(true));const css=document.createElement('style');css.id='labelPrintStyle';css.textContent=`@page{size:${100+cfg.gap+cfg.left+cfg.right}mm 30mm;margin:0}@media print{html,body{margin:0!important;padding:0!important;background:white!important}body>:not(#labelPrintDocument){display:none!important}#labelPrintDocument{display:block!important}.jm-label{outline:0}.jm-roll{margin:0!important}.jm-label-row{break-inside:avoid}}`;document.head.append(css);document.body.append(doc);await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));window.print();}catch(e){clean();status(e.message);}}
  window.addEventListener('afterprint',clean);
- window.addEventListener('jaymart-order-ready',e=>{report=e.detail;overrides.clear();host.hidden=false;$('labelBranch').replaceChildren(new Option('ทุกสาขา',''),...report.branches.map(b=>new Option(`${b.id} · ${b.inputName}`,b.id)));rebuild();});
- $('orderFile').addEventListener('change',()=>{host.hidden=true;report=null;items=[];clean();});
+ window.addEventListener('jaymart-order-ready',e=>{report=e.detail;overrides.clear();$('labelBranch').replaceChildren(new Option('ทุกสาขา',''),...report.branches.map(b=>new Option(`${b.id} · ${b.inputName}`,b.id)));rebuild();});
+ $('orderFile').addEventListener('change',()=>{report=null;items=[];clean();});
  $('labelBranch').onchange=rebuild;$('labelSearch').oninput=draw;
  $('labelAll').onclick=()=>{items.forEach(x=>{x.selected=true;save(x);});draw();};$('labelNone').onclick=()=>{items.forEach(x=>{x.selected=false;save(x);});draw();};
  $('labelPreviewBtn').onclick=()=>{try{preview();}catch(e){$('labelPreview').replaceChildren();status(e.message);}};$('labelPrintBtn').onclick=()=>print(false);$('labelTestBtn').onclick=()=>print(true);

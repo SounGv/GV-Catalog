@@ -44,28 +44,67 @@
     .form-print:hover{background:var(--green-dark)}
     #deliveryPrintDocument{display:none}
   </style>
-<style>@media print{a[href="/"]{display:none!important}}</style></head>
+<style>@media print{a[href="/"]{display:none!important}}</style><style>
+/* Page flow: 1 file -> 2 check -> 3 pick a job. Existing element ids are kept so the converter script is untouched. */
+.steps{display:flex;align-items:center;gap:8px;margin:0 0 16px;font-size:14px;color:var(--muted);overflow-x:auto}@media(max-width:560px){.steps{font-size:12px}.steps .stp-line{min-width:8px}.steps .stp i{width:24px;height:24px}}
+.steps .stp{display:flex;align-items:center;gap:8px;font-weight:700;white-space:nowrap}
+.steps .stp i{font-style:normal;width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;font-size:13px;background:#fff;border:1px solid #c5d4ce}
+.steps .stp.done{color:var(--green)}.steps .stp.done i{font-size:0;background:var(--mint);border-color:#8fcab4;color:var(--green)}.steps .stp.done i:before{content:"✓";font-size:15px}
+.steps .stp.now{color:var(--ink)}.steps .stp.now i{background:var(--green);color:#fff;border-color:var(--green)}
+.steps .stp-line{flex:1;height:1px;background:#cfdcd6;min-width:16px}
+.flow{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:1100px}
+.step{padding:16px 18px}.step-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}.step-head h2{margin:0;font-size:16px}.step-head .hint{font-size:12px;color:var(--muted)}
+#orderFile{display:block;width:100%;height:48px;padding:8px 10px;border:1.5px dashed #9fcfbd;border-radius:12px;background:#f5fbf8;color:var(--muted);font-size:13px}
+#orderFile::file-selector-button{border:0;border-radius:8px;padding:8px 14px;margin-right:12px;background:var(--green);color:#fff;font-size:13px;font-weight:800;cursor:pointer}
+.lockline{margin:10px 0 0;font-size:12px;color:var(--muted)}
+.chip{font-size:12px;padding:3px 11px;border-radius:99px;background:var(--mint);color:var(--green-dark);font-weight:800}
+#stepCheck .stat-grid{display:none;margin-bottom:14px}body.has-report #stepCheck .stat-grid{display:grid}
+@media(max-width:700px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+#stepCheck .analyze{width:auto;margin:0;padding:12px 20px;font-size:14px}
+body.has-report #stepCheck .analyze{background:#fff;color:var(--green-dark);border:1px solid #b8ddd1}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+#stepWork .tile{display:flex!important;flex-direction:column;align-items:flex-start;gap:4px;width:auto;margin:0;padding:14px;text-align:left;border:1px solid #cbd9d3;border-radius:14px;background:#fff;color:var(--ink);font-weight:400}
+#stepWork .tile:hover{background:#f5fbf8;border-color:#8fcab4}
+#stepWork .tile .ico{color:var(--green);margin-bottom:2px}#stepWork .tile b{font-size:14px;font-weight:850}#stepWork .tile span{font-size:12px;color:var(--muted);line-height:1.45}
+#stepWork .tile.hot{border:2px solid var(--green);padding:13px}#stepWork .tile.on{background:var(--mint);border-color:var(--green)}
+#stepWork .tile.need{opacity:.55}
+#workPanels{margin-top:14px}.panel-box,#labelTool,#packTool{margin:14px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+#panelForm .form-tool{margin:0 0 14px;padding:0;border:0;background:none}#panelForm .form-entry{grid-template-columns:minmax(160px,260px) auto;align-items:center}
+#panelForm .form-preview-card{margin-top:0}
+@media print{.steps{display:none!important}}
+</style>
+</head>
 <body>
   <main class="app">
     <a href="/" style="display:inline-flex;align-items:center;gap:4px;color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;margin-bottom:14px">&lsaquo; กลับหน้าหลัก</a><header class="top"><div class="brand"><div class="mark" aria-hidden="true">✓</div><div>Jaymart<small>ใบส่งของรายสาขา</small></div></div><div class="privacy">ทำงานในเครื่อง · ไม่อัปโหลดไฟล์</div></header>
-    <section class="hero"><div><div class="eyebrow">Order safety workflow</div><h1>ตรวจรหัสสาขา เติมที่อยู่ให้ถูกก่อนเปิดบิล</h1><p>โยนไฟล์ออเดอร์รวมเข้ามา ระบบจะยึดรหัสสาขาเป็นหลัก ตรวจฐานข้อมูล 2 ชั้น แสดงจุดที่ไม่ตรง และเติมข้อมูลร้านให้อัตโนมัติ</p></div><div class="hero-art" aria-hidden="true"><div class="mini-sheet"><div class="mini-head"><span>BranchD</span><span>BranchName</span><span>ที่อยู่</span><span>ผลตรวจ</span></div><div class="mini-row"><span>1002</span><span>JAY BC-Bangplee</span><span>89 ม.9 บางพลี</span><span class="ok">ตรงรหัส</span></div><div class="mini-row"><span>1009</span><span>JAY BC-Phetchaburi</span><span>130 ม.1 เพชรบุรี</span><span class="ok">เติมข้อมูล</span></div><div class="mini-row"><span>1770</span><span>JAY CT-North Ville</span><span>—</span><span class="warn">ตรวจสอบ</span></div></div></div></section>
-    <section class="workspace">
-      <aside class="panel"><h2>ไฟล์ที่ใช้ตรวจสอบ</h2><p class="sub">เลือกไฟล์ออเดอร์เท่านั้น · ฐานข้อมูลสาขาถูกล็อกไว้ในโปรแกรม</p>
-        <label class="upload required"><strong>1 · ไฟล์ออเดอร์รวม <b style="color:#b74f46">จำเป็น</b></strong><span>รองรับ Order แนวตั้ง · ตารางไขว้ · ชีตแยกตามรหัสสาขา</span><input id="orderFile" type="file" accept=".xlsx,.xlsm,.xls,.xlsb,.ods,.csv,.tsv,.pdf" /></label>
-        <div class="upload locked"><strong>2 · DATA เดิม <small>(ล็อกในโปรแกรม)</small></strong><span>ฐานข้อมูลเดิมถูกรวมไว้แล้ว ใช้อ้างอิงรหัสร้านอัตโนมัติ</span><div class="lock-state">✓ พร้อมใช้งาน</div></div>
-        <div class="upload locked"><strong>3 · Jaymart ที่อยู่สาขา <small>(ล็อกในโปรแกรม)</small></strong><span>ไฟล์ Jaymart ที่อยู่สาขา 14.05.67(1) ถูกฝังไว้เป็นฐานสำรอง</span><div class="lock-state">✓ พร้อมใช้งาน</div></div>
-        <button class="analyze" id="analyzeBtn" type="button">ตรวจสอบและเติมข้อมูล</button><button class="export" id="exportBtn" type="button">ดาวน์โหลดไฟล์ผลลัพธ์</button>
-        <div class="note">ผู้ใช้เลือกเฉพาะไฟล์ออเดอร์ ระบบจะเทียบรหัสกับฐาน DATA และ Jaymart ที่ล็อกไว้ ห้ามแก้ชื่อหรือที่อยู่จากไฟล์ออเดอร์เอง</div>
-        <section class="form-tool"><h3>ฟอร์มพิมพ์รายสาขา A4</h3><p class="sub">กรอกเฉพาะเลข Branch ID ระบบจะดึงที่อยู่และรายการสินค้าให้</p><div class="form-entry"><input id="branchIdInput" type="text" inputmode="numeric" placeholder="เช่น 1012" /><button id="branchFormBtn" type="button">ดึงข้อมูลและสร้างฟอร์ม</button></div><div class="form-hint" id="formHint">ต้องเลือกไฟล์ออเดอร์และกดตรวจสอบก่อน</div><button class="form-export" id="formExportBtn" type="button" hidden>ดาวน์โหลดฟอร์ม A4 เฉพาะสาขา</button></section>
-      </aside>
-      <section class="main"><div class="card empty" id="empty"><div><div class="empty-icon">⌕</div><h2>รอไฟล์ออเดอร์</h2><p>เลือกไฟล์ออเดอร์รวมเพียงไฟล์เดียว แล้วกดตรวจสอบ ระบบจะแสดงสาขาที่ตรง สาขาที่เติมจากฐานสำรอง และสาขาที่ต้องแก้ไข</p></div></div>
-        <div class="card form-preview-card" id="formPreviewCard"><div class="bar"><div><h3>ตัวอย่างฟอร์ม A4</h3><p id="formPreviewMeta">—</p></div><button class="form-print" id="formPrintBtn" type="button">พิมพ์ใบส่งของ</button></div><div class="a4-preview" id="formPreview"></div></div>
-        <div class="results" id="results"><div class="stat-grid"><div class="stat"><span>รายการออเดอร์</span><strong id="lineCount">0</strong></div><div class="stat"><span>สาขาที่พบ</span><strong id="branchCount">0</strong></div><div class="stat"><span>พบข้อมูลอัตโนมัติ</span><strong id="matchCount">0</strong></div><div class="stat"><span>ต้องตรวจสอบ</span><strong id="issueCount">0</strong></div></div>
-          <div class="card bar"><div><h3>ผลตรวจสาขา</h3><p id="subline">—</p></div><div class="status" id="overall">—</div></div>
-          <div class="alert" id="alerts" hidden><strong>รายการที่ควรตรวจสอบ</strong><span id="alertText"></span></div>
-          <div class="card"><div class="table-wrap"><table id="reportTable"></table></div><div class="foot">หลักการ: รหัสสาขาตรง = ใช้ข้อมูลอัตโนมัติ · ไม่พบใน DATA แต่พบใน Jaymart = ใช้ฐานสำรอง · ไม่พบทั้งสอง = ห้ามเปิดบิลจนกว่าจะยืนยันข้อมูล</div></div>
+    <nav class="steps" id="steps" aria-label="ขั้นตอน"><span class="stp now" data-step="1"><i>1</i>เลือกไฟล์</span><span class="stp-line"></span><span class="stp" data-step="2"><i>2</i>ตรวจสอบ</span><span class="stp-line"></span><span class="stp" data-step="3"><i>3</i>เลือกงานที่จะทำ</span></nav>
+    <section class="main flow">
+      <div class="card step" id="stepFile"><div class="step-head"><h2>1 · ไฟล์ออเดอร์</h2><span class="hint">รองรับ Order แนวตั้ง · ตารางไขว้ · ชีตแยกตามรหัสสาขา</span></div>
+        <input id="orderFile" type="file" accept=".xlsx,.xlsm,.xls,.xlsb,.ods,.csv,.tsv,.pdf" aria-label="เลือกไฟล์ออเดอร์" />
+        <p class="lockline">🔒 ฐานข้อมูลสาขาและที่อยู่ Jaymart ล็อกไว้ในโปรแกรมแล้ว ไม่ต้องเลือกไฟล์เพิ่ม · ระบบจะไม่แก้ชื่อหรือที่อยู่จากไฟล์ออเดอร์</p></div>
+      <div class="card step" id="stepCheck"><div class="step-head"><h2>2 · ตรวจสอบ</h2><span class="chip" id="checkChip" hidden>ตรวจแล้ว</span></div>
+        <div class="stat-grid"><div class="stat"><span>รายการออเดอร์</span><strong id="lineCount">0</strong></div><div class="stat"><span>สาขาที่พบ</span><strong id="branchCount">0</strong></div><div class="stat"><span>พบข้อมูลอัตโนมัติ</span><strong id="matchCount">0</strong></div><div class="stat"><span>ต้องตรวจสอบ</span><strong id="issueCount">0</strong></div></div>
+        <button class="analyze" id="analyzeBtn" type="button">ตรวจสอบและเติมข้อมูล</button></div>
+      <div class="card step" id="stepWork"><div class="step-head"><h2>3 · เลือกงานที่จะทำ</h2><span class="hint" id="workHint">เลือกไฟล์และกดตรวจสอบก่อน จึงจะใช้ใบส่งของ สติกเกอร์ และไฟล์ Excel ได้ · ยิงสแกนเปิดได้ตลอด</span></div>
+        <div class="tiles">
+          <button type="button" class="tile" data-panel="form"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><b>ใบส่งของ A4</b><span>พิมพ์รายสาขา ใส่เลข Branch ID</span></button>
+          <button type="button" class="tile" data-panel="label"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg><b>สติกเกอร์สินค้า</b><span>50 × 30 มม. 2 ดวงต่อแถว</span></button>
+          <button type="button" class="tile" id="exportBtn"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg><b>ดาวน์โหลด Excel</b><span>ไฟล์ผลลัพธ์ทั้งหมด</span></button>
+          <button type="button" class="tile hot" data-panel="pack"><svg class="ico" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6v12M8 6v12M12 6v12M16 6v12M20 6v12" /><path d="M2 3h3M19 3h3M2 21h3M19 21h3"/></svg><b>ยิงสแกนลงลัง</b><span>สร้างงานจากไฟล์นี้ แล้วเริ่มยิง</span></button>
         </div>
-      </section>
+        <div id="workPanels">
+          <div class="panel-box" id="panelForm" hidden>
+            <section class="form-tool"><h3>ฟอร์มพิมพ์รายสาขา A4</h3><p class="sub">กรอกเฉพาะเลข Branch ID ระบบจะดึงที่อยู่และรายการสินค้าให้</p><div class="form-entry"><input id="branchIdInput" type="text" inputmode="numeric" placeholder="เช่น 1012" /><button id="branchFormBtn" type="button">ดึงข้อมูลและสร้างฟอร์ม</button></div><div class="form-hint" id="formHint">ต้องเลือกไฟล์ออเดอร์และกดตรวจสอบก่อน</div><button class="form-export" id="formExportBtn" type="button" hidden>ดาวน์โหลดฟอร์ม A4 เฉพาะสาขา</button></section>
+            <div class="card form-preview-card" id="formPreviewCard"><div class="bar"><div><h3>ตัวอย่างฟอร์ม A4</h3><p id="formPreviewMeta">—</p></div><button class="form-print" id="formPrintBtn" type="button">พิมพ์ใบส่งของ</button></div><div class="a4-preview" id="formPreview"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card empty" id="empty" hidden><div><h2>รอไฟล์ออเดอร์</h2></div></div>
+      <div class="results" id="results">
+        <div class="card bar"><div><h3>ผลตรวจสาขา</h3><p id="subline">—</p></div><div class="status" id="overall">—</div></div>
+        <div class="alert" id="alerts" hidden><strong>รายการที่ควรตรวจสอบ</strong><span id="alertText"></span></div>
+        <div class="card"><div class="table-wrap"><table id="reportTable"></table></div><div class="foot">หลักการ: รหัสสาขาตรง = ใช้ข้อมูลอัตโนมัติ · ไม่พบใน DATA แต่พบใน Jaymart = ใช้ฐานสำรอง · ไม่พบทั้งสอง = ห้ามเปิดบิลจนกว่าจะยืนยันข้อมูล</div></div>
+      </div>
     </section>
   </main><div class="toast" id="toast"></div>
   <script>
@@ -347,5 +386,6 @@ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:x
 <script src="JsBarcode.code128.min.js"></script>
   <script src="product-labels.js"></script>
   <script src="pack-jobs.js"></script>
+  <script src="flow.js"></script>
 </body>
 </html>
