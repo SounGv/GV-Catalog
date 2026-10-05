@@ -71,6 +71,10 @@ body.has-report #stepCheck .analyze{background:#fff;color:var(--green-dark);bord
 #workPanels{margin-top:14px}.panel-box,#labelTool,#packTool{margin:14px 0 0;padding-top:14px;border-top:1px solid var(--line)}
 #panelForm .form-tool{margin:0 0 14px;padding:0;border:0;background:none}#panelForm .form-entry{grid-template-columns:minmax(160px,260px) auto;align-items:center}
 #panelForm .form-preview-card{margin-top:0}
+/* Touch targets >= 44px, visible keyboard focus, and Thai line height (tone marks need room). */
+.flow{line-height:1.65}.step-head .hint,.lockline{line-height:1.6}
+#stepCheck .analyze,#stepWork .tile,.form-entry button,.form-entry input,.form-print,.form-export,#orderFile{min-height:44px}
+.flow :is(button,input,summary,select):focus-visible,#packTool :is(button,summary):focus-visible,#packConfirm :is(button,summary):focus-visible,#packScreen button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 @media print{.steps{display:none!important}}
 </style>
 </head>

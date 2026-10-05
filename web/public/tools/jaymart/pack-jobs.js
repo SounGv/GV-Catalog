@@ -6,7 +6,7 @@
  'use strict';
  const style=document.createElement('style');
  style.textContent=`#packTool h2{margin:0;font-size:16px}#packTool .pack-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
- #packTool .pack-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}#packTool button,#packScreen .pack-bar button{border:1px solid var(--green-dark);background:var(--green);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}
+ #packTool .pack-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}#packTool button{min-height:44px}#packConfirm .pc-actions button{min-height:44px}#packTool button,#packScreen .pack-bar button{border:1px solid var(--green-dark);background:var(--green);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}
  #packTool button.secondary,#packScreen .pack-bar button{background:#fff;color:var(--green-dark);border-color:var(--line)}#packTool button:disabled{opacity:.5;cursor:default}
  #packTool table{width:100%;border-collapse:collapse;font-size:13px}#packTool th,#packTool td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left}#packTool th{color:var(--muted);font-size:12px;background:#f3f6f8}
  #packTool td.num{text-align:right;font-variant-numeric:tabular-nums}#packTool td.empty{color:var(--muted);text-align:center;padding:22px}#packTool .pack-msg{font-size:13px;margin-bottom:10px}#packTool .pack-msg.bad{color:var(--red)}
