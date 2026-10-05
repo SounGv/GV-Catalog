@@ -365,13 +365,15 @@ function labelPageLayout(size,orientation){
   const pageName=(size==="a5"?"labelA5":"labelA4")+(landscape?"Landscape":"Portrait");
   const scale=Math.min(1,(pageW-20)/277);
   const left=(pageW-277*scale)/2;
-  return {pageW,pageH,pageName,scale,left};
+  // Portrait sheets are folded in half: centre the label in the top half. Landscape keeps the form's 13.7 mm.
+  const top=landscape?13.7:Math.max(0,(pageH/2-91.3*scale)/2);
+  return {pageW,pageH,pageName,scale,left,top};
 }
 function labelPageHtml(order,boxNo,total,note,poIndex=1,poTotal=1,layout){
   const ref=branchRoute(order.branchName,order.branchCode),route=ref?.route||String(order.branchCode||"?").replace(/^0+/,""),zone=ref?.zone||"ตรวจสอบ",branch=ref?.name?.replace(/\s*\(/," (")||order.branchName||"ไม่พบชื่อสาขา";
   const digits="3160".split("").map(x=>`<div class="box-store-digit">${x}</div>`).join("");
   const poSeq=`<div class="page-po-seq">PO ${poIndex}/${poTotal}</div>`;
-  return `<section class="label-print-page" style="page:${layout.pageName};width:${layout.pageW}mm;height:${layout.pageH}mm"><div class="box-label" style="transform:scale(${layout.scale});transform-origin:top left;margin:13.7mm 0 0 ${layout.left}mm">${poSeq}<div class="box-head"><div class="box-brand">OfficeMate</div><div class="box-zone">${esc(zone)}</div></div><div class="box-route">${esc(route)}</div><div class="box-details"><div class="box-branch"><span class="box-branch-name">ชื่อสาขา ${esc(branch)}</span></div><div class="box-store"><div>รหัสร้านค้า</div>${digits}<div class="box-company">ชื่อบริษัท แก็ดเจ็ด วิลล่า จำกัด</div></div><div class="box-spacer"></div><div class="box-po"><div>เลขที่ PO ${esc(order.po||"")}</div><div>กล่อง&nbsp;&nbsp; ${boxNo}</div><div>จากทั้งหมด&nbsp;&nbsp; ${total}</div></div><div class="box-spacer"></div><div class="box-note"><div>หมายเหตุ</div><div class="box-note-choice"><span class="box-check ${note==="special"?"checked":""}"></span> Special</div><div class="box-note-choice"><span class="box-check ${note==="normal"?"checked":""}"></span> Normal</div></div><div></div></div></div></section>`;
+  return `<section class="label-print-page" style="page:${layout.pageName};width:${layout.pageW}mm;height:${layout.pageH}mm"><div class="box-label" style="transform:scale(${layout.scale});transform-origin:top left;margin:${layout.top}mm 0 0 ${layout.left}mm">${poSeq}<div class="box-head"><div class="box-brand">OfficeMate</div><div class="box-zone">${esc(zone)}</div></div><div class="box-route">${esc(route)}</div><div class="box-details"><div class="box-branch"><span class="box-branch-name">ชื่อสาขา ${esc(branch)}</span></div><div class="box-store"><div>รหัสร้านค้า</div>${digits}<div class="box-company">ชื่อบริษัท แก็ดเจ็ด วิลล่า จำกัด</div></div><div class="box-spacer"></div><div class="box-po"><div>เลขที่ PO ${esc(order.po||"")}</div><div>กล่อง&nbsp;&nbsp; ${boxNo}</div><div>จากทั้งหมด&nbsp;&nbsp; ${total}</div></div><div class="box-spacer"></div><div class="box-note"><div>หมายเหตุ</div><div class="box-note-choice"><span class="box-check ${note==="special"?"checked":""}"></span> Special</div><div class="box-note-choice"><span class="box-check ${note==="normal"?"checked":""}"></span> Normal</div></div><div></div></div></div></section>`;
 }
 function clearLabelPrintDocument(){document.body.classList.remove("label-printing");els.labelPrintDocument.replaceChildren();state.labelPrinting=false;renderLabelOptions()}
 function printBoxLabels(scope){
