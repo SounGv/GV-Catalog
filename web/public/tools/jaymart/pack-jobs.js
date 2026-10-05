@@ -64,6 +64,7 @@
    const p=(await send(true)).preview;
    if(!await confirmDryRun(p,sourceFile))return;
    const {jobId}=await send(false);
+   window.dispatchEvent(new CustomEvent('jaymart-scan-created'));
    openPackJob(jobId);
   }catch(e){msg('สร้างงานยิงสแกนไม่สำเร็จ: '+e.message,true)}
   finally{button.disabled=false}
