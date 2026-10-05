@@ -563,6 +563,49 @@ export async function recordScan(jobId: string, branch: string, barcodeRaw: stri
   }
 }
 
+export type RemoveOutcome = { message: string; part: string | null; detail: BranchDetail | null };
+
+/**
+ * Takes one counted piece of a line back out of the box. Its latest counted scan
+ * becomes "removed" (who and when are kept for the report), so every count — which
+ * only ever uses result = 'counted' — drops by one. Adding still requires a real scan.
+ */
+export async function removeOnePiece(jobId: string, branch: string, lineId: string, holder: BranchHolder): Promise<RemoveOutcome> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    // Same lock as a scan of this line, so a removal and a scan never interleave.
+    const { rows: lines } = await client.query<{ id: string; part: string; qty_required: number }>(
+      "SELECT id, part, qty_required FROM pack_lines WHERE id = $1 AND job_id = $2 AND branch = $3 FOR UPDATE",
+      [lineId, jobId, branch],
+    );
+    const line = lines[0];
+    if (!line) throw new Error("ไม่พบรายการนี้ในสาขา");
+    const { rows: closed } = await client.query(
+      "SELECT 1 FROM branch_closures WHERE job_id = $1 AND branch = $2 AND reopened_at IS NULL",
+      [jobId, branch],
+    );
+    if (closed.length) throw new Error("สาขานี้บันทึกครบแพ็คแล้ว — กดแก้ไขก่อนจึงจะแก้จำนวนได้");
+    const heldBy = await holdBranch(client, jobId, branch, holder);
+    if (heldBy) throw new Error(heldMessage(heldBy));
+    const { rowCount } = await client.query(
+      `UPDATE scan_events SET result = 'removed', removed_at = now(), removed_by = $2
+       WHERE id = (SELECT id FROM scan_events WHERE pack_line_id = $1 AND result = 'counted' ORDER BY scanned_at DESC LIMIT 1)`,
+      [line.id, holder.name],
+    );
+    if (!rowCount) throw new Error(`${line.part}: ยังไม่มีชิ้นที่นับ`);
+    await client.query("COMMIT");
+    const detail = await getBranchDetail(jobId, branch, client);
+    const left = detail?.lines.find((l) => l.id === line.id)?.scanned ?? 0;
+    return { message: `นำออก 1 ชิ้น: ${line.part} (เหลือ ${left}/${line.qty_required})`, part: line.part, detail };
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export type CloseOutcome = {
   isClosed: boolean;
   message: string;
@@ -729,8 +772,11 @@ export async function getScanEventLog(jobId: string) {
     station_id: string | null;
     video_file: string | null;
     clip_offset_sec: string | null;
+    removed_by: string | null;
+    removed_at: Date | null;
   }>(
-    `SELECT e.branch, e.barcode, e.result, l.part, e.scanned_by, e.scanned_at, e.station_id, e.video_file, e.clip_offset_sec
+    `SELECT e.branch, e.barcode, e.result, l.part, e.scanned_by, e.scanned_at, e.station_id, e.video_file, e.clip_offset_sec,
+            e.removed_by, e.removed_at
      FROM scan_events e LEFT JOIN pack_lines l ON l.id = e.pack_line_id
      WHERE e.job_id = $1 ORDER BY e.branch, e.scanned_at`,
     [jobId],

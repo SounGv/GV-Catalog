@@ -6,6 +6,7 @@ const RESULT_LABEL: Record<string, string> = {
   over: "เกิน PO",
   unknown: "ไม่อยู่ใน PO",
   ambiguous: "บาร์ไม่ชัดเจน (ตรงหลาย SKU)",
+  removed: "นับแล้ว แต่นำออกจากลัง",
 };
 
 const bangkok = (d: Date | null) =>
@@ -91,6 +92,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     { header: "ไฟล์วิดีโอ", width: 44 },
     { header: "นาทีในคลิป (นาที:วินาที)", width: 20 },
     { header: "เครื่อง", width: 14 },
+    { header: "นำออกโดย", width: 16 },
+    { header: "นำออกเมื่อ", width: 20 },
   ];
   const eventRow = (e: (typeof scanLog)[number]) => [
     e.branch,
@@ -102,6 +105,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     e.video_file ?? "",
     clipTime(e.clip_offset_sec),
     e.station_id ?? "",
+    e.removed_by ?? "",
+    bangkok(e.removed_at),
   ];
   const rejected = wb.addWorksheet("สแกนที่ไม่นับ");
   rejected.columns = eventColumns;

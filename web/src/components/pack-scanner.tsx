@@ -15,6 +15,7 @@ const RESULT_LABEL: Record<string, string> = {
   ambiguous: "ไม่ชัดเจน",
   closed: "สาขาปิดแล้ว",
   held: "มีคนอื่นทำอยู่",
+  removed: "นำออกแล้ว",
 };
 const BRANCH_POLL_MS = 5000;
 const noSubscribe = () => () => {};
@@ -124,6 +125,8 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
   const [reopenReason, setReopenReason] = useState("");
   /** Why the last branch pick was refused (someone else is packing it). */
   const [blockedNotice, setBlockedNotice] = useState<string | null>(null);
+  /** "แก้ไขจำนวน" mode: each line shows a button to take one piece back out. */
+  const [isEditingQty, setIsEditingQty] = useState(false);
   const myStation = useSyncExternalStore(noSubscribe, stationId, () => "");
 
   const scanInputRef = useRef<HTMLInputElement>(null);
@@ -207,6 +210,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
         setLastScan(null);
         setReopenReason("");
         setBlockedNotice(null);
+        setIsEditingQty(false);
         applyDetail(data.detail);
         setBranches((list) =>
           list.map((b) =>
@@ -378,6 +382,27 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
       const text = error instanceof Error ? error.message : "บันทึกไม่สำเร็จ";
       if (isSelected) setFeedback({ tone: "warn", text });
       else setBlockedNotice(`${branch}: ${text}`);
+      playTone("warn");
+    }
+    focusScanInput();
+  };
+
+  const removePiece = async (line: BranchDetail["lines"][number]) => {
+    const branch = selectedRef.current;
+    if (!branch || queueRef.current.length) return;
+    try {
+      const outcome = await api<{ message: string; part: string | null; detail: BranchDetail | null }>(
+        `/branches/${encodeURIComponent(branch)}/remove`,
+        { method: "POST", body: JSON.stringify({ lineId: line.id, stationId: stationId(), scannedBy: scannerName }) },
+      );
+      applyDetail(outcome.detail);
+      setLastPart(outcome.part);
+      const left = outcome.detail?.lines.find((l) => l.id === line.id)?.scanned ?? 0;
+      // Shown on screen and burnt into the evidence video like a scan.
+      setLastScan({ model: `${line.sku ?? line.part} · ${line.description}`, barcode: "นำออก 1 ชิ้น", result: `เหลือ ${left}/${line.required}` });
+      setFeedback({ tone: "info", text: outcome.message });
+    } catch (error) {
+      setFeedback({ tone: "warn", text: error instanceof Error ? error.message : "แก้จำนวนไม่สำเร็จ" });
       playTone("warn");
     }
     focusScanInput();
@@ -697,6 +722,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                       <th className="px-3 py-2 text-right">ต้องการ</th>
                       <th className="px-3 py-2 text-right">สแกนแล้ว</th>
                       <th className="px-3 py-2">สถานะ</th>
+                      {isEditingQty && !detail?.isClosed ? <th className="px-3 py-2 text-right">แก้จำนวน</th> : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -714,6 +740,18 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                           <td className="px-3 py-1.5">
                             {missing <= 0 ? <span className="font-semibold text-accent">✓ ครบ</span> : <span className="font-semibold text-red-600">ขาด {missing}</span>}
                           </td>
+                          {isEditingQty && !detail?.isClosed ? (
+                            <td className="px-3 py-1.5 text-right">
+                              <button
+                                type="button"
+                                disabled={line.scanned === 0 || !canScan}
+                                onClick={() => void removePiece(line)}
+                                className="h-8 whitespace-nowrap rounded-[8px] border border-red-600 px-2.5 text-sm font-semibold text-red-600 disabled:border-line disabled:text-muted"
+                              >
+                                − นำออก 1
+                              </button>
+                            </td>
+                          ) : null}
                         </tr>
                       );
                     })}
@@ -743,6 +781,18 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                     บันทึกครบแพ็คแล้ว
                   </button>
                 )}
+                {detail && !detail.isClosed ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingQty((v) => !v)}
+                    className={
+                      "h-10 rounded-[10px] border px-4 text-sm font-medium " +
+                      (isEditingQty ? "border-red-600 bg-red-600 text-white" : "border-ink text-ink")
+                    }
+                  >
+                    {isEditingQty ? "เสร็จสิ้นแก้ไขจำนวน" : "แก้ไขจำนวน"}
+                  </button>
+                ) : null}
                 {detail && !detail.isClosed ? (
                   <button type="button" onClick={() => void leaveSelectedBranch()} className="h-10 rounded-[10px] border border-line px-4 text-sm text-muted">
                     ออกจากสาขานี้ (ให้คนอื่นทำต่อ)

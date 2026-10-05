@@ -251,3 +251,11 @@ CREATE TABLE IF NOT EXISTS branch_claims (
   PRIMARY KEY (job_id, branch)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS branch_claims_station_idx ON branch_claims (job_id, station_id);
+
+-- "แก้ไขจำนวน" (remove a piece from the box): the line's latest counted scan
+-- becomes 'removed' and records who took it out and when. Counts only ever
+-- use result = 'counted', so it simply stops counting; the row stays for the report.
+ALTER TABLE scan_events ADD COLUMN IF NOT EXISTS removed_at timestamptz;
+ALTER TABLE scan_events ADD COLUMN IF NOT EXISTS removed_by text;
+ALTER TABLE scan_events DROP CONSTRAINT IF EXISTS scan_events_result_check;
+ALTER TABLE scan_events ADD CONSTRAINT scan_events_result_check CHECK (result IN ('counted', 'over', 'unknown', 'ambiguous', 'removed'));
