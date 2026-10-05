@@ -445,7 +445,8 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
   const canScan = Boolean(selected && detail && !detail.isClosed && scannerName && !isLoadingBranch);
 
   const recordingBranch = detail && !detail.isClosed ? detail.branch : null;
-  const recordingReference = detail ? (detail.trb ?? detail.poNumber ?? "") : "";
+  // Clip file names carry the PO number (TRB only when the bill has no PO); both already start with "PO"/"TRB".
+  const recordingReference = detail?.poNumber ?? detail?.trb ?? "";
   const isRecorderReady = Boolean(
     recorderStatus.folderName && !recorderStatus.needsFolderPermission && recorderStatus.cameraId && recorderStatus.isConfirmed,
   );
@@ -464,7 +465,9 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
     setOverlay(
       [
         `${detail.branch} ${detail.branchName}`,
-        `${detail.trb ? `TRB ${detail.trb}` : detail.poNumber ? `PO ${detail.poNumber}` : ""} · ผู้สแกน ${scannerName || "-"} · ${t.scanned}/${t.required}`,
+        [detail.poNumber ? `PO ${detail.poNumber}` : "", detail.trb ? `TRB ${detail.trb}` : "", `ผู้สแกน ${scannerName || "-"}`, `${t.scanned}/${t.required}`]
+          .filter(Boolean)
+          .join(" · "),
         feedback?.text ?? "",
       ],
       feedback?.tone ?? "info",
@@ -769,6 +772,9 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
             </div>
           ) : null}
           {recorderStatus.fileName ? <p className="truncate font-mono text-[11px] text-muted">กำลังบันทึก: {recorderStatus.fileName}</p> : null}
+          {!recorderStatus.isRecording && recorderStatus.savedFile ? (
+            <p className="truncate text-xs font-semibold text-emerald-700">✓ บันทึกคลิปแล้ว: {recorderStatus.savedFile}</p>
+          ) : null}
           {recorderStatus.error ? <p className="text-sm text-red-600">{recorderStatus.error}</p> : null}
           {isRecorderReady && !recorderStatus.error ? (
             <p className="truncate text-xs text-emerald-700">

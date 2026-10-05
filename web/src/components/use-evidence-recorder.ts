@@ -8,16 +8,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * is uploaded.
  *
  * The camera frame is redrawn onto a canvas with a caption (date-time, branch,
- * PO/bill, last scan) so the footage explains itself. Data is appended to the
- * file every few seconds and the file is closed after each append, so a crash
- * or closed tab loses at most the last few seconds instead of the whole clip.
+ * PO/bill, last scan) so the footage explains itself. One clip per bill: the
+ * file stays open and each second of video is appended in order, then it is
+ * closed when the bill is saved or left. Appending to an open file avoids
+ * re-copying the whole clip on every write, which used to back up and keep the
+ * camera running after the bill was saved. A crash loses only the clip in progress.
  */
 
 type DirectoryHandle = FileSystemDirectoryHandle & {
   queryPermission(options: { mode: "readwrite" }): Promise<PermissionState>;
   requestPermission(options: { mode: "readwrite" }): Promise<PermissionState>;
 };
-type WritableFile = FileSystemWritableFileStream & { seek(position: number): Promise<void> };
 
 const CAMERA_KEY = "gv-pack-camera-id";
 /** Camera id the station last confirmed with the confirm button; recording waits for it. */
@@ -27,7 +28,6 @@ const DB_NAME = "gv-pack";
 const STORE = "handles";
 const FOLDER_KEY = "video-folder";
 const FPS = 15;
-const FLUSH_MS = 3000;
 
 function openHandleStore(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -97,6 +97,8 @@ export type RecorderStatus = {
   isPreviewing: boolean;
   isConfirmed: boolean;
   fileName: string | null;
+  /** Last clip whose file finished closing on disk — shown so the packer sees it was saved. */
+  savedFile: string | null;
   error: string | null;
 };
 
@@ -111,6 +113,7 @@ export function useEvidenceRecorder() {
     isPreviewing: false,
     isConfirmed: false,
     fileName: null,
+    savedFile: null,
     error: null,
   });
   const patch = useCallback((next: Partial<RecorderStatus>) => setStatus((s) => ({ ...s, ...next })), []);
@@ -122,31 +125,12 @@ export function useEvidenceRecorder() {
   const drawTimerRef = useRef<number | null>(null);
   const overlayRef = useRef<{ lines: string[]; tone: OverlayTone; highlight: string[] }>({ lines: [], tone: "info", highlight: [] });
   const recorderRef = useRef<MediaRecorder | null>(null);
-  const sessionRef = useRef<{ fileName: string; startedAt: number } | null>(null);
-
-  // --- file writing: buffered chunks appended + committed every few seconds ---
-  const pendingRef = useRef<Blob[]>([]);
-  const fileRef = useRef<{ handle: FileSystemFileHandle; size: number } | null>(null);
-  const flushChainRef = useRef<Promise<void>>(Promise.resolve());
-  const flushTimerRef = useRef<number | null>(null);
-
-  const flush = useCallback(() => {
-    flushChainRef.current = flushChainRef.current.then(async () => {
-      const file = fileRef.current;
-      const chunks = pendingRef.current.splice(0);
-      if (!file || !chunks.length) return;
-      const writable = (await file.handle.createWritable({ keepExistingData: true })) as WritableFile;
-      await writable.seek(file.size);
-      for (const chunk of chunks) {
-        await writable.write(chunk);
-        file.size += chunk.size;
-      }
-      await writable.close();
-    }).catch((error: unknown) => {
-      patch({ error: `บันทึกวิดีโอลงโฟลเดอร์ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}` });
-    });
-    return flushChainRef.current;
-  }, [patch]);
+  /** The clip being recorded: its open file and the queue of writes into it, in order. */
+  const clipRef = useRef<{ fileName: string; startedAt: number; writable: FileSystemWritableFileStream; writes: Promise<void> } | null>(null);
+  const reportWriteError = useCallback(
+    (error: unknown) => patch({ error: `บันทึกวิดีโอลงโฟลเดอร์ไม่สำเร็จ: ${error instanceof Error ? error.message : String(error)}` }),
+    [patch],
+  );
 
   const scanCameras = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia || !("showDirectoryPicker" in window) || typeof MediaRecorder === "undefined") {
@@ -254,24 +238,29 @@ export function useEvidenceRecorder() {
 
   const stop = useCallback(async () => {
     const recorder = recorderRef.current;
+    const clip = clipRef.current;
     recorderRef.current = null;
-    if (flushTimerRef.current !== null) window.clearInterval(flushTimerRef.current);
-    flushTimerRef.current = null;
+    clipRef.current = null;
     if (recorder && recorder.state !== "inactive") {
+      // The final chunk arrives (and is queued for writing) before "stop" fires.
       await new Promise<void>((resolve) => {
         recorder.addEventListener("stop", () => resolve(), { once: true });
         recorder.stop();
       });
     }
-    await flush();
-    fileRef.current = null;
-    sessionRef.current = null;
+    // Camera off at once; the file finishes closing in the background.
     if (drawTimerRef.current !== null) window.clearInterval(drawTimerRef.current);
     drawTimerRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     patch({ isRecording: false, isPreviewing: false, fileName: null });
-  }, [flush, patch]);
+    if (clip) {
+      await clip.writes
+        .then(() => clip.writable.close())
+        .then(() => patch({ savedFile: clip.fileName }))
+        .catch(reportWriteError);
+    }
+  }, [patch, reportWriteError]);
 
   const openCamera = useCallback(
     async (cameraId: string) => {
@@ -333,25 +322,26 @@ export function useEvidenceRecorder() {
 
         const fileName = `${stamp(new Date())}_${safeName(label.branch)}_${safeName(label.reference || "ไม่มีเลข")}.webm`;
         const handle = await folder.getFileHandle(fileName, { create: true });
-        fileRef.current = { handle, size: 0 };
-        pendingRef.current = [];
+        const clip = { fileName, startedAt: Date.now(), writable: await handle.createWritable(), writes: Promise.resolve() };
 
         const mimeType = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((t) => MediaRecorder.isTypeSupported(t));
         const recorder = new MediaRecorder(canvas.captureStream(FPS), { mimeType, videoBitsPerSecond: 2_000_000 });
         recorder.ondataavailable = (event) => {
-          if (event.data.size) pendingRef.current.push(event.data);
+          if (!event.data.size) return;
+          const data = event.data;
+          clip.writes = clip.writes.then(() => clip.writable.write(data)).catch(reportWriteError);
         };
         recorder.start(1000);
+        clip.startedAt = Date.now(); // clip offsets count from the first recorded frame
         recorderRef.current = recorder;
-        flushTimerRef.current = window.setInterval(() => void flush(), FLUSH_MS);
-        sessionRef.current = { fileName, startedAt: Date.now() };
+        clipRef.current = clip;
         patch({ isRecording: true, fileName, error: null });
       } catch (error) {
         patch({ error: `เริ่มบันทึกวิดีโอไม่ได้: ${error instanceof Error ? error.message : String(error)}` });
         await stop();
       }
     },
-    [flush, openCamera, patch, status.cameraId, stop],
+    [openCamera, patch, reportWriteError, status.cameraId, stop],
   );
 
   const setOverlay = useCallback((lines: string[], tone: OverlayTone = "info", highlight: string[] = []) => {
@@ -360,7 +350,7 @@ export function useEvidenceRecorder() {
 
   /** Where "now" is in the current clip — sent with every scan so the report can point at the footage. */
   const clipReference = useCallback((at: number) => {
-    const session = sessionRef.current;
+    const session = clipRef.current;
     return session ? { videoFile: session.fileName, clipOffsetSec: Math.max(0, (at - session.startedAt) / 1000) } : { videoFile: null, clipOffsetSec: null };
   }, []);
 
@@ -374,21 +364,14 @@ export function useEvidenceRecorder() {
     if (canvas.parentElement !== container) container.appendChild(canvas);
   }, []);
 
-  // Commit what we have if the tab is closed mid-recording.
+  // Try to close the clip's file if the tab is closed mid-recording.
   useEffect(() => {
-    const onHide = () => {
-      if (document.visibilityState === "hidden") void flush();
-    };
     const onUnload = () => {
       void stop();
     };
-    document.addEventListener("visibilitychange", onHide);
     window.addEventListener("pagehide", onUnload);
-    return () => {
-      document.removeEventListener("visibilitychange", onHide);
-      window.removeEventListener("pagehide", onUnload);
-    };
-  }, [flush, stop]);
+    return () => window.removeEventListener("pagehide", onUnload);
+  }, [stop]);
 
   useEffect(() => () => void stop(), [stop]);
 
