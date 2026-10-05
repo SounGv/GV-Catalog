@@ -80,11 +80,52 @@ function playComplete() {
       osc.start(ctx.currentTime + i * 0.14);
       osc.stop(ctx.currentTime + i * 0.14 + 0.22);
     });
-    const voice = new SpeechSynthesisUtterance("ครบแล้ว");
-    voice.lang = "th-TH";
-    window.speechSynthesis?.speak(voice);
   } catch {
     // colour feedback still shows completion
+  }
+}
+
+/**
+ * Says the scan result out loud in Thai so the packer need not look at the screen.
+ * A new announcement cuts off the previous one, so fast scanning always hears the latest.
+ * Uses a Thai voice when the computer has one (Windows: the Thai speech pack).
+ */
+function speak(text: string) {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "th-TH";
+    const thai = synth.getVoices().find((v) => v.lang.toLowerCase().startsWith("th"));
+    if (thai) utterance.voice = thai;
+    utterance.rate = 1.15;
+    synth.speak(utterance);
+  } catch {
+    // the beep and colour still tell the result
+  }
+}
+
+/** What to say for one scan: the piece count, or what went wrong. */
+function scanAnnouncement(outcome: ScanOutcome, line: { scanned: number; required: number } | undefined, isBranchComplete: boolean): string {
+  switch (outcome.result) {
+    case "counted":
+      if (isBranchComplete) return "ครบทุกรายการแล้ว";
+      if (line && line.scanned >= line.required) return `${line.scanned} ครบ`;
+      return line ? String(line.scanned) : "นับแล้ว";
+    case "over":
+      return "เกิน";
+    case "unknown":
+      // Right product but the system barcode instead of the customer's sticker.
+      return outcome.message.includes("สติกเกอร์") ? "ติดสติกเกอร์บาร์โค้ดก่อน" : "ผิดรุ่น";
+    case "ambiguous":
+      return "บาร์โค้ดซ้ำ ไม่นับ";
+    case "held":
+      return "มีคนอื่นทำอยู่";
+    case "closed":
+      return "บันทึกแล้ว ยิงไม่ได้";
+    default:
+      return "ไม่นับ";
   }
 }
 
@@ -311,9 +352,11 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
           });
           if (isCounted && isBranchComplete) playComplete();
           else playTone(isCounted ? "ok" : "warn");
+          speak(scanAnnouncement(outcome, line, isBranchComplete));
         } catch (error) {
           setFeedback({ tone: "warn", text: `${barcode} · ส่งผลสแกนไม่สำเร็จ: ${error instanceof Error ? error.message : "ไม่ทราบสาเหตุ"} — ยิงใหม่อีกครั้ง` });
           playTone("warn");
+          speak("ส่งไม่สำเร็จ ยิงใหม่");
         }
         queueRef.current.shift();
         setPendingCount(queueRef.current.length);
@@ -376,8 +419,13 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
       }
       if (outcome.isClosed) {
         playComplete();
+        speak("บันทึกครบแพ็คแล้ว");
         void refreshBranches(); // the branch was released for the next one
-      } else playTone("warn");
+      } else {
+        playTone("warn");
+        const missing = outcome.shortages.reduce((n, s) => n + s.missing, 0);
+        speak(missing ? `ยังขาด ${missing} ชิ้น` : "บันทึกไม่ได้");
+      }
     } catch (error) {
       const text = error instanceof Error ? error.message : "บันทึกไม่สำเร็จ";
       if (isSelected) setFeedback({ tone: "warn", text });
@@ -401,6 +449,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
       // Shown on screen and burnt into the evidence video like a scan.
       setLastScan({ model: `${line.sku ?? line.part} · ${line.description}`, barcode: "นำออก 1 ชิ้น", result: `เหลือ ${left}/${line.required}` });
       setFeedback({ tone: "info", text: outcome.message });
+      speak(`นำออก เหลือ ${left}`);
     } catch (error) {
       setFeedback({ tone: "warn", text: error instanceof Error ? error.message : "แก้จำนวนไม่สำเร็จ" });
       playTone("warn");
