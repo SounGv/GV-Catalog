@@ -38,7 +38,8 @@
     @page labelA4Landscape{size:A4 landscape;margin:0}@page labelA4Portrait{size:A4 portrait;margin:0}@page labelA5Landscape{size:A5 landscape;margin:0}@page labelA5Portrait{size:A5 portrait;margin:0}@page label4x6Landscape{size:150mm 100mm;margin:0}@page label4x6Portrait{size:100mm 150mm;margin:0}
     @media print{html,body{margin:0!important;padding:0!important;background:#fff!important}body.printing>*:not(#pdfPrintDocument){display:none!important}body.printing #pdfPrintDocument{display:block!important;margin:0!important;padding:0!important}body.label-printing>*:not(#labelPrintDocument){display:none!important}body.label-printing #labelPrintDocument{display:block!important;margin:0!important;padding:0!important}.pdf-print-page,.label-print-page{margin:0!important}}
   </style>
-<style>@media print{a[href="/"]{display:none!important}}</style></head>
+<style>@media print{a[href="/"]{display:none!important}}</style><link rel="stylesheet" href="../shared/barcode-check.css">
+</head>
 <body>
   <a href="/" style="display:inline-flex;align-items:center;gap:4px;color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;margin-bottom:14px">&lsaquo; กลับหน้าหลัก</a><header class="top">
     <div class="brand"><img class="brand-logo" src="logo.jpeg" alt="Gadget Villa"><div class="brand-title">OfficeMate PDF เป็น Excel, พิมพ์ PO และใบแปะ<small>Gadget Villa · OfficeMate PDF Converter & Print</small></div></div>
@@ -103,7 +104,7 @@
       <section class="card table-card">
         <div class="table-tools"><b>ตัวอย่างรายการที่อ่านได้</b><span id="tableCount">0 รายการ</span></div>
         <div class="empty" id="empty">เลือกไฟล์ PDF เพื่อเริ่มแปลง</div>
-        <div class="table-wrap"><table id="preview"></table></div>
+        <div class="table-wrap"><div class="bc-legend"><span><i></i> แถวสีแดง = ต้องเปลี่ยนบาร์โค้ด (บาร์โค้ดใน PO ไม่เท่าบาร์โค้ดหลักใน Catalog)</span><span><i class="amber"></i> เหลือง = เช็กรุ่นใน Catalog ไม่ได้</span></div><table id="preview"></table></div>
       </section>
     </section>
   </main>
@@ -250,16 +251,25 @@ function catalogLookup(sku){
   if(!state.catalogBySku)return null;
   return state.catalogBySku.get(String(sku||"").trim().toUpperCase())||null;
 }
+function bcStatus(x,c){
+  if(!state.catalogBySku)return"unknown";
+  const gtins=String(c.gtin||"").split(/[\s,;|/]+/).filter(g=>/^\d{8,14}$/.test(g));
+  const po=String(x.barcode||"").trim();
+  if(!gtins.length||!po)return"unknown";
+  return gtins.includes(po)?"same":"change";
+}
+function bcRowClass(x,c){const t=bcStatus(x,c);return t==="change"?"bc-row-change":t==="unknown"&&state.catalogBySku?"bc-row-unknown":""}
+function bcTag(x,c){const t=bcStatus(x,c);return t==="change"?'<span class="bc-tag-change">⚠ ต้องเปลี่ยนบาร์โค้ด</span>':t==="unknown"&&state.catalogBySku?'<span class="bc-tag-unknown">เช็กรุ่นใน Catalog ไม่ได้</span>':""}
 function catalogCheck(x){
   const hit=catalogLookup(x.sku);
   if(!hit)return{gtin:"",officeMateBarcode:"",status:state.catalogBySku?"ไม่พบ SKU นี้ใน Catalog":""};
   const poBarcode=String(x.barcode||"").trim();
   if(!poBarcode)return{gtin:hit.gtin,officeMateBarcode:hit.officeMateBarcode,status:"ไม่มีบาร์โค้ดใน PO"};
-  if(poBarcode===hit.gtin)return{gtin:hit.gtin,officeMateBarcode:hit.officeMateBarcode,status:"ตรงกับบาร์โค้ดหลัก"};
+  if(String(hit.gtin||"").split(/[\s,;|/]+/).includes(poBarcode))return{gtin:hit.gtin,officeMateBarcode:hit.officeMateBarcode,status:"ตรงกับบาร์โค้ดหลัก"};
   if(hit.officeMateBarcode&&poBarcode===hit.officeMateBarcode)return{gtin:hit.gtin,officeMateBarcode:hit.officeMateBarcode,status:"ตรงกับบาร์โค้ด OfficeMate ที่บันทึกไว้"};
   return{gtin:hit.gtin,officeMateBarcode:hit.officeMateBarcode,status:"ต่างจากที่ระบบมี ตรวจสอบก่อนเปลี่ยนบาร์โค้ด"};
 }
-async function syncCatalogBarcodes(){
+async function syncCatalogBarcodes(silent=false){
   els.syncCatalogBtn.disabled=true;els.catalogInfo.textContent="กำลังซิงค์จาก Catalog…";
   try{
     const res=await fetch("/api/catalog/barcodes");
@@ -269,7 +279,7 @@ async function syncCatalogBarcodes(){
     state.catalogBySku=map;
     els.catalogInfo.textContent=`ซิงค์แล้ว · ${map.size.toLocaleString()} SKU จาก Catalog`;
     render();
-    toast("ซิงค์บาร์โค้ดจาก Catalog แล้ว");
+    if(!silent)toast("ซิงค์บาร์โค้ดจาก Catalog แล้ว");
   }catch(e){els.catalogInfo.textContent=e.message||"ซิงค์ไม่สำเร็จ";toast(e.message||"ซิงค์ไม่สำเร็จ",true)}
   finally{els.syncCatalogBtn.disabled=false}
 }
@@ -439,7 +449,7 @@ function renderTable(){
   let html="<thead><tr>"+heads.map(h=>`<th>${h}</th>`).join("")+"</tr></thead><tbody>";
   for(const x of rows){
     const c=catalogCheck(x);
-    html+=`<tr><td>${esc(x.po)}</td><td>${esc(x.branchCode)}<br>${esc(x.branchName)}</td><td>${esc(x.sku)}</td><td>${esc(x.barcode)}</td><td>${esc(x.description)}</td><td class="num">${x.saleQty}</td><td class="num">${x.amount.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${x.page}</td><td>${esc(c.status)}</td></tr>`;
+    html+=`<tr class="${bcRowClass(x,c)}"><td>${esc(x.po)}</td><td>${esc(x.branchCode)}<br>${esc(x.branchName)}</td><td>${esc(x.sku)}</td><td>${esc(x.barcode)}</td><td>${esc(x.description)}</td><td class="num">${x.saleQty}</td><td class="num">${x.amount.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>${x.page}</td><td>${esc(c.status)}${bcTag(x,c)}</td></tr>`;
   }
   els.preview.innerHTML=html+"</tbody>";
 }
@@ -459,7 +469,8 @@ els.labelBoxCount.addEventListener("input",()=>{const selected=selectedLabelOrde
 els.labelSelectedBtn.addEventListener("click",()=>printBoxLabels("selected"));
 els.labelAllBtn.addEventListener("click",()=>printBoxLabels("all"));
 els.resetBtn.addEventListener("click",()=>{els.fileInput.value="";reset(true)});
-els.syncCatalogBtn.addEventListener("click",syncCatalogBarcodes);
+els.syncCatalogBtn.addEventListener("click",()=>syncCatalogBarcodes());
+syncCatalogBarcodes(true);
 els.refresh.addEventListener("click",renderTable);els.search.addEventListener("input",renderTable);
 for(const ev of ["dragenter","dragover"])els.drop.addEventListener(ev,e=>{e.preventDefault();els.drop.style.background="#e2faf3"});
 for(const ev of ["dragleave","drop"])els.drop.addEventListener(ev,e=>{e.preventDefault();els.drop.style.background="#f1fbf8"});

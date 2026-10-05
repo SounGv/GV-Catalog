@@ -7,6 +7,7 @@
  const host=document.createElement('section');host.id='labelTool';host.hidden=true;
  host.innerHTML=`<h2>สติกเกอร์สินค้า 50 × 30 มม. · 2 ดวง/แถว</h2>
  <div class="label-controls"><label>สาขา<select id="labelBranch"></select></label><label>ค้นหารุ่น / บาร์โค้ด<input id="labelSearch" type="search"></label><button id="labelAll">เลือกทั้งหมด</button><button id="labelNone">ล้างการเลือก</button></div>
+ <div class="bc-legend"><span><i></i> แถวสีแดง = ต้องเปลี่ยนบาร์โค้ด (บาร์โค้ดลูกค้าไม่เท่าบาร์โค้ดหลักใน Catalog)</span><span><i class="amber"></i> เหลือง = เช็กรุ่นใน Catalog ไม่ได้</span><span>· ต้องเปลี่ยน <b id="labelBcCount">0</b> รุ่น</span></div>
  <div class="label-grid"><table><thead><tr><th>พิมพ์</th><th>ITEM_CODE</th><th>ชื่อรุ่น</th><th>รายละเอียด / สี</th><th>ดวง</th></tr></thead><tbody id="labelItems"></tbody></table></div>
  <details><summary>ตั้งค่ากระดาษและตำแหน่งพิมพ์</summary><div class="label-controls">
  <label>ช่องว่างกลาง (มม.)<input id="labelGap" type="number" min="0" max="10" step="0.1" value="0"></label>
@@ -17,6 +18,7 @@
  <div id="labelStatus" role="status"></div><div class="label-controls"><button id="labelPreviewBtn">ตรวจตัวอย่าง</button><button id="labelPrintBtn">พิมพ์ที่เลือก</button><button id="labelTestBtn">พิมพ์ทดสอบ 1 แถว</button></div><div id="labelPreview"></div>`;
  document.getElementById('workPanels').append(host);
  const $=id=>document.getElementById(id);let report=null,items=[],overrides=new Map();
+ function modelOf(desc){return(String(desc||'').match(/\b\d{5}(?:-?BOX|[A-Z])?\b/i)||[])[0]||'';}
  function shortName(desc){
   const sku=(desc.match(/\b\d{5}(?:-?BOX|[A-Z])?\b/i)||[])[0]||'';
   const color=(desc.match(/\b(Black|White|Purple|Grey|Gray|Silver|Blue)\b/i)||[])[0]||'';
@@ -37,8 +39,8 @@
   const map=new Map();for(const b of report.branches){if($('labelBranch').value&&b.id!==$('labelBranch').value)continue;for(const r of b.rows){if(!map.has(r.item))map.set(r.item,{code:String(r.item),desc:r.desc,qty:0,selected:true,...shortName(r.desc),conflict:false});const x=map.get(r.item);x.qty+=Number(r.unit);if(x.desc!==r.desc)x.conflict=true;}}
   items=[...map.values()].map(x=>Object.assign(x,overrides.get(`${$('labelBranch').value}:${x.code}`)||{}));$('labelPreview').replaceChildren();draw();
  }
- function draw(){const tbody=$('labelItems');tbody.replaceChildren();const q=$('labelSearch').value.toLowerCase();for(const x of items){if(!`${x.code} ${x.desc} ${x.title}`.toLowerCase().includes(q))continue;const row=document.createElement('tr');const cell=()=>{const td=document.createElement('td');row.append(td);return td;};const check=document.createElement('input');check.type='checkbox';check.checked=x.selected;check.setAttribute('aria-label',`พิมพ์ ${x.code}`);cell().append(check);check.onchange=()=>{x.selected=check.checked;save(x);};cell().textContent=x.code;
-   for(const key of ['title','detail','qty']){const input=document.createElement('input');input.type=key==='qty'?'number':'text';input.value=x[key];input.min='0';input.step='1';input.title=x.desc;input.setAttribute('aria-label',`${key} ${x.code}`);cell().append(input);input.onchange=()=>{x[key]=key==='qty'?Number(input.value):input.value.trim();save(x);};}tbody.append(row);}status();}
+ function draw(){const tbody=$('labelItems');let changed=0;tbody.replaceChildren();const q=$('labelSearch').value.toLowerCase();for(const x of items){if(!`${x.code} ${x.desc} ${x.title}`.toLowerCase().includes(q))continue;const row=document.createElement('tr');const cell=()=>{const td=document.createElement('td');row.append(td);return td;};const check=document.createElement('input');check.type='checkbox';check.checked=x.selected;check.setAttribute('aria-label',`พิมพ์ ${x.code}`);cell().append(check);check.onchange=()=>{x.selected=check.checked;save(x);};{const td=cell();td.textContent=x.code;const st=GVBarcodeCheck.status(modelOf(x.desc),x.code);if(st==="change")changed++;row.className=GVBarcodeCheck.rowClass(st);td.insertAdjacentHTML("beforeend",GVBarcodeCheck.tagHtml(st));}
+   for(const key of ['title','detail','qty']){const input=document.createElement('input');input.type=key==='qty'?'number':'text';input.value=x[key];input.min='0';input.step='1';input.title=x.desc;input.setAttribute('aria-label',`${key} ${x.code}`);cell().append(input);input.onchange=()=>{x[key]=key==='qty'?Number(input.value):input.value.trim();save(x);};}tbody.append(row);}const bc=$('labelBcCount');if(bc)bc.textContent=changed;status();}
  function save(x){overrides.set(`${$('labelBranch').value}:${x.code}`,{title:x.title,detail:x.detail,qty:x.qty,selected:x.selected});$('labelPreview').replaceChildren();status();}
  function status(message){const selected=items.filter(x=>x.selected);$('labelStatus').textContent=message||`${selected.length} รุ่น · ${selected.reduce((n,x)=>n+x.qty,0)} ดวง`;}
  function config(){const read=id=>{const e=$(id);if(!e.checkValidity()||e.value==='')throw Error('ตรวจสอบค่าระยะกระดาษ');return Number(e.value);};return {gap:read('labelGap'),left:read('labelLeft'),right:read('labelRight'),y:read('labelY')};}
@@ -62,7 +64,7 @@
  window.addEventListener('afterprint',clean);
  window.addEventListener('jaymart-order-ready',e=>{report=e.detail;overrides.clear();$('labelBranch').replaceChildren(new Option('ทุกสาขา',''),...report.branches.map(b=>new Option(`${b.id} · ${b.inputName}`,b.id)));rebuild();});
  $('orderFile').addEventListener('change',()=>{report=null;items=[];clean();});
- $('labelBranch').onchange=rebuild;$('labelSearch').oninput=draw;
+ GVBarcodeCheck.load().then(()=>draw());$('labelBranch').onchange=rebuild;$('labelSearch').oninput=draw;
  $('labelAll').onclick=()=>{items.forEach(x=>{x.selected=true;save(x);});draw();};$('labelNone').onclick=()=>{items.forEach(x=>{x.selected=false;save(x);});draw();};
  $('labelPreviewBtn').onclick=()=>{try{preview();}catch(e){$('labelPreview').replaceChildren();status(e.message);}};$('labelPrintBtn').onclick=()=>print(false);$('labelTestBtn').onclick=()=>print(true);
 })();

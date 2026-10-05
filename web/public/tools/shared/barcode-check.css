@@ -1,0 +1,12 @@
+/* A row whose customer barcode differs from our main barcode is red end to end. The tag repeats
+   the meaning in words so the colour is never the only signal. */
+tr.bc-row-change>td,tr.bc-row-change>th{background:#fbcfca!important;color:#5f0f09!important}
+tr.bc-row-change:hover>td{background:#f8bbb4!important}
+tr.bc-row-unknown>td{background:#fff4d6!important}
+.bc-tag-change,.bc-tag-unknown{display:block;margin-top:2px;font-size:11px;font-weight:800;line-height:1.35}
+.bc-tag-change{color:#a3140b}
+.bc-tag-unknown{color:#7a5a00;font-weight:600}
+.bc-legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0;padding:8px 14px;font-size:12px;line-height:1.6;color:#5b6572}
+.bc-legend i{display:inline-block;width:14px;height:14px;border-radius:3px;background:#fbcfca;border:1px solid #e79c94}
+.bc-legend i.amber{background:#fff4d6;border-color:#e8d08a}
+@media print{.bc-legend{display:none!important}}
