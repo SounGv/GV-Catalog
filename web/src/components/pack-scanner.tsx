@@ -608,6 +608,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)_minmax(340px,32%)]">
         {/* ── Bills / branches ── */}
         <aside className="flex min-h-0 flex-col gap-2 overflow-hidden rounded-[10px] border border-line bg-surface p-2.5 max-lg:max-h-[60vh]">
+          {kindCount("pickpack") > 0 ? (
           <select
             value={kindFilter}
             onChange={(e) => setKindFilter(e.target.value as DeliveryKind)}
@@ -618,6 +619,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
             <option value="direct">ส่งตรงสาขา ({kindCount("direct")})</option>
             <option value="pickpack">Pickpack / TRB ({kindCount("pickpack")})</option>
           </select>
+          ) : null}
           <input
             type="search"
             value={branchFilter}

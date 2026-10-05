@@ -1,7 +1,7 @@
 import type { PoolClient } from "pg";
 import { pool } from "@/lib/db";
 
-/** One line as the IT City converter hands it over (its parseOrder + check output). */
+/** One line as a retailer converter hands it over (IT City: parseOrder + check output; Jaymart: ITEM_CODE as the barcode). */
 export type IncomingPackLine = {
   branch: string;
   branchName?: string;

@@ -9,6 +9,8 @@ type CreateJobBody = {
 };
 
 const MAX_LINES = 20000;
+/** Retailer tools that can hand a parsed order to scan-to-pack. */
+const PACK_CUSTOMERS = ["ITCity", "Jaymart"];
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
   const customer = String(body.customer ?? "").trim();
   const sourceFile = String(body.sourceFile ?? "").trim();
   const lines = Array.isArray(body.lines) ? body.lines : [];
-  if (customer !== "ITCity") return Response.json({ error: "รองรับเฉพาะลูกค้า ITCity" }, { status: 400 });
+  if (!PACK_CUSTOMERS.includes(customer)) return Response.json({ error: `รองรับเฉพาะลูกค้า ${PACK_CUSTOMERS.join(", ")}` }, { status: 400 });
   if (!sourceFile) return Response.json({ error: "ไม่มีชื่อไฟล์ PO" }, { status: 400 });
   if (!lines.length || lines.length > MAX_LINES) return Response.json({ error: "จำนวนรายการไม่ถูกต้อง" }, { status: 400 });
 
