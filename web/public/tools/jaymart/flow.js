@@ -12,7 +12,7 @@
  const panels={form:'panelForm',label:'labelTool',pack:'packTool'};
  const needsReport=new Set(['form','label']);
  const blank=()=>({a4:[],labels:[],allLabels:false,excel:false,scan:false,skip:false});
- let hasReport=false,fileKey='',branchIds=[],prog=blank(),skipArmed=0;
+ let hasReport=false,fileKey='',branchIds=[],branchInfo=[],prog=blank(),skipArmed=0;
 
  // ---- small helpers ----
  function toast(text){const t=$('toast');if(!t)return;t.textContent=text;t.className='toast show error';clearTimeout(toast.timer);toast.timer=setTimeout(()=>{t.className='toast'},3600)}
@@ -64,12 +64,24 @@
   const link=$('skipLock');link.hidden=!anyLocked;
   if(!anyLocked)skipArmed=0;
   link.textContent=skipArmed?'กดอีกครั้งเพื่อยืนยัน: ข้ามขั้นตอนที่ล็อก (ใช้เมื่อพิมพ์ไม่ได้จริงๆ)':'พิมพ์ไม่ได้ / ข้ามขั้นตอนที่ล็อก';
+  paintForm();
   // summary beside the heading
   if(hasReport){
    const done=[a4Done(),labelDone(),prog.excel,prog.scan].filter(Boolean).length;
    $('workHint').textContent=`เสร็จแล้ว ${done} / 4 งาน`+(skipped?' · ข้ามการล็อกแล้ว':'')+' · กดช่องซ้ำเพื่อปิด';
   }
  }
+
+ // ---- A4 form panel: branch picker (printed ticks) and the 'print all' count ----
+ function paintForm(){
+  const pick=$('formBranchPick'),keep=pick.value;
+  pick.replaceChildren(new Option('— เลือกสาขา —',''),...branchInfo.map(b=>new Option(`${prog.a4.includes(b.id)?'✓ ':''}${b.id} · ${b.name}${b.hasMaster?'':' (ไม่มีข้อมูลที่อยู่)'}`,b.id)));
+  pick.value=branchInfo.some(b=>b.id===keep)?keep:'';
+  const ok=branchInfo.filter(b=>b.hasMaster),left=branchInfo.filter(b=>!b.hasMaster);
+  $('formAllCount').textContent=ok.length;
+  $('formAllNote').textContent=left.length?`พิมพ์ทุกสาขาที่มีข้อมูลที่อยู่ในครั้งเดียว · ข้าม ${left.length} สาขาที่ไม่มีข้อมูล: ${left.map(b=>b.id).join(', ')}`:'พิมพ์ใบส่งของทุกสาขาในไฟล์ครั้งเดียว ไม่ต้องเลือกทีละสาขา';
+ }
+ $('formBranchPick').addEventListener('change',e=>{if(!e.target.value)return;$('branchIdInput').value=e.target.value;$('branchFormBtn').click()});
 
  // ---- panels ----
  function closeAll(){for(const [k,id] of Object.entries(panels)){const p=$(id);if(p)p.hidden=true;tiles.find(t=>t.dataset.panel===k)?.classList.remove('on')}}
@@ -107,14 +119,14 @@
 
  // ---- progress signals from the converter, label and scan scripts ----
  const mark=fn=>e=>{if(!hasReport)return;fn(e.detail||{});save();render()};
- window.addEventListener('jaymart-form-printed',mark(d=>{const id=String(d.branch);if(!prog.a4.includes(id))prog.a4.push(id)}));
+ window.addEventListener('jaymart-form-printed',mark(d=>{for(const id of (d.branches||[d.branch]).map(String))if(!prog.a4.includes(id))prog.a4.push(id)}));
  window.addEventListener('jaymart-labels-printed',mark(d=>{if(d.branch)(prog.labels.includes(String(d.branch))||prog.labels.push(String(d.branch)));else prog.allLabels=true}));
  window.addEventListener('jaymart-excel-downloaded',mark(()=>{prog.excel=true}));
  window.addEventListener('jaymart-scan-created',mark(()=>{prog.scan=true}));
 
  // ---- file and check lifecycle ----
  $('orderFile').addEventListener('change',()=>{
-  hasReport=false;fileKey='';branchIds=[];prog=blank();
+  hasReport=false;fileKey='';branchIds=[];branchInfo=[];prog=blank();
   document.body.classList.remove('has-report');$('checkChip').hidden=true;
   closeAll();render();
   setStep($('orderFile').files.length?1:0,$('orderFile').files.length?2:1);
@@ -123,6 +135,7 @@
   hasReport=true;document.body.classList.add('has-report');$('checkChip').hidden=false;
   fileKey=keyOf($('orderFile').files[0]);
   branchIds=(e.detail?.branches||[]).map(b=>String(b.id));
+  branchInfo=(e.detail?.branches||[]).map(b=>({id:String(b.id),name:String(b.inputName||'').trim(),hasMaster:!!b.master}));
   prog={...blank(),...(readStore()[fileKey]||{})};
   render();setStep(2,3);
  });

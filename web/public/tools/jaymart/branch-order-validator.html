@@ -19,8 +19,9 @@
     .upload.locked{border-style:solid;border-color:#b8ddd1;background:#eefaf6}.upload.locked strong{color:var(--ink)}.lock-state{margin-top:10px;color:var(--green-dark);font-size:12px;font-weight:850}
     .form-tool{margin-top:16px;padding:15px;border:1px solid #b8ddd1;border-radius:14px;background:#f2fcf8}.form-tool h3{margin:0;font-size:14px}.form-tool .sub{margin:5px 0 11px}.form-entry{display:grid;grid-template-columns:1fr;gap:8px}.form-entry input{width:100%;height:42px;border:1px solid #b9d9cf;border-radius:9px;padding:8px 10px;background:#fff}.form-entry button{border:0;border-radius:10px;padding:10px 12px;background:var(--green);color:#fff;font-size:13px;font-weight:850}.form-entry button:hover{background:var(--green-dark)}.form-hint{margin-top:8px;color:var(--muted);font-size:11px;line-height:1.5}.form-preview-card{display:none;margin-top:16px}.form-preview-card.show{display:block}.a4-preview{background:#eef3f5;padding:18px;overflow:auto}.a4-paper{width:min(100%,760px);min-height:980px;margin:auto;background:#fff;border:1px solid #18354b;padding:24px;box-shadow:0 12px 32px rgba(31,68,91,.12)}.a4-head{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:2px solid #18354b;padding-bottom:14px}.a4-brand{font-weight:900;color:#087c67;font-size:18px}.a4-meta{font-size:12px;line-height:1.65}.a4-title{text-align:right;font-weight:900;font-size:15px}.a4-branch{margin:16px 0 12px;padding:10px;border:1px solid #d9e4e8;background:#f7fbfd;font-size:12px;line-height:1.65}.a4-branch strong{display:block;color:#087c67}.a4-table{width:100%;min-width:0;border-collapse:collapse;font-size:12px}.a4-table th{position:static;background:#d9e4e8;color:#18354b;border:1px solid #18354b;padding:7px}.a4-table td{border:1px solid #18354b;padding:7px;white-space:normal;max-width:none;overflow:visible;text-overflow:clip;vertical-align:top}.a4-table th:nth-child(1),.a4-table td:nth-child(1){width:8%;text-align:center}.a4-table th:nth-child(2),.a4-table td:nth-child(2){width:22%}.a4-table th:nth-child(4),.a4-table td:nth-child(4){width:12%;text-align:center}.a4-sign{margin-top:120px;display:grid;grid-template-columns:1fr 1fr;gap:55px;font-size:12px}.a4-sign div{border-top:1px dotted #18354b;padding-top:5px}.form-export{margin-top:9px;width:100%;border:0;border-radius:10px;padding:11px 12px;color:#fff;background:var(--blue);font-size:13px;font-weight:850}.form-export:hover{background:#2f6489}@media(max-width:900px){.a4-paper{min-height:0}.a4-sign{margin-top:45px}}@media(max-width:620px){.a4-preview{padding:8px}.a4-paper{padding:14px}.a4-head{grid-template-columns:1fr}.a4-title{text-align:left}.a4-table{font-size:10px}}
     .a4-paper{width:210mm;min-height:297mm;padding:10mm 9mm;color:#000;font-family:Arial,Tahoma,sans-serif;font-size:9pt;margin:0 auto 16px}
-    .a4-paper .a4-head{display:grid;grid-template-columns:22mm 1fr 30mm;gap:4mm;border:0;padding:0;align-items:start}
+    .a4-paper .a4-head{display:grid;grid-template-columns:22mm 1fr 54mm;gap:4mm;border:0;padding:0;align-items:start}
     .a4-logo{width:22mm;height:19mm;object-fit:contain}
+    .a4-paper .a4-scan{margin-top:2mm;text-align:center;font-size:7.5pt;line-height:1.2;font-variant-numeric:tabular-nums}.a4-paper .a4-scan .scan-code{margin:0 auto 0.5mm}
     .a4-paper .a4-meta{font-size:9pt;line-height:1.7}
     .a4-paper .a4-title{font-size:10pt;text-align:center;padding-top:7mm;font-weight:400}
     .a4-customer{display:flex;justify-content:flex-end;margin:4mm 0;font-size:9pt}
@@ -84,6 +85,15 @@ body.has-report #stepCheck .analyze{background:#fff;color:var(--green-dark);bord
 #stepWork .tile.locked .ico,#stepWork .tile.locked b{opacity:.5}#stepWork .tile.locked span{color:#3d4752;font-weight:600}
 #stepWork .tile.locked .tile-badge{background:#e5e9ed;color:#3d4752}
 .skip-lock{display:block;margin:8px 0 0;padding:0 2px;min-height:44px;background:none;border:0;color:#5b6572;font-size:12px;text-decoration:underline;cursor:pointer}.skip-lock[hidden]{display:none}
+/* Two ways to print the A4 forms: the selected bill, or all of them. */
+.copies-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 2px;font-size:14px;font-weight:700}.copies-row input{width:84px;min-height:44px;border:1px solid #b9d9cf;border-radius:9px;padding:8px 10px;font-size:16px;text-align:center}.copies-row span{font-size:12px;font-weight:400;color:var(--muted)}
+.form-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:10px}
+.form-choice{border:1px solid #cbd9d3;border-radius:14px;padding:14px;background:#fff}.form-choice h4{margin:0;font-size:15px}.form-choice .sub{margin:2px 0 10px;font-size:12px;color:var(--muted)}
+.form-choice select,.form-choice input{width:100%;min-height:44px;border:1px solid #b9d9cf;border-radius:9px;padding:8px 10px;background:#fff;font-size:14px}
+.form-choice .field-lbl{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
+.form-choice .form-entry{margin-top:8px;grid-template-columns:1fr}
+.form-all{width:100%;min-height:52px;border:0;border-radius:11px;background:var(--green);color:#fff;font-size:15px;font-weight:850}
+.form-all:hover{background:var(--green-dark)}
 @media print{.steps{display:none!important}}
 </style>
 <link rel="stylesheet" href="../shared/barcode-check.css">
@@ -108,8 +118,18 @@ body.has-report #stepCheck .analyze{background:#fff;color:var(--green-dark);bord
         </div>
         <div id="workPanels">
           <div class="panel-box" id="panelForm" hidden>
-            <section class="form-tool"><h3>ฟอร์มพิมพ์รายสาขา A4</h3><p class="sub">กรอกเฉพาะเลข Branch ID ระบบจะดึงที่อยู่และรายการสินค้าให้</p><div class="form-entry"><input id="branchIdInput" type="text" inputmode="numeric" placeholder="เช่น 1012" /><button id="branchFormBtn" type="button">ดึงข้อมูลและสร้างฟอร์ม</button></div><div class="form-hint" id="formHint">ต้องเลือกไฟล์ออเดอร์และกดตรวจสอบก่อน</div><button class="form-export" id="formExportBtn" type="button" hidden>ดาวน์โหลดฟอร์ม A4 เฉพาะสาขา</button></section>
-            <div class="card form-preview-card" id="formPreviewCard"><div class="bar"><div><h3>ตัวอย่างฟอร์ม A4</h3><p id="formPreviewMeta">—</p></div><button class="form-print" id="formPrintBtn" type="button">พิมพ์ใบส่งของ</button></div><div class="a4-preview" id="formPreview"></div></div>
+            <section class="form-tool"><h3>พิมพ์ใบส่งของ A4</h3>
+              <label class="copies-row">จำนวนใบต่อสาขา <input id="formCopies" type="number" min="1" max="20" step="1" value="1" inputmode="numeric" aria-label="จำนวนใบส่งของต่อสาขา" /><span>เช่น 3 ใบต่อสาขา · ใช้กับทั้งสองแบบด้านล่าง</span></label>
+              <div class="form-choices">
+                <div class="form-choice"><h4>พิมพ์บิลที่เลือก</h4><p class="sub">เลือกสาขา ดูตัวอย่างก่อน แล้วพิมพ์ทีละสาขา</p>
+                  <label class="field-lbl" for="formBranchPick">เลือกสาขา</label><select id="formBranchPick" aria-label="เลือกสาขา"><option value="">— เลือกสาขา —</option></select>
+                  <div class="form-entry"><input id="branchIdInput" type="text" inputmode="numeric" placeholder="หรือพิมพ์ Branch ID เช่น 1012" aria-label="Branch ID" /><button id="branchFormBtn" type="button">ดูตัวอย่างใบส่งของ</button></div>
+                  <div class="form-hint" id="formHint">ต้องเลือกไฟล์ออเดอร์และกดตรวจสอบก่อน</div>
+                  <button class="form-export" id="formExportBtn" type="button" hidden>ดาวน์โหลดฟอร์ม A4 เฉพาะสาขา</button></div>
+                <div class="form-choice"><h4>พิมพ์ทั้งหมด</h4><p class="sub" id="formAllNote">พิมพ์ใบส่งของทุกสาขาในไฟล์ครั้งเดียว ไม่ต้องเลือกทีละสาขา</p>
+                  <button id="formPrintAllBtn" type="button" class="form-all">พิมพ์ทั้งหมด <span id="formAllCount">0</span> สาขา × <span id="formAllCopies">1</span> ใบ</button></div>
+              </div></section>
+            <div class="card form-preview-card" id="formPreviewCard"><div class="bar"><div><h3>ตัวอย่างฟอร์ม A4</h3><p id="formPreviewMeta">—</p></div><button class="form-print" id="formPrintBtn" type="button">พิมพ์บิลที่เลือก</button></div><div class="a4-preview" id="formPreview"></div></div>
           </div>
         </div>
       </div>
@@ -216,32 +236,44 @@ body.has-report #stepCheck .analyze{background:#fff;color:var(--green-dark);bord
       const m=b.master||{},names=[m.name,m.english||m.nameEn].filter(x=>String(x||'').trim());
       return names.filter((x,i)=>names.findIndex(y=>norm(y)===norm(x))===i).join(' / ');
     }
-    function renderFormPreview(b){
+    function scanValueOf(b){const pos=[...new Set(b.rows.filter(isOrderItem).map(r=>String(r.po||"").trim()).filter(Boolean))];return pos.length===1?pos[0]:String(b.id)}
+    function formPapers(b){
       const m=b.master||{},name=deliveryBranchName(b),address=m.address||[m.subdistrict,m.district,m.province,m.zip].filter(Boolean).join(" "),contact=[m.contact,m.phone,m.phone2].filter(Boolean).join(" / ");
       const now=new Date(),date=`${String(now.getDate()).padStart(2,"0")}-${String(now.getMonth()+1).padStart(2,"0")}-${now.getFullYear()+543}`;
       const items=b.rows.filter(isOrderItem),pages=deliveryPages(items);
-      el.formMeta.textContent=`Branch ID ${b.id} · ${items.length} รายการ · ${pages.length} หน้า`;
-      el.formPreview.innerHTML=pages.map((items,pageIndex)=>`<section class="a4-paper">
-        <div class="a4-head"><img class="a4-logo" src="data:image/png;base64,${GADGET_LOGO_PNG_B64}" alt="Gadget Villa"><div class="a4-meta"><div>บริษัท แก็ดเจ็ต วิลล่า จำกัด</div><div>Gadget Villa Co., Ltd</div><div>729/28-37 ถนนรัชดาภิเษก แขวงบางโพงพาง เขตยานนาวา กรุงเทพฯ 10120</div><div>Tel. 02-284-1027 &nbsp; Fax 02-284-1027 &nbsp; Tax Registration No. 0105557008364</div></div><div class="a4-title">ใบส่งของ${pages.length>1?`<br>${pageIndex+1} / ${pages.length}`:""}</div></div>
+      const scanValue=scanValueOf(b),scanSvg=GVBranchCode.svg(scanValue);
+      const meta=`Branch ID ${b.id} · ${items.length} รายการ · ${pages.length} หน้า`;
+      const html=pages.map((items,pageIndex)=>`<section class="a4-paper">
+        <div class="a4-head"><img class="a4-logo" src="data:image/png;base64,${GADGET_LOGO_PNG_B64}" alt="Gadget Villa"><div class="a4-meta"><div>บริษัท แก็ดเจ็ต วิลล่า จำกัด</div><div>Gadget Villa Co., Ltd</div><div>729/28-37 ถนนรัชดาภิเษก แขวงบางโพงพาง เขตยานนาวา กรุงเทพฯ 10120</div><div>Tel. 02-284-1027 &nbsp; Fax 02-284-1027 &nbsp; Tax Registration No. 0105557008364</div></div><div class="a4-title">ใบส่งของ${pages.length>1?`<br>${pageIndex+1} / ${pages.length}`:""}${scanSvg?`<div class="a4-scan">${scanSvg}<div>${scanValue}</div></div>`:""}</div></div>
         <div class="a4-customer"><time>${date}</time></div>
         <div class="a4-branch"><div class="branch-row"><span class="branch-label">รหัสสาขา</span><span>${esc(b.id)}</span></div><div class="branch-row"><span class="branch-label">ชื่อสาขา</span><span>${esc(name)}</span></div><div class="branch-row"><span class="branch-label">ที่อยู่</span><span>${esc(address||"—")}</span></div><div class="branch-row"><span class="branch-label">ติดต่อ</span><span>${esc(contact||"—")}</span></div></div>
         <table class="a4-table"><thead><tr><th>ลำดับ</th><th>รหัสสินค้าลูกค้า</th><th>รายการสินค้า</th><th>จำนวน</th></tr></thead><tbody>${items.map(x=>`<tr><td>${x.index}</td><td>${esc(x.item)}</td><td>${esc(x.desc)}</td><td>${esc(x.unit)}</td></tr>`).join("")}</tbody><tfoot><tr><td colspan="3" style="text-align:right;font-weight:700">รวม</td><td style="text-align:center;font-weight:700">${items.reduce((s,x)=>s+(Number(x.unit)||0),0)}</td></tr></tfoot></table>
         <div class="a4-sign"><div>ผู้รับ<br>วันที่ ........................................</div><div>ผู้ส่ง<br>วันที่ ........................................</div></div>
       </section>`).join("");
-      el.formCard.classList.add("show");
+      return{meta,html};
     }
+    function renderFormPreview(b){const f=formPapers(b);el.formMeta.textContent=f.meta;el.formPreview.innerHTML=f.html;el.formCard.classList.add("show")}
     function createBranchForm(){try{const b=findFormBranch();state.formBranch=b;renderFormPreview(b);el.formExport.hidden=false;el.formHint.textContent=`พบสาขา ${b.id} · ${b.rows.length} รายการสินค้า · ใช้ข้อมูลที่อยู่จาก ${b.master.source||"ฐานข้อมูล"}`;toast("สร้างตัวอย่างฟอร์ม A4 แล้ว")}catch(e){console.error(e);toast(e.message||"สร้างฟอร์มไม่สำเร็จ",true)}}
     function clearDeliveryPrint(){
       document.getElementById("deliveryPrintDocument")?.remove();
       document.getElementById("deliveryPrintStyle")?.remove();
       document.documentElement.classList.remove("printing-delivery");
     }
-    function printBranchForm(){
+    // Copies per branch (IT City style: 3 forms per branch). The last value is remembered on this computer.
+    function formCopies(){const n=Math.max(1,Math.min(20,parseInt(document.getElementById("formCopies").value,10)||1));return n}
+    function paintCopies(){
+      const n=formCopies();document.getElementById("formAllCopies").textContent=n;
+      document.getElementById("formPrintBtn").textContent=n>1?`พิมพ์บิลที่เลือก × ${n} ใบ`:"พิมพ์บิลที่เลือก";
+    }
+    {const input=document.getElementById("formCopies");
+      try{const saved=parseInt(localStorage.getItem("gv-jaymart-form-copies"),10);if(saved>=1&&saved<=20)input.value=saved}catch{}
+      input.addEventListener("input",()=>{try{localStorage.setItem("gv-jaymart-form-copies",String(formCopies()))}catch{}paintCopies()});paintCopies()}
+    // Prints any set of A4 papers in one job and tells the page which branches were printed.
+    function printForms(papers,branchIds){
       try{
-        if(!state.formBranch||!el.formPreview.querySelector(".a4-paper"))return toast("กรุณาสร้างใบส่งของก่อนพิมพ์",true);
         clearDeliveryPrint();
         const host=document.createElement("main");host.id="deliveryPrintDocument";
-        for(const paper of el.formPreview.querySelectorAll(".a4-paper"))host.appendChild(paper.cloneNode(true));
+        for(const paper of papers)host.appendChild(paper);
         document.body.appendChild(host);
         const style=document.createElement("style");style.id="deliveryPrintStyle";
         style.textContent=`@page{size:A4 portrait;margin:0}
@@ -256,10 +288,32 @@ body.has-report #stepCheck .analyze{background:#fff;color:var(--green-dark);bord
         document.head.appendChild(style);
         document.documentElement.classList.add("printing-delivery");
         window.focus();window.print();
-        window.dispatchEvent(new CustomEvent("jaymart-form-printed",{detail:{branch:String(state.formBranch.id)}}));
+        window.dispatchEvent(new CustomEvent("jaymart-form-printed",{detail:{branches:branchIds.map(String)}}));
       }catch(e){clearDeliveryPrint();console.error(e);toast("พิมพ์ใบส่งของไม่สำเร็จ: "+e.message,true)}
     }
+    // "พิมพ์บิลที่เลือก": the branch whose preview is on screen.
+    function printBranchForm(){
+      if(!state.formBranch||!el.formPreview.querySelector(".a4-paper"))return toast("กรุณาเลือกสาขาและสร้างใบส่งของก่อนพิมพ์",true);
+      const once=[...el.formPreview.querySelectorAll(".a4-paper")],papers=[];
+      for(let c=0;c<formCopies();c++)papers.push(...once.map(p=>p.cloneNode(true)));
+      printForms(papers,[state.formBranch.id]);
+    }
+    // "พิมพ์ทั้งหมด": every branch that has address data, one job. A branch without address data is
+    // left out (same rule as the single form) and reported, so nothing prints with a blank address.
+    function printAllForms(){
+      if(!state.report)return toast("กรุณาเลือกไฟล์ออเดอร์และกดตรวจสอบก่อน",true);
+      const ready=state.report.branches.filter(b=>b.master&&b.rows.some(isOrderItem)),left=state.report.branches.filter(b=>!b.master);
+      if(!ready.length)return toast("ไม่มีสาขาที่มีข้อมูลที่อยู่ให้พิมพ์",true);
+      const scratch=document.createElement("div"),papers=[];
+      for(const b of ready){
+        scratch.innerHTML=formPapers(b).html;const once=[...scratch.querySelectorAll(".a4-paper")];
+        for(let c=0;c<formCopies();c++)papers.push(...once.map(p=>p.cloneNode(true)));
+      }
+      if(left.length)toast(`ข้าม ${left.length} สาขาที่ไม่มีข้อมูลที่อยู่ (${left.map(x=>x.id).join(", ")}) — พิมพ์ ${ready.length} สาขา`,true);
+      printForms(papers,ready.map(b=>b.id));
+    }
     document.getElementById("formPrintBtn").addEventListener("click",printBranchForm);
+    document.getElementById("formPrintAllBtn").addEventListener("click",printAllForms);
     window.addEventListener("afterprint",clearDeliveryPrint);
     function downloadBranchForm(){try{const b=state.formBranch||findFormBranch(),blob=exportBook({branches:[b]},true),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`Branch_${b.id}_A4_Form.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast(`ดาวน์โหลดฟอร์มสาขา ${b.id} แล้ว`)}catch(e){console.error(e);toast(e.message||"สร้างฟอร์มไม่สำเร็จ",true)}}
     function crc32(b){let t=crc32.t;if(!t){t=crc32.t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;t[n]=c>>>0}}let c=0xffffffff;for(const x of b)c=t[(c^x)&255]^(c>>>8);return(c^0xffffffff)>>>0}function join(a){const n=a.reduce((x,y)=>x+y.length,0),o=new Uint8Array(n);let p=0;for(const x of a){o.set(x,p);p+=x.length}return o}
@@ -399,6 +453,7 @@ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:x
   <script src="xlsx.full.min.js"></script>
 <script src="../shared/pdf-to-rows.js"></script>
 <script src="JsBarcode.code128.min.js"></script>
+  <script src="../shared/branch-code.js"></script>
   <script src="../shared/barcode-check.js"></script>
   <script src="product-labels.js"></script>
   <script src="pack-jobs.js"></script>
