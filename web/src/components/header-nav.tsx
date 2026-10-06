@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type HeaderNavProps = {
   pendingReports: number;
@@ -38,6 +38,25 @@ const STATIC_TOOLS = [
 export function HeaderNav({ pendingReports }: HeaderNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsRef = useRef<HTMLDivElement>(null);
+
+  // The tools submenu closes on a click elsewhere or Escape.
+  useEffect(() => {
+    if (!toolsOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setToolsOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setToolsOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [toolsOpen]);
 
   function isActive(href: string) {
     return href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -61,25 +80,45 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
             href={item.href}
             className={
               isActive(item.href)
-                ? "flex items-center gap-1.5 border-b-2 border-accent py-1 text-base font-semibold text-accent"
-                : "flex items-center gap-1.5 border-b-2 border-transparent py-1 text-base text-accent"
+                ? "flex items-center gap-1.5 whitespace-nowrap border-b-2 border-accent py-1 text-base font-semibold text-accent"
+                : "flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent py-1 text-base text-accent"
             }
           >
             {item.label}
             {reportsBadge(item.href)}
           </Link>
         ))}
-        {STATIC_TOOLS.map((tool) => (
-          <a
-            key={tool.href}
-            href={tool.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 border-b-2 border-transparent py-1 text-base text-accent"
+        <div ref={toolsRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setToolsOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={toolsOpen}
+            className="flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent py-1 text-base text-accent"
           >
-            {tool.label}
-          </a>
-        ))}
+            เครื่องมือ
+            <svg viewBox="0 0 24 24" className={`h-4 w-4 transition-transform ${toolsOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          {toolsOpen ? (
+            <div role="menu" className="absolute top-full right-0 z-30 mt-2 flex min-w-64 flex-col rounded-[10px] border border-line bg-surface p-1.5 shadow-[var(--shadow-sm)]">
+              {STATIC_TOOLS.map((tool) => (
+                <a
+                  key={tool.href}
+                  role="menuitem"
+                  href={tool.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setToolsOpen(false)}
+                  className="flex min-h-11 items-center rounded-md px-3 py-2 text-base text-accent hover:bg-accent-soft"
+                >
+                  {tool.label}
+                </a>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </nav>
 
       <button
@@ -111,6 +150,7 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
               {reportsBadge(item.href)}
             </Link>
           ))}
+          <p className="px-3 pt-2 text-sm text-muted">เครื่องมือ</p>
           {STATIC_TOOLS.map((tool) => (
             <a
               key={tool.href}
