@@ -188,6 +188,10 @@ CREATE TABLE IF NOT EXISTS pack_jobs (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- A display name and a short note staff can edit after the job is created.
+ALTER TABLE pack_jobs ADD COLUMN IF NOT EXISTS title text;
+ALTER TABLE pack_jobs ADD COLUMN IF NOT EXISTS note text;
+
 CREATE TABLE IF NOT EXISTS pack_lines (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id uuid NOT NULL REFERENCES pack_jobs (id) ON DELETE CASCADE,

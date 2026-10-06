@@ -44,7 +44,7 @@
   $('packJobCount').textContent='กำลังโหลด…';
   try{
    const res=await fetch('/api/pack/jobs?customer=Jaymart',{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||('HTTP '+res.status));
-      GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกน — เลือกไฟล์ออเดอร์ กดตรวจสอบ แล้วกด "สร้างงานยิงสแกนจากไฟล์ที่เปิดอยู่"'});
+      GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกน — เลือกไฟล์ออเดอร์ กดตรวจสอบ แล้วกด "สร้างงานยิงสแกนจากไฟล์ที่เปิดอยู่"',onChange:loadPackJobs});
   }catch(e){$('packJobCount').textContent='';msg('โหลดรายการงานสแกนไม่สำเร็จ: '+e.message,true)}
  }
 

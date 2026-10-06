@@ -137,7 +137,7 @@ async function loadPackJobs(){
   const table=$('packJobs');$('packJobCount').textContent='กำลังโหลด…';
   try{
     const res=await fetch('/api/pack/jobs?customer=ITCity',{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||('HTTP '+res.status));
-        GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกน · เลือกไฟล์ออเดอร์ แล้วกด "สร้างงานยิงสแกนจากไฟล์ที่เปิดอยู่"'});
+        GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกน · เลือกไฟล์ออเดอร์ แล้วกด "สร้างงานยิงสแกนจากไฟล์ที่เปิดอยู่"',onChange:loadPackJobs});
    }catch(e){$('packJobCount').textContent='';error('โหลดรายการงานสแกนไม่สำเร็จ: '+e.message)}
 }
 function openPackJob(jobId){

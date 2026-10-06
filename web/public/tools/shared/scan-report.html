@@ -49,7 +49,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   try{
    const res=await fetch('/api/pack/jobs?customer='+encodeURIComponent(key),{cache:'no-store'});const data=await res.json().catch(()=>({}));
    if(!res.ok)throw Error(data.error||('HTTP '+res.status));
-   GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกนของร้านนี้'});daily(data.jobs);
+   GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกนของร้านนี้',onChange:load});daily(data.jobs);
   }catch(e){$('packJobCount').textContent='';$('error').hidden=false;$('error').textContent='โหลดรายงานไม่สำเร็จ: '+e.message+' · ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้านี้'}
  }
  // "เปิดสแกน" opens the full scan page of that job in a new tab.

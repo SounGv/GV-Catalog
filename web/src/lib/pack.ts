@@ -178,6 +178,10 @@ export type PackJobSummary = {
   sourceFile: string;
   createdAt: string;
   createdBy: string | null;
+  title: string | null;
+  note: string | null;
+  /** Scans that put a piece in a carton (counted, over, removed). A job with none has not started and can be deleted. */
+  startedCount: number;
   branchCount: number;
   closedCount: number;
   required: number;
@@ -191,12 +195,16 @@ export async function listPackJobs(customer?: string): Promise<PackJobSummary[]>
     source_file: string;
     created_at: Date;
     created_by: string | null;
+    title: string | null;
+    note: string | null;
+    started_count: number;
     branch_count: number;
     closed_count: number;
     required: number;
     scanned: number;
   }>(
-    `SELECT j.id, j.customer, j.source_file, j.created_at, j.created_by,
+    `SELECT j.id, j.customer, j.source_file, j.created_at, j.created_by, j.title, j.note,
+            (SELECT count(*)::int FROM scan_events WHERE job_id = j.id AND result NOT IN ('unknown', 'ambiguous')) AS started_count,
             (SELECT count(DISTINCT branch)::int FROM pack_lines WHERE job_id = j.id) AS branch_count,
             (SELECT count(*)::int FROM branch_closures WHERE job_id = j.id AND reopened_at IS NULL) AS closed_count,
             (SELECT coalesce(sum(qty_required), 0)::int FROM pack_lines WHERE job_id = j.id) AS required,
@@ -210,11 +218,81 @@ export async function listPackJobs(customer?: string): Promise<PackJobSummary[]>
     sourceFile: r.source_file,
     createdAt: r.created_at.toISOString(),
     createdBy: r.created_by,
+    title: r.title,
+    note: r.note,
+    startedCount: r.started_count,
     branchCount: r.branch_count,
     closedCount: r.closed_count,
     required: r.required,
     scanned: r.scanned,
   }));
+}
+
+/** Edits the display name and note of a job. Empty text clears the field. */
+export async function updatePackJobMeta(jobId: string, title: string, note: string): Promise<boolean> {
+  const { rowCount } = await pool.query("UPDATE pack_jobs SET title = $2, note = $3 WHERE id = $1", [
+    jobId,
+    title.trim().slice(0, 120) || null,
+    note.trim().slice(0, 500) || null,
+  ]);
+  return (rowCount ?? 0) > 0;
+}
+
+export type PackJobDeletePreview = {
+  rows_in: number;
+  matched: number;
+  to_insert: number;
+  to_update: number;
+  to_delete: number;
+  skipped: number;
+  null_count: number;
+  duplicate_count: number;
+  sample_diff: { sourceFile: string; branches: number; lines: number; scans: number; rejected_scans: number }[];
+  blocked: string | null;
+};
+
+/** What deleting a job would remove. A job that already has scans or a closed bill is blocked. */
+export async function previewDeletePackJob(jobId: string): Promise<PackJobDeletePreview | null> {
+  const { rows } = await pool.query<{ source_file: string; lines: number; branches: number; scans: number; rejected: number; closures: number }>(
+    `SELECT j.source_file,
+            (SELECT count(*)::int FROM pack_lines WHERE job_id = j.id) AS lines,
+            (SELECT count(DISTINCT branch)::int FROM pack_lines WHERE job_id = j.id) AS branches,
+            (SELECT count(*)::int FROM scan_events WHERE job_id = j.id AND result NOT IN ('unknown', 'ambiguous')) AS scans,
+            (SELECT count(*)::int FROM scan_events WHERE job_id = j.id AND result IN ('unknown', 'ambiguous')) AS rejected,
+            (SELECT count(*)::int FROM branch_closures WHERE job_id = j.id) AS closures
+     FROM pack_jobs j WHERE j.id = $1`,
+    [jobId],
+  );
+  const r = rows[0];
+  if (!r) return null;
+  const blocked = r.scans > 0 || r.closures > 0 ? "งานนี้เริ่มยิงแล้ว ลบไม่ได้ (มีหลักฐานการสแกนอยู่)" : null;
+  return {
+    rows_in: 1,
+    matched: 1,
+    to_insert: 0,
+    to_update: 0,
+    to_delete: blocked ? 0 : 1,
+    skipped: blocked ? 1 : 0,
+    null_count: 0,
+    duplicate_count: 0,
+    sample_diff: [{ sourceFile: r.source_file, branches: r.branches, lines: r.lines, scans: r.scans, rejected_scans: r.rejected }],
+    blocked,
+  };
+}
+
+/** Deletes a job that has no counted scans and no closed bill (rejected scans do not count as started); its lines go with it (ON DELETE CASCADE). */
+export async function deletePackJob(jobId: string): Promise<"deleted" | "blocked" | "missing"> {
+  const preview = await previewDeletePackJob(jobId);
+  if (!preview) return "missing";
+  if (preview.blocked) return "blocked";
+  // The guard is repeated in the statement so a scan that lands between the check and the delete wins.
+  const { rowCount } = await pool.query(
+    `DELETE FROM pack_jobs j WHERE j.id = $1
+       AND NOT EXISTS (SELECT 1 FROM scan_events WHERE job_id = j.id AND result NOT IN ('unknown', 'ambiguous'))
+       AND NOT EXISTS (SELECT 1 FROM branch_closures WHERE job_id = j.id)`,
+    [jobId],
+  );
+  return (rowCount ?? 0) > 0 ? "deleted" : "blocked";
 }
 
 export async function getPackJob(jobId: string): Promise<{ id: string; customer: string; sourceFile: string; createdAt: string } | null> {

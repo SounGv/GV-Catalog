@@ -151,7 +151,7 @@ async function loadPackJobs(){
  const table=$('packJobs');$('packJobCount').textContent='กำลังโหลด…';
  try{
   const res=await fetch('/api/pack/jobs?customer=Com7',{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||('HTTP '+res.status));
-    GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกน · เลือกไฟล์ PO แล้วกด "สร้างงานยิงสแกนจาก PO ที่เปิดอยู่"'});
+    GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกน · เลือกไฟล์ PO แล้วกด "สร้างงานยิงสแกนจาก PO ที่เปิดอยู่"',onChange:loadPackJobs});
  }catch(e){$('packJobCount').textContent='';packError('โหลดรายการงานสแกนไม่สำเร็จ: '+e.message)}
 }
 function openPackJob(jobId){
