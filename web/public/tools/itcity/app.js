@@ -137,10 +137,8 @@ async function loadPackJobs(){
   const table=$('packJobs');$('packJobCount').textContent='กำลังโหลด…';
   try{
     const res=await fetch('/api/pack/jobs?customer=ITCity',{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||('HTTP '+res.status));
-    const when=iso=>new Date(iso).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'short',timeStyle:'short'});
-    $('packJobCount').textContent=data.jobs.length+' งาน';
-    table.innerHTML=data.jobs.length?'<thead><tr><th>ไฟล์ PO</th><th>สร้างเมื่อ</th><th>สแกนแล้ว / ต้องการ</th><th>ครบแพ็คแล้ว</th><th></th></tr></thead><tbody>'+data.jobs.map(j=>`<tr><td>${esc(j.sourceFile)}</td><td>${esc(when(j.createdAt)+(j.createdBy?' · '+j.createdBy:''))}</td><td class="num">${j.scanned.toLocaleString()} / ${j.required.toLocaleString()}</td><td class="num">${j.closedCount} / ${j.branchCount}</td><td><button type="button" data-pack-job="${esc(j.id)}">เปิดสแกน</button></td></tr>`).join('')+'</tbody>':'<tbody><tr><td class="empty">ยังไม่มีงานสแกน — เปิดไฟล์ออเดอร์แล้วกด "สร้างงานยิงสแกนจากไฟล์ที่เปิดอยู่"</td></tr></tbody>';
-  }catch(e){$('packJobCount').textContent='';error('โหลดรายการงานสแกนไม่สำเร็จ: '+e.message)}
+        GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกน · เลือกไฟล์ออเดอร์ แล้วกด "สร้างงานยิงสแกนจากไฟล์ที่เปิดอยู่"'});
+   }catch(e){$('packJobCount').textContent='';error('โหลดรายการงานสแกนไม่สำเร็จ: '+e.message)}
 }
 function openPackJob(jobId){
   $('packScreen').hidden=false;document.body.classList.add('pack-open');
