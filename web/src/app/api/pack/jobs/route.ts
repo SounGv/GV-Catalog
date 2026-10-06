@@ -10,7 +10,7 @@ type CreateJobBody = {
 
 const MAX_LINES = 20000;
 /** Retailer tools that can hand a parsed order to scan-to-pack. */
-const PACK_CUSTOMERS = ["ITCity", "Jaymart"];
+const PACK_CUSTOMERS = ["ITCity", "Jaymart", "Com7"];
 
 export const dynamic = "force-dynamic";
 

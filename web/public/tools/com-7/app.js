@@ -113,6 +113,7 @@ function allLines(){
 }
 function render(){
  const hasPo=state.pos.length>0;
+ $('packNeed').hidden=hasPo;
  $('empty').hidden=hasPo||state.busy;$('result').hidden=!hasPo;$('checkChip').hidden=!hasPo;
  setStep(hasPo?1:0,hasPo?2:1);
  if(!hasPo)return;
@@ -128,6 +129,41 @@ function render(){
  $('table').innerHTML=`<thead><tr><th>PO</th><th class="num">#</th><th>บาร์โค้ดใน PO (ลูกค้า)</th><th>รุ่น</th><th>รายการสินค้า</th><th class="num">จำนวน</th><th>บาร์โค้ดใน Catalog</th><th>ผลตรวจ</th>${custHead}</tr></thead><tbody>${shown.map(r=>`<tr class="${GVBarcodeCheck.rowClass(r.status)}"><td class="code">${esc(r.po)}</td><td class="num">${r.l.seq}</td><td class="code">${esc(r.l.barcode)}</td><td class="code">${esc(r.model||'—')}</td><td class="desc">${esc(r.l.desc)}</td><td class="num">${r.l.qty}</td><td class="code">${esc(r.catalogGtin.split(/[\s,;|/]+/).filter(Boolean).join(' · ')||'—')}</td><td>${r.status==='same'?'<span class="ok">✓ ตรงกับ Catalog</span>':GVBarcodeCheck.tagHtml(r.status)}${r.note?`<span class="mute">${esc(r.note)}</span>`:''}</td>${state.custBarcodes?`<td>${r.inCust?'<span class="ok">✓ มีในไฟล์</span>':'<span class="mute">ไม่มีในไฟล์</span>'}</td>`:''}</tr>`).join('')}</tbody>`;
  $('rowCount').textContent=`แสดง ${shown.length} จาก ${rows.length} รายการ`+(shown.length?'':' · ไม่มีรายการตรงกับตัวกรอง ลองล้างช่องค้นหาหรือเลือก "ทุกใบ"');
 }
+
+// ---- scan-to-pack: each PO is one bill (its number is the bill code the scan screen searches) ----
+function packError(text){const e=$('packError');e.hidden=!text;e.textContent=text||''}
+async function createPackJob(){
+ if(!state.pos.length)return packError('ยังไม่มีรายการ กรุณาเลือกไฟล์ PO ก่อน');
+ const button=$('packJobButton');button.disabled=true;packError('');
+ const sourceFile=state.pos.map(p=>p.file).join(' + ');
+ let createdBy='';try{createdBy=localStorage.getItem('gv-pack-scanner-name')||''}catch{}
+ const lines=allLines().map(r=>({branch:r.po,branchName:'Com7 · PO '+r.po,po:r.po,part:r.l.barcode,sku:r.model,description:r.l.desc,customerBarcode:r.l.barcode,systemBarcode:String(r.catalogGtin).split(/[\s,;|/]+/).find(g=>/^\d{8,14}$/.test(g))||'',qty:r.l.qty}));
+ const send=async dryRun=>{const res=await fetch('/api/pack/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:'Com7',sourceFile,createdBy,dryRun,lines})});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||('HTTP '+res.status));return data};
+ try{
+  const p=(await send(true)).preview;
+  if(!await GVDryRunConfirm(p,sourceFile,'Com7'))return;
+  const {jobId}=await send(false);
+  openPackJob(jobId);
+ }catch(e){packError('สร้างงานยิงสแกนไม่สำเร็จ: '+e.message)}
+ finally{button.disabled=false}
+}
+async function loadPackJobs(){
+ const table=$('packJobs');$('packJobCount').textContent='กำลังโหลด…';
+ try{
+  const res=await fetch('/api/pack/jobs?customer=Com7',{cache:'no-store'});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||('HTTP '+res.status));
+  const when=iso=>new Date(iso).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'short',timeStyle:'short'});
+  $('packJobCount').textContent=data.jobs.length+' งาน';
+  table.innerHTML=data.jobs.length?'<thead><tr><th>ไฟล์ PO</th><th>สร้างเมื่อ</th><th class="num">สแกนแล้ว / ต้องการ</th><th class="num">ครบแพ็คแล้ว</th><th></th></tr></thead><tbody>'+data.jobs.map(j=>`<tr><td class="desc">${esc(j.sourceFile)}</td><td>${esc(when(j.createdAt)+(j.createdBy?' · '+j.createdBy:''))}</td><td class="num">${j.scanned.toLocaleString()} / ${j.required.toLocaleString()}</td><td class="num">${j.closedCount} / ${j.branchCount}</td><td><button type="button" data-pack-job="${esc(j.id)}">เปิดสแกน</button></td></tr>`).join('')+'</tbody>':'<tbody><tr><td class="empty">ยังไม่มีงานสแกน · เลือกไฟล์ PO แล้วกด "สร้างงานยิงสแกนจาก PO ที่เปิดอยู่"</td></tr></tbody>';
+ }catch(e){$('packJobCount').textContent='';packError('โหลดรายการงานสแกนไม่สำเร็จ: '+e.message)}
+}
+function openPackJob(jobId){
+ $('packScreen').hidden=false;document.body.classList.add('pack-open');
+ const frame=$('packFrame');frame.onload=()=>frame.focus();frame.src='/pack/'+encodeURIComponent(jobId)+'?embed=1';
+}
+function closePackJob(){$('packFrame').src='about:blank';$('packScreen').hidden=true;document.body.classList.remove('pack-open');loadPackJobs()}
+$('packJobs').addEventListener('click',e=>{const id=e.target.closest('[data-pack-job]')?.dataset.packJob;if(id)openPackJob(id)});
+$('packJobButton').addEventListener('click',createPackJob);$('packRefresh').addEventListener('click',loadPackJobs);$('packBack').addEventListener('click',closePackJob);
+loadPackJobs();
 
 // ---- file events ----
 function showError(list){const e=$('error');e.hidden=!list.length;e.innerHTML=list.map(esc).join('<br>')}

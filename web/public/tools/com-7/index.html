@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Com7 · ตรวจบาร์โค้ด</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="../shared/barcode-check.css"><script defer src="xlsx.full.min.js"></script><script defer src="../shared/barcode-check.js"></script><script defer src="app.js"></script></head>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Com7 · ตรวจบาร์โค้ด</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="../shared/barcode-check.css"><script defer src="xlsx.full.min.js"></script><script defer src="../shared/barcode-check.js"></script><script defer src="../shared/dryrun-confirm.js"></script><script defer src="app.js"></script></head>
 <body>
 <a class="back" href="/">&lsaquo; กลับหน้าหลัก</a>
 <header class="app-header"><img src="logo.jpeg" alt="Gadget Villa"><div><h1>Com7</h1><span>ตรวจบาร์โค้ดจากใบสั่งซื้อ (PO)</span></div><span class="version">v1</span></header>
 <div class="workspace">
-<nav class="steps" id="steps" aria-label="ขั้นตอน"><span class="stp now" data-step="1"><i>1</i>เลือกไฟล์</span><span class="stp-line"></span><span class="stp" data-step="2"><i>2</i>ดูผลตรวจบาร์โค้ด</span></nav>
+<nav class="steps" id="steps" aria-label="ขั้นตอน"><span class="stp now" data-step="1"><i>1</i>เลือกไฟล์</span><span class="stp-line"></span><span class="stp" data-step="2"><i>2</i>ดูผลตรวจบาร์โค้ด</span><span class="stp-line"></span><span class="stp" data-step="3"><i>3</i>ยิงสแกนลงลัง</span></nav>
 <main class="flow">
   <section class="card" id="stepFile"><div class="step-head"><h2>1 · ไฟล์</h2><span class="hint">ระบบตรวจให้อัตโนมัติทันทีที่เลือกไฟล์ PO</span></div>
     <div class="drops">
@@ -28,6 +28,13 @@
       <div class="table-scroll"><table id="table"></table></div>
       <p class="file-names" id="rowCount"></p>
     </div>
+  </section>
+  <section class="card" id="stepPack"><div class="step-head"><h2>3 · ยิงสแกนลงลัง</h2><span class="hint">PO 1 ใบ = 1 บิล · ระบบบันทึกกล้องระหว่างยิง · เปิดดูงานเดิมได้ตลอด ไม่ต้องเลือกไฟล์</span></div>
+    <div id="packError" class="alert error" role="alert" hidden></div>
+    <div class="pack-actions"><button id="packJobButton" type="button">สร้างงานยิงสแกนจาก PO ที่เปิดอยู่</button><button id="packRefresh" class="secondary" type="button">รีเฟรชรายการงาน</button><span id="packJobCount" class="hint"></span></div>
+    <p class="hint" id="packNeed">ยังไม่ได้เลือกไฟล์ PO · เลือกไฟล์ก่อนจึงสร้างงานใหม่ได้ (งานที่สร้างไว้แล้วเปิดได้เลย)</p>
+    <div class="table-scroll"><table id="packJobs" style="min-width:640px"></table></div>
+    <div id="packScreen" hidden><div class="pack-bar"><button id="packBack" class="secondary" type="button">‹ กลับ Com7</button><span>ยิงสแกนลงลัง · Com7</span></div><iframe id="packFrame" title="หน้ายิงสแกน" allow="camera; microphone; fullscreen"></iframe></div>
   </section>
 </main></div>
 <div class="toast" id="toast" role="status"></div>
