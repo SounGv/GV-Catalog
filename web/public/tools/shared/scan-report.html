@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>รายงานย้อนหลัง · ยิงสแกนลงลัง</title>
+<style>
+*{box-sizing:border-box}body{margin:0;color:#18232b;background:#f7f8fa;font:14px Tahoma,Arial,sans-serif;line-height:1.65}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #bf860e;outline-offset:2px}
+.back{display:inline-flex;align-items:center;min-height:44px;padding:0 22px;color:#64748b;text-decoration:none;font-size:13px;font-weight:600}
+.app-header{display:flex;gap:14px;align-items:center;padding:12px 22px;background:#fff;border-bottom:1px solid #cfd9d4}.app-header img{width:54px;height:54px;object-fit:contain}.app-header h1{margin:0;font-size:22px;line-height:1.35}.app-header span{font-size:12px;color:#5d6e65}
+main{max-width:1400px;margin:auto;padding:18px 22px 28px;display:grid;gap:12px}
+.card{background:#fff;border:1px solid #d3ded8;border-radius:14px;box-shadow:0 1px 3px #18232b0d;padding:16px 18px;min-width:0}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}.head h2{margin:0;font-size:16px}.head .hint{font-size:12px;color:#64748b}
+table{border-collapse:collapse;width:100%;min-width:760px}th{background:#e8f2ed;white-space:nowrap}th,td{padding:10px 9px;border-bottom:1px solid #d8e2dc;text-align:left;vertical-align:middle;font-size:13px;line-height:1.55}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow:auto;max-height:70vh;border:1px solid #d8e2dc;border-radius:10px;background:#fff}
+.alert{background:#fff0ee;color:#9e2923;border:1px solid #e0aca8;padding:12px;border-radius:8px;margin-bottom:12px}
+.jr-act button{border:1px solid #123b2c;background:#185c45;color:#fff}
+[hidden]{display:none!important}
+@media(max-width:640px){main{padding:14px 12px 24px}}
+</style></head>
+<body>
+<a class="back" id="backLink" href="/">&lsaquo; กลับหน้าหลัก</a>
+<header class="app-header"><img src="../itcity/logo.jpeg" alt="Gadget Villa"><div><h1 id="title">รายงานย้อนหลัง</h1><span>งานยิงสแกนลงลังที่ผ่านมา · ส่งออก Excel ได้ต่อ 1 งาน</span></div></header>
+<main>
+  <div id="error" class="alert" role="alert" hidden></div>
+  <section class="card"><div class="head"><h2>งานยิงสแกน</h2><span class="hint" id="packJobCount">กำลังโหลด…</span></div>
+    <div class="scroll"><table id="packJobs"></table></div></section>
+  <section class="card"><div class="head"><h2>สรุปรายวัน</h2><span class="hint">นับตามวันที่สร้างงาน (เวลาไทย)</span></div>
+    <div class="scroll"><table id="daily" style="min-width:560px"></table></div></section>
+</main>
+<script src="job-report.js"></script>
+<script>
+(()=>{
+ 'use strict';
+ const STORES={Jaymart:{name:'Jaymart',tool:'../jaymart/branch-order-validator.html'},ITCity:{name:'IT City',tool:'../itcity/index.html'},Com7:{name:'Com7',tool:'../com-7/index.html'}};
+ const $=id=>document.getElementById(id);
+ const key=new URLSearchParams(location.search).get('customer')||'';
+ const store=STORES[key];
+ if(!store){$('error').hidden=false;$('error').textContent='ไม่พบร้านนี้ · เปิดหน้ารายงานจากเครื่องมือของแต่ละร้าน (Jaymart, IT City, Com7)';$('packJobCount').textContent='';return}
+ $('title').textContent='รายงานย้อนหลัง · '+store.name;document.title='รายงานย้อนหลัง · '+store.name;
+ $('backLink').href=store.tool;$('backLink').textContent='‹ กลับเครื่องมือ '+store.name;
+ const day=iso=>new Date(iso).toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'});
+ const dayLabel=d=>new Date(d+'T00:00:00+07:00').toLocaleDateString('th-TH',{dateStyle:'medium',timeZone:'Asia/Bangkok'});
+ function daily(jobs){
+  const m=new Map();
+  for(const j of jobs){const d=day(j.createdAt),r=m.get(d)||{jobs:0,scanned:0,required:0,closed:0,bills:0};r.jobs++;r.scanned+=j.scanned;r.required+=j.required;r.closed+=j.closedCount;r.bills+=j.branchCount;m.set(d,r)}
+  const rows=[...m.entries()].sort((a,b)=>b[0].localeCompare(a[0]));
+  $('daily').innerHTML=rows.length?'<thead><tr><th>วันที่</th><th class="num">งาน</th><th class="num">สแกนแล้ว / ต้องการ (ชิ้น)</th><th class="num">ครบแพ็ค / บิลทั้งหมด</th></tr></thead><tbody>'+rows.map(([d,r])=>`<tr><td>${dayLabel(d)}</td><td class="num">${r.jobs}</td><td class="num">${r.scanned.toLocaleString()} / ${r.required.toLocaleString()}</td><td class="num">${r.closed} / ${r.bills}</td></tr>`).join('')+'</tbody>':'<tbody><tr><td>ยังไม่มีงาน</td></tr></tbody>';
+ }
+ async function load(){
+  try{
+   const res=await fetch('/api/pack/jobs?customer='+encodeURIComponent(key),{cache:'no-store'});const data=await res.json().catch(()=>({}));
+   if(!res.ok)throw Error(data.error||('HTTP '+res.status));
+   GVJobReport.render({table:$('packJobs'),jobs:data.jobs,countEl:$('packJobCount'),emptyText:'ยังไม่มีงานสแกนของร้านนี้'});daily(data.jobs);
+  }catch(e){$('packJobCount').textContent='';$('error').hidden=false;$('error').textContent='โหลดรายงานไม่สำเร็จ: '+e.message+' · ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้านี้'}
+ }
+ // "เปิดสแกน" opens the full scan page of that job in a new tab.
+ $('packJobs').addEventListener('click',e=>{const id=e.target.closest('[data-pack-job]')?.dataset.packJob;if(id)window.open('/pack/'+encodeURIComponent(id),'_blank','noopener')});
+ load();
+})();
+</script></body></html>
