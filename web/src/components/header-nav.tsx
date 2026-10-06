@@ -25,6 +25,7 @@ const STATIC_TOOLS = [
   { href: "/tools/ais/gv-po-label-system.html", label: "แปลงไฟล์ PO AIS" },
   { href: "/tools/itcity/index.html", label: "แปลงไฟล์ PO IT City" },
   { href: "/tools/officemate/GV-OfficeMate-PDF-to-Excel.html", label: "แปลงไฟล์ PO OfficeMate" },
+  { href: "/tools/com-7/index.html", label: "ตรวจบาร์โค้ด PO Com7" },
   { href: "/tools/box-label/label_print_edit.html", label: "พิมพ์ใบแปะกล่อง" },
 ];
 

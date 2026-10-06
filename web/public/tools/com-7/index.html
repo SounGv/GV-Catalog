@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Com7 · ตรวจบาร์โค้ด</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="../shared/barcode-check.css"><script defer src="xlsx.full.min.js"></script><script defer src="../shared/barcode-check.js"></script><script defer src="app.js"></script></head>
+<body>
+<a class="back" href="/">&lsaquo; กลับหน้าหลัก</a>
+<header class="app-header"><img src="logo.jpeg" alt="Gadget Villa"><div><h1>Com7</h1><span>ตรวจบาร์โค้ดจากใบสั่งซื้อ (PO)</span></div><span class="version">v1</span></header>
+<div class="workspace">
+<nav class="steps" id="steps" aria-label="ขั้นตอน"><span class="stp now" data-step="1"><i>1</i>เลือกไฟล์</span><span class="stp-line"></span><span class="stp" data-step="2"><i>2</i>ดูผลตรวจบาร์โค้ด</span></nav>
+<main class="flow">
+  <section class="card" id="stepFile"><div class="step-head"><h2>1 · ไฟล์</h2><span class="hint">ระบบตรวจให้อัตโนมัติทันทีที่เลือกไฟล์ PO</span></div>
+    <div class="drops">
+      <div class="drop"><label for="poFiles">PO จาก Com7 <span class="sub">(PDF · เลือกได้หลายใบพร้อมกัน)</span></label><input id="poFiles" type="file" accept=".pdf,application/pdf" multiple><div id="poNames" class="file-names"></div></div>
+      <div class="drop"><label for="custFile">ไฟล์บาร์โค้ดลูกค้า <span class="sub">(Excel · ไม่ใส่ก็ได้)</span></label><input id="custFile" type="file" accept=".xlsx,.xlsm,.xls,.csv"><div id="custName" class="file-names"></div></div>
+    </div>
+  </section>
+  <section class="card" id="stepCheck"><div class="step-head"><h2>2 · ผลตรวจบาร์โค้ด</h2><span class="chip" id="checkChip" hidden>ตรวจแล้ว</span></div>
+    <div id="error" class="alert error" role="alert" hidden></div>
+    <div id="loading" class="alert" role="status" hidden>กำลังอ่านไฟล์…</div>
+    <div id="catalogWarn" class="alert" role="status" hidden>เช็กกับ Catalog ไม่ได้ (ต่ออินเทอร์เน็ตไม่ติด) ทุกแถวจึงยังไม่มีผลตรวจ <button id="retryCatalog" class="secondary" type="button">ลองเชื่อมต่อ Catalog อีกครั้ง</button></div>
+    <p id="empty" class="empty">ยังไม่ได้เลือกไฟล์ PO · กดปุ่ม "เลือกไฟล์" ด้านบนเพื่อเริ่ม</p>
+    <div id="result" hidden>
+      <div class="stats" id="stats"></div>
+      <div class="bc-legend"><span><i></i> แถวสีแดง = ต้องเปลี่ยนบาร์โค้ด (บาร์โค้ดใน PO ไม่ตรงกับบาร์โค้ดใน Catalog)</span><span><i class="amber"></i> เหลือง = เช็กรุ่นใน Catalog ไม่ได้</span></div>
+      <div class="filter-row">
+        <label>ค้นหา<input id="search" type="search" placeholder="เลข PO / รุ่น / บาร์โค้ด / ชื่อสินค้า"></label>
+        <label>ใบสั่งซื้อ<select id="poSelect"><option value="">ทุกใบ</option></select></label>
+        <label>สถานะ<select id="statusSelect"><option value="">ทั้งหมด</option><option value="change">ต้องเปลี่ยนบาร์โค้ด</option><option value="unknown">เช็กไม่ได้</option><option value="same">ตรงกัน</option></select></label>
+      </div>
+      <div class="table-scroll"><table id="table"></table></div>
+      <p class="file-names" id="rowCount"></p>
+    </div>
+  </section>
+</main></div>
+<div class="toast" id="toast" role="status"></div>
+</body></html>
