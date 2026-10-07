@@ -32,10 +32,12 @@
  const labelDone=()=>total()>0&&labelCount()===total();
  const printsOk=()=>prog.skip||(a4Done()&&labelDone());
  // Without a checked file nothing is in progress, so the scan list stays open (another PC can open an existing job).
+ // Jaymart orders go straight to the branch, so no job waits for another: the stickers, Excel and scan
+ // are always open. The ticks still show what was printed or downloaded.
  const lockReason={
-  label:()=>hasReport&&!(prog.skip||a4Done())?'ต้องพิมพ์ใบส่งของ A4 ให้ครบทุกสาขาก่อน':'',
-  export:()=>hasReport&&!printsOk()?'ต้องพิมพ์ใบส่งของ A4 และสติกเกอร์ให้ครบก่อน':'',
-  pack:()=>hasReport&&!printsOk()?'ต้องพิมพ์ใบส่งของ A4 และสติกเกอร์ให้ครบก่อน':'',
+  label:()=>'',
+  export:()=>'',
+  pack:()=>'',
  };
  function lockOf(name){return (lockReason[name]||(()=>''))()}
 
