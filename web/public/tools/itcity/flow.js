@@ -32,7 +32,8 @@
  const printedCount=()=>scope().filter(id=>prog.printed.includes(id)).length;
  const printedAll=()=>total()>0&&printedCount()===total();
  const tracked=()=>hasLines&&!isSample;
- const lockReason=()=>tracked()&&!(prog.skip||printedAll())?`ต้องพิมพ์ใบส่งของให้ครบทุกสาขา${kind()?'ของ'+kindNames[kind()]:''}ก่อน`:'';
+ // Direct-to-branch bills are never locked: Excel and scan are open without printing first.
+ const lockReason=()=>tracked()&&kind()!=='direct'&&!(prog.skip||printedAll())?`ต้องพิมพ์ใบส่งของให้ครบทุกสาขา${kind()?'ของ'+kindNames[kind()]:''}ก่อน`:'';
  // The scan list stays open with no file loaded, so another PC can open an existing job.
  const lockOf=name=>name==='delivery'?'':lockReason();
 
