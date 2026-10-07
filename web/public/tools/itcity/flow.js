@@ -11,7 +11,8 @@
  const tiles=[...document.querySelectorAll('#stepWork .tile[data-panel]')];
  const panels={delivery:'panelDelivery',pack:'packView'};
  const blank=()=>({printed:[],excel:false,scan:false,skip:false});
- let hasLines=false,isSample=false,fileKey='',branchIds=[],prog=blank(),skipArmed=0;
+ let hasLines=false,isSample=false,fileKey='',branchIds=[],kinds={},prog=blank(),skipArmed=0;
+ const kindNames={direct:'ส่งตรงสาขา',pickpack:'Pickpack'};
 
  function toast(text){const t=$('toast');t.textContent=text;t.className='toast show';clearTimeout(toast.timer);toast.timer=setTimeout(()=>{t.className='toast'},3600)}
  function readStore(){try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch{return{}}}
@@ -23,11 +24,15 @@
  }
 
  // ---- what is done / locked ----
- const total=()=>branchIds.length;
- const printedCount=()=>branchIds.filter(id=>prog.printed.includes(id)).length;
+ // "Done" is measured against the delivery type chosen above the print button (all types when none):
+ // printing every branch of 'ส่งตรงสาขา' completes the step for that type.
+ const kind=()=>$('kindSelect').value;
+ const scope=()=>kind()?branchIds.filter(id=>kinds[id]===kind()):branchIds;
+ const total=()=>scope().length;
+ const printedCount=()=>scope().filter(id=>prog.printed.includes(id)).length;
  const printedAll=()=>total()>0&&printedCount()===total();
  const tracked=()=>hasLines&&!isSample;
- const lockReason=()=>tracked()&&!(prog.skip||printedAll())?'ต้องพิมพ์ใบส่งของให้ครบทุกสาขาก่อน':'';
+ const lockReason=()=>tracked()&&!(prog.skip||printedAll())?`ต้องพิมพ์ใบส่งของให้ครบทุกสาขา${kind()?'ของ'+kindNames[kind()]:''}ก่อน`:'';
  // The scan list stays open with no file loaded, so another PC can open an existing job.
  const lockOf=name=>name==='delivery'?'':lockReason();
 
@@ -42,7 +47,7 @@
  function render(){
   const delivery=tiles.find(t=>t.dataset.panel==='delivery'),pack=tiles.find(t=>t.dataset.panel==='pack'),excel=$('exportButton');
   const t=tracked();
-  paint(delivery,{done:t&&printedAll(),sub:t&&total()?`พิมพ์แล้ว ${printedCount()} / ${total()} สาขา`:''});
+  paint(delivery,{done:t&&printedAll(),sub:t&&total()?`${kind()?kindNames[kind()]+' · ':''}พิมพ์แล้ว ${printedCount()} / ${total()} สาขา`:''});
   const why=lockReason();
   paint(excel,{done:t&&prog.excel,locked:!!why,reason:why,sub:why?`🔒 ${why}`:t&&prog.excel?'ดาวน์โหลดแล้ว':''});
   paint(pack,{done:t&&prog.scan,locked:!!why,reason:why,sub:why?`🔒 ${why}`:t&&prog.scan?'สร้างงานยิงสแกนแล้ว':''});
@@ -101,6 +106,7 @@
  window.addEventListener('itcity-render',e=>{
   const d=e.detail||{};
   hasLines=!!d.hasLines;isSample=!!d.isSample;
+  kinds=d.kinds||{};
   const key=isSample?'':keyOf($('orderFiles').files),ids=(d.branches||[]).map(String).sort();
   if(key!==fileKey||ids.join(',')!==branchIds.join(',')){
    fileKey=key;branchIds=ids;prog={...blank(),...(key?readStore()[key]||{}:{})};
@@ -111,5 +117,6 @@
   render();
   hasLines?setStep(2,3):setStep($('orderFiles').files.length?1:0,$('orderFiles').files.length?2:1);
  });
+ $('kindSelect').addEventListener('change',render);
  render();
 })();

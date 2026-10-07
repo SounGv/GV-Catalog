@@ -97,7 +97,7 @@ function render(){
   $('printScope').textContent=scopeText();
   $('printButton').disabled=$('exportButton').disabled=state.busy;
   renderTables();renderDelivery();switchView(state.view);
-  window.dispatchEvent(new CustomEvent('itcity-render',{detail:{branches:[...new Set(state.lines.map(r=>r.branch))],isSample:!!state.isSample,hasLines:state.lines.length>0}}));
+  window.dispatchEvent(new CustomEvent('itcity-render',{detail:{branches:[...new Set(state.lines.map(r=>r.branch))],kinds:Object.fromEntries([...branchKinds()].map(([id,b])=>[id,b.kind])),isSample:!!state.isSample,hasLines:state.lines.length>0}}));
 }
 async function print(){
   if(state.busy||!state.lines.length)return;error('');
