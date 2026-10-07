@@ -377,15 +377,19 @@ function labelPageLayout(size,orientation){
   const pageH=landscape?Math.min(base.w,base.h):Math.max(base.w,base.h);
   const pageName=(size==="a5"?"labelA5":size==="sticker4x6"?"label4x6":"labelA4")+(landscape?"Landscape":"Portrait");
   if(size==="sticker4x6"){
-    // 4x6 sticker: the whole form, centred with a 3 mm edge. Portrait turns it 90 degrees to run along the 150 mm side.
+    // 4x6 sticker: the whole form with a 3 mm edge. Portrait turns it 90 degrees to run along the 150 mm side.
+    // Scaling uses `zoom` and the box stays in normal flow: Chrome mispositions and crops absolutely
+    // positioned, transform-scaled boxes on the printed pages after the first (labels 2, 3, ... came out shifted).
     const fit=Math.min((150-6)/277,(100-6)/180);
-    return {pageW,pageH,pageName,boxClass:"sticker",boxStyle:`position:absolute;left:50%;top:50%;margin:0;transform-origin:center;transform:translate(-50%,-50%)${landscape?"":" rotate(90deg)"} scale(${fit})`};
+    const edge=landscape?(100-180*fit)/2:(100-180*fit)/2; // centred across the 100 mm side
+    const along=(150-277*fit)/2; // centred along the 150 mm side
+    return {pageW,pageH,pageName,boxClass:"sticker",boxStyle:landscape?`zoom:${fit};margin:${edge/fit}mm 0 0 ${along/fit}mm`:`zoom:${fit};transform-origin:top left;transform:rotate(90deg);margin:${along/fit}mm 0 0 ${(edge+180*fit)/fit}mm`};
   }
   const scale=Math.min(1,(pageW-20)/277);
   const left=(pageW-277*scale)/2;
   // Portrait sheets are folded in half: centre the label in the top half. Landscape keeps the form's 13.7 mm.
   const top=landscape?13.7:Math.max(0,(pageH/2-91.3*scale)/2);
-  return {pageW,pageH,pageName,boxStyle:`transform:scale(${scale});transform-origin:top left;margin:${top}mm 0 0 ${left}mm`};
+  return {pageW,pageH,pageName,boxStyle:`zoom:${scale};margin:${top/scale}mm 0 0 ${left/scale}mm`};
 }
 function labelPageHtml(order,boxNo,total,note,poIndex=1,poTotal=1,layout){
   const ref=branchRoute(order.branchName,order.branchCode),route=ref?.route||String(order.branchCode||"?").replace(/^0+/,""),zone=ref?.zone||"ตรวจสอบ",branch=ref?.name?.replace(/\s*\(/," (")||order.branchName||"ไม่พบชื่อสาขา";
