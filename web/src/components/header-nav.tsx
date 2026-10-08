@@ -25,6 +25,7 @@ const REPORT_LINKS = [
   { href: "/tools/shared/scan-report.html?customer=Jaymart", label: "ประวัติยิงสแกน · Jaymart" },
   { href: "/tools/shared/scan-report.html?customer=ITCity", label: "ประวัติยิงสแกน · IT City" },
   { href: "/tools/shared/scan-report.html?customer=Com7", label: "ประวัติยิงสแกน · Com7" },
+  { href: "/docs/system-summary.html", label: "สรุประบบแปลงไฟล์ PO" },
 ];
 
 const STATIC_TOOLS = [
