@@ -200,6 +200,16 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
   .lbl-ctn-no       { border-right:  1pt solid #000; }
   .lbl-sku-box      { border: 2pt solid #000; }
 }
+.sku-bulk { margin: 0 0 10px; padding: 12px; background: #f5fbf8; border: 1.5px solid #c9e3d8; border-radius: 12px; }
+.sku-bulk label { display: block; font-size: .8rem; font-weight: 700; color: #123b2c; margin-bottom: 6px; }
+.sku-bulk label span { font-weight: 400; color: #64748b; }
+.sku-bulk-row { display: flex; gap: 8px; }
+.sku-bulk-row input { flex: 0 0 120px; min-height: 44px; padding: 8px 10px; border: 1.5px solid #bdccc5; border-radius: 10px; font-size: 1rem; font-family: inherit; }
+.sku-bulk-row button { flex: 1; min-height: 44px; padding: 8px 14px; background: #185c45; color: #fff; border: 0; border-radius: 10px; font-size: .9rem; font-weight: 700; font-family: inherit; cursor: pointer; }
+.sku-bulk-row button:hover { background: #123b2c; }
+.sku-bulk input:focus-visible, .sku-bulk button:focus-visible { outline: 3px solid #bf860e; outline-offset: 2px; }
+.sku-bulk-msg { min-height: 1.4em; margin-top: 6px; font-size: .78rem; color: #185c45; }
+.sku-bulk-msg.bad { color: #a3140b; }
 </style>
 <style>@media print{a[href="/"]{display:none!important}}</style></head>
 <body>
@@ -239,6 +249,15 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
     <div class="sec-title">
       📦 รายการ SKU
       <span id="sku-count-badge" style="font-size:.68rem;font-weight:700;color:#185c45;background:#e8f2ed;padding:1px 9px;border-radius:99px;text-transform:none;letter-spacing:0">0 รายการ</span>
+    </div>
+    <div class="sku-bulk">
+      <label for="sku-want">จำนวน SKU ในบิลนี้ <span>(เช่น 10-20 · สร้างช่องกรอกให้ทีเดียว)</span></label>
+      <div class="sku-bulk-row">
+        <input id="sku-want" type="number" min="1" max="50" step="1" inputmode="numeric" placeholder="เช่น 15"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();makeSkuRows()}">
+        <button type="button" onclick="makeSkuRows()">สร้างช่อง SKU</button>
+      </div>
+      <div id="sku-bulk-msg" class="sku-bulk-msg" role="status"></div>
     </div>
     <div id="sku-list"></div>
     <button class="btn-add-sku" onclick="addSku()" type="button">
@@ -446,7 +465,7 @@ addSku();
 /* ══════════════════════════════════════════════════════
    SKU ROW MANAGEMENT
 ══════════════════════════════════════════════════════ */
-function addSku() {
+function addSku(noFocus) {
   uid++;
   const id  = uid;
   const num = document.querySelectorAll('.sku-row').length + 1;
@@ -508,7 +527,35 @@ function addSku() {
   document.getElementById('sku-list').appendChild(row);
   refreshBadges();
   recalcAll();
-  document.getElementById('sn-' + id).focus();
+  if (!noFocus) document.getElementById('sn-' + id).focus();
+}
+
+/* Creates SKU entry rows up to the number typed (max 50). Filled rows are never removed:
+   asking for fewer than exist only drops empty rows from the end. */
+const SKU_MAX = 50;
+function skuRowIsEmpty(row) {
+  return ['sn-', 'sq-', 'sc-', 'sp-', 'sf-', 'st-'].every(p => !document.getElementById(p + row.dataset.uid).value.trim());
+}
+function makeSkuRows() {
+  const msg  = document.getElementById('sku-bulk-msg');
+  const want = parseInt(document.getElementById('sku-want').value, 10);
+  if (!(want >= 1)) { msg.className = 'sku-bulk-msg bad'; msg.textContent = 'พิมพ์จำนวน SKU ก่อน เช่น 15'; return; }
+  if (want > SKU_MAX) { msg.className = 'sku-bulk-msg bad'; msg.textContent = 'สร้างได้ครั้งละไม่เกิน ' + SKU_MAX + ' SKU'; return; }
+  let rows = [...document.querySelectorAll('.sku-row')];
+  let kept = '';
+  while (rows.length > want) {
+    const last = rows[rows.length - 1];
+    if (!skuRowIsEmpty(last)) { kept = ' · ช่องที่ ' + rows.length + ' มีข้อมูลแล้ว จึงไม่ลบ'; break; }
+    last.remove();
+    rows = [...document.querySelectorAll('.sku-row')];
+  }
+  while (rows.length < want) { addSku(true); rows = [...document.querySelectorAll('.sku-row')]; }
+  refreshBadges();
+  recalcAll();
+  msg.className = 'sku-bulk-msg';
+  msg.textContent = 'มีช่อง SKU ' + rows.length + ' ช่อง' + kept;
+  const firstEmpty = rows.find(skuRowIsEmpty);
+  if (firstEmpty) document.getElementById('sn-' + firstEmpty.dataset.uid).focus();
 }
 
 function delSku(rowId) {
