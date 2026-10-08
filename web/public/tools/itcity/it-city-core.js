@@ -118,6 +118,7 @@ function parseOrder(sheets,file){
     const free=poIds.filter(p=>!claimed.has(p));
     if(free.length===1)for(const r of missingPo)r.po=free[0];
     else if(poIds.length===1)for(const r of missingPo)r.po=poIds[0];
+    else if(free.filter(p=>String(file).toUpperCase().includes(p.toUpperCase())).length===1){const named=free.find(p=>String(file).toUpperCase().includes(p.toUpperCase()));for(const r of missingPo)r.po=named} // the file name names its PO: "(pickpack POB0183260914063)"
     else warnings.push(`${file}: ยังยืนยันเลข PO ไม่ได้`);
   }
   const used=new Set(lines.map(r=>r.po).filter(Boolean));
