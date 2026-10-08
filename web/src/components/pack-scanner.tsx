@@ -560,21 +560,21 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
     <main className="flex flex-col gap-2 px-3 py-2 lg:h-[calc(100dvh-var(--sticky-top-offset,0px))] lg:overflow-hidden">
       {/* Inside a retailer tool the tool already provides the header and job list. */}
       {embedded && <style>{"[data-site-chrome]{display:none}"}</style>}
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[10px] bg-[#18364c] px-3 py-2 text-white">
         <div className="flex min-w-0 items-baseline gap-3">
           {!embedded && (
-            <Link href="/pack" className="shrink-0 text-sm text-muted underline">
+            <Link href="/pack" className="shrink-0 text-sm text-[#aebfcc] underline hover:text-white">
               ‹ งานสแกนทั้งหมด
             </Link>
           )}
-          <h1 className="shrink-0 text-lg font-semibold">ยิงสแกนลงลัง · {customer}</h1>
-          <span className="truncate text-sm text-muted">{sourceFile}</span>
-          <span className="shrink-0 rounded bg-neutral-100 px-2 py-0.5 text-sm">
+          <h1 className="shrink-0 text-lg font-semibold text-white">ยิงสแกนลงลัง · {customer}</h1>
+          <span className="truncate text-sm text-[#aebfcc]">{sourceFile}</span>
+          <span className="shrink-0 rounded bg-white/15 px-2 py-0.5 text-sm text-white">
             {kindFilter ? `${KIND_LABEL[kindFilter]} · ` : ""}ครบแพ็คแล้ว <b>{totalDone}</b> / {kindBranches.length} สาขา
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <label className="flex items-center gap-2 text-sm text-muted">
+          <label className="flex items-center gap-2 text-sm text-[#aebfcc]">
             ผู้สแกน
             <input
               key={scannerName}
@@ -588,7 +588,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
               }
             />
           </label>
-          <a href={`/api/pack/jobs/${jobId}/report`} className="inline-flex h-9 items-center rounded-[8px] border border-line px-3 text-sm">
+          <a href={`/api/pack/jobs/${jobId}/report`} className="inline-flex h-9 items-center rounded-[8px] border border-white/30 px-3 text-sm text-white hover:bg-white/10">
             ส่งออกรายงาน
           </a>
         </div>
