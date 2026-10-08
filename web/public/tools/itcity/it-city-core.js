@@ -29,7 +29,7 @@ function parseMaster(sheets){
   throw Error('ไม่พบคอลัมน์ เลข SKU และ GTIN ในไฟล์ระบบ');
 }
 function parseOrder(sheets,file){
-  const matrices=[],transfers=[],pos=[];
+  const matrices=[],transfers=[],pos=[],docLines=[];
   for(const s of sheets){
     const mh=header(s.rows,['PRODUCT_CODE']);
     if(mh){
@@ -61,6 +61,14 @@ function parseOrder(sheets,file){
       const branch=key(r[th.index('TO_WH')]);if(!branch)throw Error(`ไม่มีรหัสสาขา: ${file} แถว ${i+1}`);
       const status=key(r[th.index('STATUS')]);if(/CANCEL|VOID|ยกเลิก/.test(status))throw Error(`พบรายการยกเลิกที่ยังมีจำนวน: ${file} แถว ${i+1}`);
       transfers.push({branch,branchName:branch,part,description:text(r[th.index('ITEM_DESCRIPTION')]),qty:n,trb:text(r[th.index('TRANSFER_REQ_NO')]),customerBarcode:text(r[th.index('BARCODE')]),po:'',date:text(r[th.index('DATE_ENTERED')]).slice(0,10),file,sourceRow:i+1,sheet:s.name});
+    }
+    // A purchase-order document (POB...) read from a PDF: one PO per destination, barcode on every line.
+    const dh=header(s.rows,['DOC_PO','DEST_CODE','ITEM_NO','BARCODE','QTY']);
+    if(dh)for(let i=dh.row+1;i<s.rows.length;i++){
+      const r=s.rows[i],part=text(r[dh.index('ITEM_NO')]);if(!part)continue;
+      const n=qty(r[dh.index('QTY')],`${file} / ${s.name} / แถว ${i+1}`);if(!n)continue;
+      const branch=key(r[dh.index('DEST_CODE')]);if(!branch)throw Error(`ไม่มีรหัสปลายทาง: ${file} แถว ${i+1}`);
+      docLines.push({branch,branchName:text(r[dh.index('DEST_NAME')])||branch,part,description:text(r[dh.index('DESCRIPTION')]),qty:n,trb:'',po:text(r[dh.index('DOC_PO')]),date:text(r[dh.index('DOC_DATE')]),file,sourceRow:i+1,sheet:s.name,customerBarcode:text(r[dh.index('BARCODE')]),refLabel:'',refValue:''});
     }
     const ph=header(s.rows,['PO_NO','Item_Code','PO_Qty']);
     if(ph)for(let i=ph.row+1;i<s.rows.length;i++){
@@ -100,7 +108,8 @@ function parseOrder(sheets,file){
     lines.push(...direct);
     if(direct.length)warnings.push(`${file}: ส่งตรงสาขา ${new Set(direct.map(r=>r.branch)).size} สาขา (ไม่มี TRB / ไม่มีบาร์โค้ดลูกค้าให้ตรวจ)`);
   }
-  if(!transfers.length&&!matrices.length)throw Error(`${file}: ไม่พบตาราง PR หรือ TRB ที่ระบุสาขาปลายทาง (ชีต PO อย่างเดียวไม่ระบุยอดรายสาขา)`);
+  lines.push(...docLines);
+  if(!transfers.length&&!matrices.length&&!docLines.length)throw Error(`${file}: ไม่พบตาราง PR หรือ TRB ที่ระบุสาขาปลายทาง (ชีต PO อย่างเดียวไม่ระบุยอดรายสาขา)`);
   if(!lines.length)throw Error(`${file}: ไม่พบจำนวนสั่งที่มากกว่า 0`);
   // Lines without a PO number (pick-pack/TRB): take the one PO in the PO sheet not already claimed by a direct branch.
   const claimed=new Set(lines.map(r=>r.po).filter(Boolean)),poIds=[...new Set(pos.map(r=>r.po))];

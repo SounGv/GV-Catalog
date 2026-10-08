@@ -20,7 +20,17 @@ function setOrders(orders,sample=false){
 }
 async function readWorkbook(file){
   if(file.size>30*1024*1024)throw Error(`${file.name}: ไฟล์ใหญ่กว่า 30 MB`);
-  if(/\.pdf$/i.test(file.name))return PdfRows.read(file);
+  if(/\.pdf$/i.test(file.name)){
+    // A PDF with a text layer reads as a table; a scan (or a PO document in the POB layout) goes through OCR + review.
+    let sheets=null;
+    try{sheets=await PdfRows.read(file)}catch{sheets=null}
+    // Only a PDF with no recognisable table goes to OCR; a real table that fails its own checks keeps its own error.
+    if(sheets){try{C.parseOrder(sheets,file.name);return sheets}catch(e){if(!/ไม่พบตาราง PR หรือ TRB/.test(e.message))return sheets}}
+    const loading=$('loading');
+    const out=await GVPdfOcr.read(file,{onProgress:t=>{if(loading){loading.hidden=false;loading.textContent=t}}});
+    if(loading)loading.hidden=true;
+    return out.sheets;
+  }
   const buf=await file.arrayBuffer();
   let wb;
   if(/\.(csv|tsv|txt)$/i.test(file.name)){
