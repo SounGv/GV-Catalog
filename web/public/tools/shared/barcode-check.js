@@ -7,10 +7,10 @@
 //   'unknown' model not in the Catalog, no valid GTIN, or no customer barcode / not loaded yet
 (()=>{
  'use strict';
- let map=null,loading=null;
+ let map=null,loading=null,byRetailer=new Map();
  const norm=v=>String(v??'').trim().toUpperCase();
  function load(){
-  if(!loading)loading=fetch('/api/catalog/barcodes',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(d=>{map=new Map(d.rows.map(p=>[norm(p.sku),String(p.gtin??'').trim()]));return map}).catch(()=>{loading=null;return null});
+  if(!loading)loading=fetch('/api/catalog/barcodes',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(d=>{map=new Map(d.rows.map(p=>[norm(p.sku),String(p.gtin??'').trim()]));byRetailer=new Map();for(const p of d.rows)for(const [shop,code] of Object.entries(p.retailerBarcodes||{}))byRetailer.set(norm(shop)+'|'+String(code).trim(),String(p.sku).trim());return map}).catch(()=>{loading=null;return null});
   return loading;
  }
  // `model` is the Catalog SKU (the model number); "60131BOX" is read as "60131-BOX".
@@ -24,5 +24,7 @@
  }
  const rowClass=s=>s==='change'?'bc-row-change':s==='unknown'?'bc-row-unknown':'';
  const tagHtml=s=>s==='change'?'<span class="bc-tag-change">⚠ ต้องเปลี่ยนบาร์โค้ด</span>':s==='unknown'?'<span class="bc-tag-unknown">เช็กรุ่นใน Catalog ไม่ได้</span>':'';
- window.GVBarcodeCheck={load,status,rowClass,tagHtml,isLoaded:()=>!!map};
+ // The Catalog SKU a shop's own item code is registered to (Catalog > product > retailer barcodes), '' when none.
+ const skuOf=(shop,code)=>byRetailer.get(norm(shop)+'|'+String(code??'').trim())||'';
+ window.GVBarcodeCheck={load,status,skuOf,rowClass,tagHtml,isLoaded:()=>!!map};
 })();
