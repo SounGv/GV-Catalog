@@ -15,9 +15,7 @@ export async function SiteHeader() {
     <header className="border-b border-[#0f2535] bg-[#18364c] shadow-[var(--shadow-sm)]">
       <div className="mx-auto flex h-[72px] max-w-[1680px] items-center gap-6 px-4 md:px-8 lg:px-12 xl:px-16">
         <Link href="/" className="flex shrink-0 items-center gap-3">
-          <span className="flex items-center rounded-lg bg-white px-2 py-1">
-            <Image src="/gv-logo.png" alt="Gadget Villa" width={140} height={36} className="h-8 w-auto" priority />
-          </span>
+          <Image src="/gv-mark.png" alt="Gadget Villa" width={480} height={234} className="h-10 w-auto" priority />
           <span className="hidden flex-col leading-tight sm:flex">
             <span className="text-lg font-bold tracking-tight text-white">GV Catalog</span>
             <span className="text-xs font-medium text-[#aebfcc]">Gadget Villa</span>
