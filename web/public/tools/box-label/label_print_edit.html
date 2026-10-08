@@ -210,12 +210,25 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
 .sku-bulk input:focus-visible, .sku-bulk button:focus-visible { outline: 3px solid #bf860e; outline-offset: 2px; }
 .sku-bulk-msg { min-height: 1.4em; margin-top: 6px; font-size: .78rem; color: #185c45; }
 .sku-bulk-msg.bad { color: #a3140b; }
+#bulk-side { max-width: 680px; margin: 20px auto -12px; background: #fff; border-color: #c9e3d8; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
+@media (min-width: 1180px) {
+  #bulk-side { position: fixed; top: 143px; left: calc(50% + 356px); width: 280px; margin: 0; }
+}
 </style>
 <style>@media print{a[href="/"]{display:none!important}}</style></head>
 <body>
 
 <a href="/" style="display:inline-block;padding:10px 22px 0;color:#64748b;text-decoration:none;font-size:13px;font-weight:600">&lsaquo; กลับหน้าหลัก</a>
 
+<aside id="bulk-side" class="sku-bulk" aria-label="สร้างช่อง SKU ตามจำนวนใบ">
+  <label for="sku-want">จำนวนใบ (SKU) ที่ต้องการ <span>เช่น บิลนี้มี 10-20 SKU · พิมพ์จำนวนแล้วสร้างช่องให้อัตโนมัติ</span></label>
+  <div class="sku-bulk-row">
+    <input id="sku-want" type="number" min="1" max="50" step="1" inputmode="numeric" placeholder="เช่น 15"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();makeSkuRows()}">
+    <button type="button" onclick="makeSkuRows()">สร้างช่อง SKU</button>
+  </div>
+  <div id="sku-bulk-msg" class="sku-bulk-msg" role="status"></div>
+</aside>
 <div id="form-panel">
   <div class="form-header">
     <h1>🖨 พิมพ์ใบแปะกล่อง V2</h1>
@@ -250,15 +263,6 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
       📦 รายการ SKU
       <span id="sku-count-badge" style="font-size:.68rem;font-weight:700;color:#185c45;background:#e8f2ed;padding:1px 9px;border-radius:99px;text-transform:none;letter-spacing:0">0 รายการ</span>
     </div>
-    <div class="sku-bulk">
-      <label for="sku-want">จำนวน SKU ในบิลนี้ <span>(เช่น 10-20 · สร้างช่องกรอกให้ทีเดียว)</span></label>
-      <div class="sku-bulk-row">
-        <input id="sku-want" type="number" min="1" max="50" step="1" inputmode="numeric" placeholder="เช่น 15"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();makeSkuRows()}">
-        <button type="button" onclick="makeSkuRows()">สร้างช่อง SKU</button>
-      </div>
-      <div id="sku-bulk-msg" class="sku-bulk-msg" role="status"></div>
-    </div>
     <div id="sku-list"></div>
     <button class="btn-add-sku" onclick="addSku()" type="button">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -272,6 +276,7 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
 
   </div>
 </div>
+
 
 <div id="preview-area">
   <div id="preview-bar">
@@ -677,6 +682,7 @@ function generateLabels() {
 
   document.getElementById('preview-area').style.display = 'block';
   document.getElementById('form-panel').style.display   = 'none';
+  document.getElementById('bulk-side').style.display    = 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   /*
@@ -781,6 +787,7 @@ function nextOnEnter(e, nextId) {
 function backToForm() {
   document.getElementById('preview-area').style.display = 'none';
   document.getElementById('form-panel').style.display   = 'block';
+  document.getElementById('bulk-side').style.display    = '';
   document.getElementById('label-grid').innerHTML       = '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
