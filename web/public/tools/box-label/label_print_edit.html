@@ -220,12 +220,12 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
 
 <a href="/" style="display:inline-block;padding:10px 22px 0;color:#64748b;text-decoration:none;font-size:13px;font-weight:600">&lsaquo; กลับหน้าหลัก</a>
 
-<aside id="bulk-side" class="sku-bulk" aria-label="สร้างช่อง SKU ตามจำนวนใบ">
-  <label for="sku-want">จำนวนใบ (SKU) ที่ต้องการ <span>เช่น บิลนี้มี 10-20 SKU · พิมพ์จำนวนแล้วสร้างช่องให้อัตโนมัติ</span></label>
+<aside id="bulk-side" class="sku-bulk" aria-label="สร้างช่องรุ่นสินค้าตามจำนวน">
+  <label for="sku-want">จำนวนรุ่นสินค้า <span>เช่น บิลนี้มี 10-20 รุ่น พิมพ์ 15 · สร้างช่องกรอกให้ทีเดียว จำนวนใบแปะของแต่ละรุ่นมาจากจำนวนลัง (CTN)</span></label>
   <div class="sku-bulk-row">
     <input id="sku-want" type="number" min="1" max="50" step="1" inputmode="numeric" placeholder="เช่น 15"
            onkeydown="if(event.key==='Enter'){event.preventDefault();makeSkuRows()}">
-    <button type="button" onclick="makeSkuRows()">สร้างช่อง SKU</button>
+    <button type="button" onclick="makeSkuRows()">สร้างช่องรุ่นสินค้า</button>
   </div>
   <div id="sku-bulk-msg" class="sku-bulk-msg" role="status"></div>
 </aside>
@@ -544,8 +544,8 @@ function skuRowIsEmpty(row) {
 function makeSkuRows() {
   const msg  = document.getElementById('sku-bulk-msg');
   const want = parseInt(document.getElementById('sku-want').value, 10);
-  if (!(want >= 1)) { msg.className = 'sku-bulk-msg bad'; msg.textContent = 'พิมพ์จำนวน SKU ก่อน เช่น 15'; return; }
-  if (want > SKU_MAX) { msg.className = 'sku-bulk-msg bad'; msg.textContent = 'สร้างได้ครั้งละไม่เกิน ' + SKU_MAX + ' SKU'; return; }
+  if (!(want >= 1)) { msg.className = 'sku-bulk-msg bad'; msg.textContent = 'พิมพ์จำนวนรุ่นสินค้าก่อน เช่น 15'; return; }
+  if (want > SKU_MAX) { msg.className = 'sku-bulk-msg bad'; msg.textContent = 'สร้างได้ครั้งละไม่เกิน ' + SKU_MAX + ' รุ่น'; return; }
   let rows = [...document.querySelectorAll('.sku-row')];
   let kept = '';
   while (rows.length > want) {
@@ -558,7 +558,7 @@ function makeSkuRows() {
   refreshBadges();
   recalcAll();
   msg.className = 'sku-bulk-msg';
-  msg.textContent = 'มีช่อง SKU ' + rows.length + ' ช่อง' + kept;
+  msg.textContent = 'มีช่องรุ่นสินค้า ' + rows.length + ' ช่อง' + kept;
   const firstEmpty = rows.find(skuRowIsEmpty);
   if (firstEmpty) document.getElementById('sn-' + firstEmpty.dataset.uid).focus();
 }
