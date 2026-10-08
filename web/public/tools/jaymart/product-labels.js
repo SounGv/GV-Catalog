@@ -33,6 +33,13 @@
   else if(/case/i.test(desc))kind=`Case ${(desc.match(/iPhone\s*\d+\s*(?:Pro|Air)?/i)||[''])[0]}`;
   else if(/Lightning/i.test(desc))kind=`Lightning to USB-C ${length}`;
   else if(/USB.*(?:cable|connector)/i.test(desc))kind=`${/USB.?C.*M to M/i.test(desc)?'USB-C to USB-C':'USB 2.0 to USB-C'} ${watt} ${length}`;
+  // A model with no known product type still gets a readable line: the description without brand, model numbers, price and brackets.
+  if(!kind.trim()){
+   const words=desc.replace(/\([^)]*\)/g,' ').replace(/\bGV\s*\d*\.?\d*\b/gi,' ').replace(/\bUGREEN\b/gi,' ').replace(/\bCS\b/g,' ')
+    .replace(/\b[A-Za-z]{1,3}\d{2,4}[A-Za-z]?\b/g,' ').replace(/\b\d{5}(?:-?BOX|[A-Z])?\b/gi,' ').replace(/\s\d{2,4}\.?\s*$/,' ')
+    .split(/\s+/).filter(Boolean);
+   kind=words.slice(0,5).join(' ');
+  }
   return {title:sku?`UGREEN ${sku.toUpperCase().replace(/-?BOX$/,'-BOX')}`:'',detail:[kind,color].filter(Boolean).join(' ').replace(/\s+/g,' ').trim()};
  }
  function rebuild(){
@@ -46,7 +53,7 @@
  function config(){const read=id=>{const e=$(id);if(!e.checkValidity()||e.value==='')throw Error('ตรวจสอบค่าระยะกระดาษ');return Number(e.value);};return {gap:read('labelGap'),left:read('labelLeft'),right:read('labelRight'),y:read('labelY')};}
  function build(test=false){
   const selected=items.filter(x=>x.selected&&x.qty!==0);if(!selected.length)throw Error('เลือกรุ่นและจำนวนก่อนพิมพ์');
-  for(const x of selected){if(!/^\d+$/.test(x.code)||!Number.isSafeInteger(x.qty)||x.qty<0||!x.title||!x.detail||x.conflict)throw Error(`ตรวจสอบชื่อ จำนวน หรือข้อมูลซ้ำที่ไม่ตรงกัน: ${x.code}`);}
+  for(const x of selected){if(!/^\d+$/.test(x.code)||!Number.isSafeInteger(x.qty)||x.qty<0||!x.title)throw Error(`ตรวจสอบชื่อรุ่นหรือจำนวนของรหัส ${x.code} (ช่องชื่อรุ่นว่าง หรือจำนวนไม่ถูกต้อง)`);}
   const total=selected.reduce((n,x)=>n+x.qty,0);if(total>20000)throw Error('จำนวนเกิน 20,000 ดวง กรุณาแบ่งพิมพ์');
   const cfg=config(),roll=document.createElement('div');roll.className='jm-roll';roll.style.width=`${100+cfg.gap+cfg.left+cfg.right}mm`;roll.style.padding=`0 ${cfg.right}mm 0 ${cfg.left}mm`;
   let count=0,row;for(const x of selected){for(let i=0;i<x.qty;i++){if(test&&count>=2)break;if(count%2===0){row=document.createElement('div');row.className='jm-label-row';row.style.columnGap=cfg.gap+'mm';roll.append(row);}const l=document.createElement('div');l.className='jm-label';l.style.paddingTop=`${4+cfg.y}mm`;l.style.paddingBottom=`${2-cfg.y}mm`;for(const [cls,value] of [['jm-title',x.title],['jm-detail',x.detail]]){const e=document.createElement('div');e.className=cls;e.textContent=value;l.append(e);}const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');l.append(svg);JsBarcode(svg,x.code,{format:'CODE128',width:2,height:76,displayValue:false,margin:20,marginTop:0,marginBottom:0});const w=parseFloat(svg.getAttribute('width'));svg.setAttribute('viewBox',`0 0 ${w} 76`);svg.style.width=Math.min(w*.125,40)+'mm';svg.style.height='9.5mm';const digits=document.createElement('div');digits.className='jm-digits';digits.textContent=x.code;l.append(digits);row.append(l);count++;}}
