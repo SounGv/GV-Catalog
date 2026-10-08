@@ -403,7 +403,7 @@ function printBoxLabels(scope){
   const selected=scope==="all"?labelOrders():[selectedLabelOrder()].filter(Boolean);
   if(!selected.length){toast("ไม่พบ PO สำหรับสร้างใบแปะ",true);return}
   const missing=selected.filter(x=>!branchRoute(x.order.branchName,x.order.branchCode));
-  if(missing.length){toast(`มี ${missing.length} สาขาที่ยังจับคู่เลขเส้นทางไม่ได้`,true);if(scope!=="all")return}
+  if(missing.length)toast(`มี ${missing.length} สาขาที่ยังจับคู่เลขเส้นทางไม่ได้ · ใบแปะจะขึ้นคำว่า "ตรวจสอบ" ให้เขียนเลขเส้นทางเอง`,true)
   const note=els.labelNote.value||"";const layout=labelPageLayout(els.labelPaperSize.value,els.labelOrientation.value);let html="",pages=0;
   for(const {key,order,poIndex,poTotal} of selected){const total=Math.max(1,Math.min(99,Number(state.labelBoxes.get(String(key)))||1));for(let n=1;n<=total;n++){html+=labelPageHtml(order,n,total,note,poIndex,poTotal,layout);pages++}}
   state.labelPrinting=true;renderLabelOptions();els.labelMeta.textContent=`กำลังเตรียมใบแปะ ${pages} หน้า...`;els.labelPrintDocument.innerHTML=html;
