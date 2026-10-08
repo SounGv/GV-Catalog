@@ -1,0 +1,31 @@
+/* GV header theme for every retailer tool: deep navy band, white text, lime accent.
+   Loaded last in each page. Same look as the site header (src/components/site-header.tsx). */
+:root{--gv-navy:#18364c;--gv-navy-ink:#aebfcc;--gv-lime:#cdeb03}
+
+/* "Back to main" row: the top edge of the band */
+a[href="/"]{display:flex!important;align-items:center;gap:4px;margin:0!important;padding:10px 22px 2px!important;min-height:44px;background:var(--gv-navy);color:var(--gv-navy-ink)!important;font-size:13px!important;font-weight:600;text-decoration:none}
+a[href="/"]:hover{color:#fff!important}
+a[href="/"]:focus-visible{outline:3px solid var(--gv-lime);outline-offset:-3px}
+
+/* Jaymart, AIS, OfficeMate: header.top directly under the link, inside the page container */
+a[href="/"]+header.top{background:var(--gv-navy)!important;color:#fff!important;margin:0 0 20px!important;padding:4px 22px 18px!important;border:0!important;border-radius:0 0 16px 16px;position:static!important;backdrop-filter:none!important;box-shadow:none!important}
+a[href="/"]+header.top *{color:inherit}
+a[href="/"]+header.top small,a[href="/"]+header.top .brand-title small{color:var(--gv-navy-ink)!important}
+a[href="/"]+header.top .mark{background:var(--gv-lime)!important;color:var(--gv-navy)!important;box-shadow:none!important}
+a[href="/"]+header.top .privacy{color:var(--gv-lime)!important;font-weight:700}
+a[href="/"]+header.top .logo,a[href="/"]+header.top .brand-logo{background:#fff;border-radius:10px;padding:3px;mix-blend-mode:normal!important;filter:none!important}
+a[href="/"]+header.top strong,a[href="/"]+header.top .brand-title{color:#fff!important}
+
+/* IT City, Com7, scan report: .app-header under the link */
+a[href="/"]+.app-header{background:var(--gv-navy)!important;color:#fff;border:0!important;padding:4px 22px 16px!important;margin:0}
+a[href="/"]+.app-header h1{color:#fff}
+a[href="/"]+.app-header span{color:var(--gv-navy-ink)!important}
+a[href="/"]+.app-header .version{color:var(--gv-lime)!important}
+a[href="/"]+.app-header img{background:#fff;border-radius:10px;padding:3px}
+a.back{background:var(--gv-navy)!important}
+
+/* Box label tool: card header */
+.form-header{background:var(--gv-navy)!important;color:#fff}
+.form-header p{opacity:1!important;color:var(--gv-navy-ink)}
+
+@media print{a[href="/"]{display:none!important}}

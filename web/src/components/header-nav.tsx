@@ -95,8 +95,8 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
             href={item.href}
             className={
               isActive(item.href)
-                ? "flex items-center gap-1.5 whitespace-nowrap border-b-2 border-accent py-1 text-base font-semibold text-accent"
-                : "flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent py-1 text-base text-accent"
+                ? "flex items-center gap-1.5 whitespace-nowrap border-b-2 border-[#cdeb03] py-1 text-base font-semibold text-[#cdeb03]"
+                : "flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent py-1 text-base text-[#d6e3ec] hover:text-white"
             }
           >
             {item.label}
@@ -110,7 +110,7 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
               onClick={() => setOpenMenu((m) => (m === "reports" ? "" : "reports"))}
               aria-haspopup="menu"
               aria-expanded={openMenu === "reports"}
-              className={`flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b-2 py-1 text-base text-accent ${isActive("/admin/reports") ? "border-accent font-semibold" : "border-transparent"}`}
+              className={`flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b-2 py-1 text-base ${isActive("/admin/reports") ? "border-[#cdeb03] font-semibold text-[#cdeb03]" : "border-transparent text-[#d6e3ec] hover:text-white"}`}
             >
               รายงาน
               {pendingReports > 0 ? reportsBadge("/admin/reports") : null}
@@ -133,7 +133,7 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
               onClick={() => setOpenMenu((m) => (m === "tools" ? "" : "tools"))}
               aria-haspopup="menu"
               aria-expanded={openMenu === "tools"}
-              className="flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent py-1 text-base text-accent"
+              className="flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent py-1 text-base text-[#d6e3ec] hover:text-white"
             >
               เครื่องมือ
               <Chevron open={openMenu === "tools"} />
@@ -156,7 +156,7 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
         onClick={() => setMobileOpen((o) => !o)}
         aria-label="เมนู"
         aria-expanded={mobileOpen}
-        className="flex h-10 w-10 items-center justify-center rounded-md border border-line md:hidden"
+        className="flex h-10 w-10 items-center justify-center rounded-md border border-white/30 text-white md:hidden"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
