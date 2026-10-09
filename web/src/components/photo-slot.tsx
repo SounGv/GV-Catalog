@@ -53,6 +53,7 @@ export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
   const [rotating, setRotating] = useState(false);
+  const alreadyPrepared = useRef(false); // the re-submit after resizing must not resize again
 
   function handleFileChange() {
     const file = fileInputRef.current?.files?.[0];
@@ -71,6 +72,10 @@ export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, 
     const input = fileInputRef.current;
     const file = input?.files?.[0];
     if (!input || !file) return;
+    if (alreadyPrepared.current) {
+      alreadyPrepared.current = false;
+      return;
+    }
     if (rotation === 0 && file.size <= 900 * 1024) return; // small enough as is
     event.preventDefault();
     const form = event.currentTarget; // currentTarget is cleared after the first await
@@ -82,6 +87,7 @@ export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, 
       transfer.items.add(new File([rotated], file.name, { type: rotated.type }));
       input.files = transfer.files;
       setRotation(0);
+      alreadyPrepared.current = true;
       form.requestSubmit();
     } finally {
       setRotating(false);
