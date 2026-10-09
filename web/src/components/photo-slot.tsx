@@ -73,6 +73,7 @@ export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, 
     if (!input || !file) return;
     if (rotation === 0 && file.size <= 900 * 1024) return; // small enough as is
     event.preventDefault();
+    const form = event.currentTarget; // currentTarget is cleared after the first await
 
     setRotating(true);
     try {
@@ -81,7 +82,7 @@ export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, 
       transfer.items.add(new File([rotated], file.name, { type: rotated.type }));
       input.files = transfer.files;
       setRotation(0);
-      event.currentTarget.requestSubmit();
+      form.requestSubmit();
     } finally {
       setRotating(false);
     }
