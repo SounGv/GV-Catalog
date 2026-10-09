@@ -1,24 +1,28 @@
 import { PACKAGE_ANGLES, UNIT_ANGLE, type PhotoAngle } from "@/lib/photos";
-import { deleteProductPhotoAction, uploadProductPhotoAction } from "@/app/admin/products/photos-actions";
+import { deleteProductPhotoAction, updateProductPhotoLotAction, uploadProductPhotoAction } from "@/app/admin/products/photos-actions";
 import { PhotoSlot } from "@/components/photo-slot";
 
 type ProductPhotoManagerProps = {
   sku: string;
   photos: Partial<Record<PhotoAngle, string>>;
+  /** Lot number typed for each photo. */
+  lots?: Partial<Record<PhotoAngle, string>>;
   /** Set when a previous upload for one slot failed — shown only on that slot. */
   photoError?: { angle: string; message: string };
 };
 
-export function ProductPhotoManager({ sku, photos, photoError }: ProductPhotoManagerProps) {
+export function ProductPhotoManager({ sku, photos, lots = {}, photoError }: ProductPhotoManagerProps) {
   function slotFor(angle: PhotoAngle, label: string) {
     return (
       <PhotoSlot
         key={angle}
         label={label}
         url={photos[angle]}
+        lot={lots[angle]}
         error={photoError?.angle === angle ? photoError.message : undefined}
         uploadAction={uploadProductPhotoAction.bind(null, sku, angle)}
         deleteAction={deleteProductPhotoAction.bind(null, sku, angle)}
+        lotAction={updateProductPhotoLotAction.bind(null, sku, angle)}
       />
     );
   }

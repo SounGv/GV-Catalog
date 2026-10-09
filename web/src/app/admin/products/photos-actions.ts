@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { put, del } from "@vercel/blob";
-import { deletePhotoForSku, getPhotosForSku, isPhotoAngle, setPhotoForSku } from "@/lib/photos";
+import { cleanLot, deletePhotoForSku, getPhotosForSku, isPhotoAngle, setPhotoForSku, setPhotoLot } from "@/lib/photos";
 import { adminProductEditPath, skuPath } from "@/lib/catalog-query";
 import { removeBackground, RemoveBgNotConfiguredError } from "@/lib/remove-bg";
 
@@ -61,7 +61,7 @@ export async function uploadProductPhotoAction(
     contentType,
   });
 
-  await setPhotoForSku(sku, angle, blob.url, wantsBackgroundRemoval);
+  await setPhotoForSku(sku, angle, blob.url, wantsBackgroundRemoval, cleanLot(formData.get("lot")));
 
   // Best-effort cleanup — an orphaned blob costs storage quota but never breaks
   // the app, so a delete failure here should not fail the upload that already succeeded.
@@ -75,6 +75,13 @@ export async function uploadProductPhotoAction(
 
   revalidateProductPages(sku);
   redirect(adminProductEditPath(sku));
+}
+
+/** Saves the lot number of a photo without uploading it again. */
+export async function updateProductPhotoLotAction(sku: string, angleRaw: string, formData: FormData): Promise<void> {
+  if (!isPhotoAngle(angleRaw)) throw new Error(`Invalid photo angle: ${angleRaw}`);
+  await setPhotoLot(sku, angleRaw, cleanLot(formData.get("lot")));
+  revalidateProductPages(sku);
 }
 
 export async function deleteProductPhotoAction(sku: string, angleRaw: string): Promise<void> {

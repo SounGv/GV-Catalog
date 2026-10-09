@@ -7,9 +7,11 @@ import { DeletePhotoButton } from "@/components/delete-photo-button";
 type PhotoSlotProps = {
   label: string;
   url?: string;
+  lot?: string;
   error?: string;
   uploadAction: (formData: FormData) => void | Promise<void>;
   deleteAction: () => void | Promise<void>;
+  lotAction: (formData: FormData) => void | Promise<void>;
 };
 
 /**
@@ -40,7 +42,7 @@ async function rotateImageFile(file: File, degrees: number): Promise<Blob> {
   });
 }
 
-export function PhotoSlot({ label, url, error, uploadAction, deleteAction }: PhotoSlotProps) {
+export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, lotAction }: PhotoSlotProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
@@ -127,6 +129,17 @@ export function PhotoSlot({ label, url, error, uploadAction, deleteAction }: Pho
             </button>
           </div>
         ) : null}
+        <label className="flex flex-col gap-0.5 text-sm text-muted">
+          เลข lot (ถ้ามี)
+          <input
+            type="text"
+            name="lot"
+            defaultValue={lot ?? ""}
+            maxLength={60}
+            placeholder="เช่น GTE300926"
+            className="min-h-9 rounded-md border border-line bg-surface px-2 text-base text-ink"
+          />
+        </label>
         <fieldset className="flex gap-3 text-sm text-muted">
           <legend className="sr-only">ลบพื้นหลัง</legend>
           <label className="flex items-center gap-1">
@@ -140,6 +153,22 @@ export function PhotoSlot({ label, url, error, uploadAction, deleteAction }: Pho
           {rotating ? "กำลังหมุนรูป…" : url ? "อัปโหลดแทนที่" : "อัปโหลด"}
         </button>
       </form>
+      {url ? (
+        <form action={lotAction} className="flex gap-1.5">
+          <input
+            type="text"
+            name="lot"
+            defaultValue={lot ?? ""}
+            maxLength={60}
+            aria-label={`เลข lot ของรูป ${label}`}
+            placeholder="เลข lot"
+            className="min-h-9 min-w-0 flex-1 rounded-md border border-line bg-surface px-2 text-base"
+          />
+          <button type="submit" className="min-h-9 rounded-md border border-line px-2 text-sm">
+            บันทึก lot
+          </button>
+        </form>
+      ) : null}
       {url ? (
         <form action={deleteAction}>
           <DeletePhotoButton label={label} />

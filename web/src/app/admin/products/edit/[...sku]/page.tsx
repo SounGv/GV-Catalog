@@ -6,7 +6,7 @@ import { ProductPhotoManager } from "@/components/product-photo-manager";
 import { deleteProductAction, updateProductAction } from "@/app/admin/products/actions";
 import { skuFromSegments } from "@/lib/catalog-query";
 import { getProduct } from "@/lib/products";
-import { getPhotosForSku } from "@/lib/photos";
+import { getPhotoLotsForSku, getPhotosForSku } from "@/lib/photos";
 import { getBarcodesForSku } from "@/lib/barcodes";
 
 type EditProductPageProps = {
@@ -17,9 +17,10 @@ type EditProductPageProps = {
 export default async function EditProductPage({ params, searchParams }: EditProductPageProps) {
   const { sku: segments } = await params;
   const sku = skuFromSegments(segments);
-  const [product, photos, retailerBarcodes, { error, photoError, photoAngle }] = await Promise.all([
+  const [product, photos, photoLots, retailerBarcodes, { error, photoError, photoAngle }] = await Promise.all([
     getProduct(sku),
     getPhotosForSku(sku),
+    getPhotoLotsForSku(sku),
     getBarcodesForSku(sku),
     searchParams,
   ]);
@@ -42,6 +43,7 @@ export default async function EditProductPage({ params, searchParams }: EditProd
       <ProductPhotoManager
         sku={product.sku}
         photos={photos}
+        lots={photoLots}
         photoError={photoError && photoAngle ? { angle: photoAngle, message: photoError } : undefined}
       />
 

@@ -7,7 +7,7 @@ import { GtinCheck } from "@/components/gtin-check";
 import { ReportDiscrepancyForm } from "@/components/report-discrepancy-form";
 import { catalogHref, parseCatalogQuery, skuFromSegments, skuPath } from "@/lib/catalog-query";
 import { getProduct } from "@/lib/products";
-import { getPhotosForSku, PACKAGE_ANGLES, UNIT_ANGLE } from "@/lib/photos";
+import { getPhotoLotsForSku, getPhotosForSku, PACKAGE_ANGLES, UNIT_ANGLE } from "@/lib/photos";
 import { getBarcodesForSku } from "@/lib/barcodes";
 import { submitDiscrepancyReportAction } from "./report-actions";
 
@@ -36,9 +36,10 @@ export async function generateMetadata({ params }: SkuPageProps): Promise<Metada
 
 export default async function SkuPage({ params, searchParams }: SkuPageProps) {
   const sku = await loadSku(params);
-  const [product, photos, retailerBarcodes] = await Promise.all([
+  const [product, photos, photoLots, retailerBarcodes] = await Promise.all([
     getProduct(sku),
     getPhotosForSku(sku),
+    getPhotoLotsForSku(sku),
     getBarcodesForSku(sku),
   ]);
   if (!product) notFound();
@@ -140,6 +141,7 @@ export default async function SkuPage({ params, searchParams }: SkuPageProps) {
                   </div>
                 )}
                 <p className="text-center text-base">{angle.label}</p>
+                {url && photoLots[angle.id] ? <p className="text-center text-sm text-muted">lot {photoLots[angle.id]}</p> : null}
               </li>
             );
           })}
