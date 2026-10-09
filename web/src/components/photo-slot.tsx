@@ -22,22 +22,28 @@ type PhotoSlotProps = {
  */
 async function rotateImageFile(file: File, degrees: number): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
+  // Phone photos are 3-8 MB; the server accepts about 4 MB per request, so
+  // every upload is also scaled down (long side 2000 px) and re-encoded.
+  const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
   const swapDimensions = degrees % 180 !== 0;
   const canvas = document.createElement("canvas");
-  canvas.width = swapDimensions ? bitmap.height : bitmap.width;
-  canvas.height = swapDimensions ? bitmap.width : bitmap.height;
+  canvas.width = swapDimensions ? h : w;
+  canvas.height = swapDimensions ? w : h;
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D not supported");
   ctx.translate(canvas.width / 2, canvas.height / 2);
   ctx.rotate((degrees * Math.PI) / 180);
-  ctx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+  ctx.drawImage(bitmap, -w / 2, -h / 2, w, h);
 
+  const type = file.type === "image/png" ? "image/png" : "image/jpeg";
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-      file.type || "image/jpeg",
-      0.95,
+      type,
+      0.88,
     );
   });
 }
@@ -62,17 +68,17 @@ export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, 
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (rotation === 0) return; // nothing to bake in — let the normal server-action submit proceed
-    event.preventDefault();
     const input = fileInputRef.current;
     const file = input?.files?.[0];
     if (!input || !file) return;
+    if (rotation === 0 && file.size <= 900 * 1024) return; // small enough as is
+    event.preventDefault();
 
     setRotating(true);
     try {
       const rotated = await rotateImageFile(file, rotation);
       const transfer = new DataTransfer();
-      transfer.items.add(new File([rotated], file.name, { type: file.type || "image/jpeg" }));
+      transfer.items.add(new File([rotated], file.name, { type: rotated.type }));
       input.files = transfer.files;
       setRotation(0);
       event.currentTarget.requestSubmit();
@@ -150,7 +156,7 @@ export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, 
           </label>
         </fieldset>
         <button type="submit" disabled={rotating} className="min-h-9 rounded-md border border-line text-sm disabled:opacity-50">
-          {rotating ? "กำลังหมุนรูป…" : url ? "อัปโหลดแทนที่" : "อัปโหลด"}
+          {rotating ? "กำลังเตรียมรูป…" : url ? "อัปโหลดแทนที่" : "อัปโหลด"}
         </button>
       </form>
       {url ? (
