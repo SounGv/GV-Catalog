@@ -1,6 +1,7 @@
 import { PACKAGE_ANGLES, UNIT_ANGLE, type PhotoAngle } from "@/lib/photos";
-import { deleteProductPhotoAction, updateProductPhotoLotAction, uploadProductPhotoAction } from "@/app/admin/products/photos-actions";
+import { deleteProductPhotoAction, updateProductPhotoLotAction, uploadProductPhotoAction, uploadProductPhotoQuietAction } from "@/app/admin/products/photos-actions";
 import { PhotoSlot } from "@/components/photo-slot";
+import { UploadAllPhotos } from "@/components/upload-all-photos";
 
 type ProductPhotoManagerProps = {
   sku: string;
@@ -16,6 +17,7 @@ export function ProductPhotoManager({ sku, photos, lots = {}, photoError }: Prod
     return (
       <PhotoSlot
         key={angle}
+        angle={angle}
         label={label}
         url={photos[angle]}
         lot={lots[angle]}
@@ -33,6 +35,8 @@ export function ProductPhotoManager({ sku, photos, lots = {}, photoError }: Prod
         ก่อนอัปโหลด แนะนำให้กรอกขนาดกล่อง (กว้าง/ยาว/สูง) และน้ำหนักในแบบฟอร์มด้านบนโดยวัดจากของจริงหรือดูจากรูป —
         ระบบยังไม่รองรับการวัดขนาดอัตโนมัติจากภาพ (ต้องใช้อุปกรณ์วัดขนาดอ้างอิงในภาพซึ่งยังไม่มี)
       </p>
+
+      <UploadAllPhotos uploadAction={uploadProductPhotoQuietAction.bind(null, sku)} />
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">รูปแพ็กเกจ (6 มุม)</h2>

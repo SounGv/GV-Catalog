@@ -5,6 +5,7 @@ import Image from "next/image";
 import { DeletePhotoButton } from "@/components/delete-photo-button";
 
 type PhotoSlotProps = {
+  angle: string;
   label: string;
   url?: string;
   lot?: string;
@@ -20,7 +21,7 @@ type PhotoSlotProps = {
  * file itself — not just a CSS transform that would only ever show up in
  * this one browser tab.
  */
-async function rotateImageFile(file: File, degrees: number): Promise<Blob> {
+export async function rotateImageFile(file: File, degrees: number): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   // Phone photos are 3-8 MB; the server accepts about 4 MB per request, so
   // every upload is also scaled down (long side 2000 px) and re-encoded.
@@ -48,7 +49,7 @@ async function rotateImageFile(file: File, degrees: number): Promise<Blob> {
   });
 }
 
-export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, lotAction }: PhotoSlotProps) {
+export function PhotoSlot({ angle, label, url, lot, error, uploadAction, deleteAction, lotAction }: PhotoSlotProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
@@ -97,7 +98,7 @@ export function PhotoSlot({ label, url, lot, error, uploadAction, deleteAction, 
   const displayUrl = previewUrl ?? url;
 
   return (
-    <li className="flex flex-col gap-2">
+    <li className="flex flex-col gap-2" data-photo-slot data-angle={angle} data-label={label} data-rotation={rotation}>
       <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[10px] bg-neutral-100 text-muted">
         {displayUrl ? (
           <Image
