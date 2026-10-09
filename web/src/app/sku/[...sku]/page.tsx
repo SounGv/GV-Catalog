@@ -71,6 +71,15 @@ export default async function SkuPage({ params, searchParams }: SkuPageProps) {
         </ul>
       ) : null}
 
+      {product.imageUrl ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">รูปสินค้า</h2>
+          <div className="relative aspect-square w-full max-w-[360px] overflow-hidden rounded-[10px] bg-neutral-100">
+            <Image src={product.imageUrl} alt={product.name} fill sizes="(max-width: 640px) 90vw, 360px" className="object-contain p-2.5" />
+          </div>
+        </section>
+      ) : null}
+
       <section className="flex flex-col gap-3 rounded-[10px] bg-surface p-4 shadow-[var(--shadow-sm)]">
         <div>
           <p className="text-base text-muted">บาร์โค้ดหลัก</p>
