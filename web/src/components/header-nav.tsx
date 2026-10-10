@@ -37,6 +37,12 @@ const STATIC_TOOLS = [
   { href: "/tools/box-label/label_print_edit.html", label: "พิมพ์ใบแปะกล่อง" },
 ];
 
+/** Receiving department (ฝ่ายรับเข้า) tools — its own menu, separate from the PO converters. */
+const RECEIVING_TOOLS = [
+  { href: "/tools/receiving/packinglist-converter.html", label: "แปลง Packing List · ใบแปะลัง", external: true },
+  { href: "/receiving/pick-locations", label: "ตำแหน่งหยิบ · ซิงค์จาก BigSeller", external: false },
+];
+
 function Chevron({ open }: { open: boolean }) {
   return (
     <svg viewBox="0 0 24 24" className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -54,7 +60,7 @@ function Chevron({ open }: { open: boolean }) {
 export function HeaderNav({ pendingReports }: HeaderNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openMenu, setOpenMenu] = useState<"" | "reports" | "tools">("");
+  const [openMenu, setOpenMenu] = useState<"" | "reports" | "receiving" | "tools">("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   // A submenu closes on a click elsewhere or Escape.
@@ -131,6 +137,27 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
           <div className="relative">
             <button
               type="button"
+              onClick={() => setOpenMenu((m) => (m === "receiving" ? "" : "receiving"))}
+              aria-haspopup="menu"
+              aria-expanded={openMenu === "receiving"}
+              className="flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent py-1 text-base text-[#d6e3ec] hover:text-white"
+            >
+              ฝ่ายรับเข้า
+              <Chevron open={openMenu === "receiving"} />
+            </button>
+            {openMenu === "receiving" ? (
+              <div role="menu" className="absolute top-full right-0 z-30 mt-2 flex min-w-64 flex-col rounded-[10px] border border-line bg-surface p-1.5 shadow-[var(--shadow-sm)]">
+                {RECEIVING_TOOLS.map((tool) => (
+                  <a key={tool.href} role="menuitem" href={tool.href} {...(tool.external ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={() => setOpenMenu("")} className="flex min-h-11 items-center rounded-md px-3 py-2 text-base text-accent hover:bg-accent-soft">
+                    {tool.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="relative">
+            <button
+              type="button"
               onClick={() => setOpenMenu((m) => (m === "tools" ? "" : "tools"))}
               aria-haspopup="menu"
               aria-expanded={openMenu === "tools"}
@@ -186,6 +213,12 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
             <a key={link.href} href={link.href} onClick={() => setMobileOpen(false)} className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent">
               {link.label}
               {link.badge ? reportsBadge("/admin/reports") : null}
+            </a>
+          ))}
+          <p className="px-3 pt-2 text-sm text-muted">ฝ่ายรับเข้า</p>
+          {RECEIVING_TOOLS.map((tool) => (
+            <a key={tool.href} href={tool.href} {...(tool.external ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={() => setMobileOpen(false)} className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent">
+              {tool.label}
             </a>
           ))}
           <p className="px-3 pt-2 text-sm text-muted">เครื่องมือ</p>

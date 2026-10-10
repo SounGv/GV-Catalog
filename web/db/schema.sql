@@ -274,3 +274,17 @@ ALTER TABLE stickers ADD COLUMN IF NOT EXISTS count_text text;
 ALTER TABLE stickers ADD COLUMN IF NOT EXISTS order_note text;
 ALTER TABLE stickers ADD COLUMN IF NOT EXISTS incoming_note text;
 ALTER TABLE stickers ADD COLUMN IF NOT EXISTS sheet_synced_at timestamptz;
+
+-- Pick locations (ตำแหน่งหยิบ) mirrored from BigSeller's shelf data. BigSeller-Inventory
+-- already scrapes the shelf page into the Google Sheet tab DB_LOCATION_CURRENT; the
+-- receiving tools read this table instead of a copy baked into their HTML.
+CREATE TABLE IF NOT EXISTS pick_locations (
+  sku text NOT NULL,
+  position text NOT NULL,
+  position_type text,
+  area text,
+  warehouse text,
+  source_updated_at text,
+  synced_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (sku, position)
+);
