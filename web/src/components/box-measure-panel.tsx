@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getProductBoxSizeAction, saveProductBoxSizeAction } from "@/app/admin/products/photos-actions";
-import { correctForHeight, detectBox, solveBoxSize, type BoxDetection } from "@/lib/box-measure";
+import { correctForHeight, solveBoxSize } from "@/lib/box-measure";
+import { useBoxLock } from "@/components/use-box-lock";
 import type { useCamera } from "@/components/use-camera";
 
 type Camera = Omit<ReturnType<typeof useCamera>, "attachVideo">;
@@ -10,11 +11,6 @@ type Shot = { longCm: number; shortCm: number };
 type Step = "flat" | "side" | "done";
 
 const CAMERA_HEIGHT_KEY = "gv-camera-height-cm";
-const FAILURE_TEXT: Record<string, string> = {
-  "no-mat": "ไม่เห็นแผ่นรองสีฟ้า — วางกล่องบนแผ่นรองและให้แผ่นรองเต็มภาพ",
-  "no-box": "ยังหากล่องไม่เจอ — วางกล่องกลางแผ่นรอง ให้มีแผ่นรองล้อมรอบทุกด้าน",
-  "no-grid": "อ่านเส้นตารางบนแผ่นรองไม่ได้ — เพิ่มแสงหรือเลื่อนกล้องให้เห็นเส้นตารางชัดขึ้น",
-};
 
 function readCameraHeight(): string {
   try {
@@ -40,10 +36,6 @@ export function BoxMeasurePanel({
   attachVideo: (element: HTMLVideoElement | null) => void;
   sku: string;
 }) {
-  const [detection, setDetection] = useState<BoxDetection | null>(null);
-  const [failure, setFailure] = useState("");
-  const [frameSize, setFrameSize] = useState<{ w: number; h: number } | null>(null);
-  const [locked, setLocked] = useState(false);
   const [step, setStep] = useState<Step>("flat");
   const [flat, setFlat] = useState<Shot | null>(null);
   const [side, setSide] = useState<Shot | null>(null);
@@ -52,47 +44,11 @@ export function BoxMeasurePanel({
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [typedHeight, setTypedHeight] = useState("");
-  const history = useRef<BoxDetection[]>([]);
-  const grabFrame = useRef(camera.frame);
-  useEffect(() => {
-    grabFrame.current = camera.frame;
-  });
+  const { detection, failure, frameSize, locked, reset } = useBoxLock(camera.frame, step !== "done");
 
   useEffect(() => {
     void getProductBoxSizeAction(sku).then(setSaved);
   }, [sku]);
-
-  // Live detection a few times a second; "locked" once three readings in a row agree.
-  useEffect(() => {
-    if (step === "done") return;
-    let alive = true;
-    const timer = setInterval(() => {
-      if (!alive) return;
-      const image = grabFrame.current(480);
-      if (!image) return;
-      setFrameSize({ w: image.width, h: image.height });
-      const result = detectBox(image);
-      if ("reason" in result) {
-        history.current = [];
-        setDetection(null);
-        setLocked(false);
-        setFailure(FAILURE_TEXT[result.reason]);
-        return;
-      }
-      setFailure("");
-      setDetection(result);
-      const recent = [...history.current, result].slice(-3);
-      history.current = recent;
-      const steady =
-        recent.length === 3 &&
-        recent.every((d) => Math.abs(d.longCm - result.longCm) < 0.3 && Math.abs(d.shortCm - result.shortCm) < 0.3);
-      setLocked(steady);
-    }, 400);
-    return () => {
-      alive = false;
-      clearInterval(timer);
-    };
-  }, [step]);
 
   function changeCameraHeight(value: string) {
     setCameraHeight(value);
@@ -113,8 +69,7 @@ export function BoxMeasurePanel({
       setSide(shot);
       setStep("done");
     }
-    history.current = [];
-    setLocked(false);
+    reset();
   }
 
   const heightOfCamera = Number(cameraHeight) || 0;

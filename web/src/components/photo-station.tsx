@@ -5,6 +5,7 @@ import { listProductPhotosAction, uploadProductPhotoQuietAction } from "@/app/ad
 import { PACKAGE_ANGLES, UNIT_ANGLE, type PhotoAngle } from "@/lib/photo-angles";
 import { useCamera } from "@/components/use-camera";
 import { BoxMeasurePanel } from "@/components/box-measure-panel";
+import { useBoxLock } from "@/components/use-box-lock";
 
 const ANGLES: { id: PhotoAngle; label: string }[] = [...PACKAGE_ANGLES, UNIT_ANGLE].map((angle) => ({
   id: angle.id,
@@ -32,6 +33,8 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
   const [angle, setAngle] = useState<PhotoAngle>("front");
   const [lot, setLot] = useState("");
   const [still, setStill] = useState<{ blob: Blob; url: string } | null>(null);
+  // Live edge lock in the photo view too: outline the box and show its size while aiming.
+  const lock = useBoxLock(camera.frame, mode === "photo" && !still);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -280,15 +283,55 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
                   </g>
                 </svg>
               ) : null}
+              {!still && lock.detection && lock.frameSize ? (
+                <svg
+                  viewBox={(() => {
+                    const side = Math.min(lock.frameSize.w, lock.frameSize.h);
+                    return `${(lock.frameSize.w - side) / 2} ${(lock.frameSize.h - side) / 2} ${side} ${side}`;
+                  })()}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 h-full w-full"
+                >
+                  <polygon
+                    points={lock.detection.corners.map((p) => `${p.x},${p.y}`).join(" ")}
+                    fill={lock.locked ? "rgba(205,235,3,0.12)" : "none"}
+                    stroke={lock.locked ? "#cdeb03" : "#ffffff"}
+                    strokeWidth={lock.locked ? 2.5 : 1.5}
+                    strokeDasharray={lock.locked ? undefined : "6 4"}
+                  />
+                </svg>
+              ) : null}
+              {!still && lock.detection ? (
+                <span
+                  className={`absolute top-2 right-2 rounded-lg px-3 py-1.5 font-mono text-base font-semibold tabular-nums ${
+                    lock.locked ? "bg-[#cdeb03] text-ink" : "bg-black/70 text-white"
+                  }`}
+                >
+                  {lock.locked ? "● " : ""}
+                  {lock.detection.longCm.toFixed(1)} × {lock.detection.shortCm.toFixed(1)} cm
+                </span>
+              ) : null}
               {camera.resolution && !still ? (
                 <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
                   {camera.resolution.width}×{camera.resolution.height}
                 </span>
               ) : null}
             </div>
-            {camera.resolution && camera.resolution.width < 1920 && !still ? (
+            {camera.resolution && Math.max(camera.resolution.width, camera.resolution.height) < 1920 && !still ? (
               <p className="text-sm text-amber-700">
                 กล้องส่งภาพแค่ {camera.resolution.width}×{camera.resolution.height} ภาพเลยไม่คมเท่าที่ควร ลองเลือกกล้องอีกตัวในช่อง กล้อง หรือต่อกล้องเข้าพอร์ต USB 3 (สีฟ้า)
+              </p>
+            ) : null}
+            {!still ? (
+              <p className="text-center text-sm text-muted">
+                {lock.detection
+                  ? "ขนาดมุมขวาบนคือ ยาว × กว้าง ของด้านที่เห็น (ยังไม่หักความสูงกล่อง) ถ้าต้องการ กว้าง ยาว สูง ที่บันทึกลงสินค้าได้ ใช้แท็บ วัดขนาดกล่อง"
+                  : "ถ้าวางกล่องบนแผ่นรองสีฟ้าให้แผ่นรองล้อมรอบทุกด้าน กล้องจะล็อกขอบกล่องและบอกขนาดเป็น cm ให้เอง"}{" "}
+                {lock.detection ? (
+                  <button type="button" onClick={() => setMode("measure")} className="font-semibold text-accent underline">
+                    ไปวัดขนาดกล่อง
+                  </button>
+                ) : null}
               </p>
             ) : null}
             {!still ? <p className="text-center text-sm text-muted">วางสินค้ากลางกรอบ ให้เต็มกรอบพอดี ใช้พื้นหลังเรียบและแสงสว่างสม่ำเสมอ ภาพที่บันทึกคือส่วนในกรอบสี่เหลี่ยมนี้</p> : null}
