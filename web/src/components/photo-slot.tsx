@@ -3,6 +3,7 @@
 import { useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { DeletePhotoButton } from "@/components/delete-photo-button";
+import { CameraCapture } from "@/components/camera-capture";
 
 type PhotoSlotProps = {
   angle: string;
@@ -54,6 +55,7 @@ export function PhotoSlot({ angle, label, url, lot, error, uploadAction, deleteA
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
   const [rotating, setRotating] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const alreadyPrepared = useRef(false); // the re-submit after resizing must not resize again
 
   function handleFileChange() {
@@ -63,6 +65,16 @@ export function PhotoSlot({ angle, label, url, lot, error, uploadAction, deleteA
       if (previous) URL.revokeObjectURL(previous);
       return file ? URL.createObjectURL(file) : null;
     });
+  }
+
+  /** A photo taken with the camera goes into the file input exactly like a chosen file. */
+  function useCapturedPhoto(file: File) {
+    const input = fileInputRef.current;
+    if (!input) return;
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+    handleFileChange();
   }
 
   function rotate(delta: number) {
@@ -125,6 +137,13 @@ export function PhotoSlot({ angle, label, url, lot, error, uploadAction, deleteA
           onChange={handleFileChange}
           className="text-sm file:mr-2 file:rounded-md file:border file:border-line file:bg-surface file:px-2 file:py-1 file:text-sm"
         />
+        <button
+          type="button"
+          onClick={() => setCameraOpen(true)}
+          className="min-h-9 rounded-md border border-line text-sm"
+        >
+          ถ่ายรูปด้วยกล้อง
+        </button>
         {previewUrl ? (
           <div className="flex gap-2">
             <button
@@ -167,6 +186,7 @@ export function PhotoSlot({ angle, label, url, lot, error, uploadAction, deleteA
           {rotating ? "กำลังเตรียมรูป…" : url ? "อัปโหลดแทนที่" : "อัปโหลด"}
         </button>
       </form>
+      {cameraOpen ? <CameraCapture label={label} onCapture={useCapturedPhoto} onClose={() => setCameraOpen(false)} /> : null}
       {url ? (
         <form action={lotAction} className="flex gap-1.5">
           <input

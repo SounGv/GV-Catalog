@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { put, del } from "@vercel/blob";
-import { cleanLot, deletePhotoForSku, getPhotosForSku, isPhotoAngle, setPhotoForSku, setPhotoLot, type PhotoAngle } from "@/lib/photos";
+import { cleanLot, deletePhotoForSku, getPhotoLotsForSku, getPhotosForSku, isPhotoAngle, setPhotoForSku, setPhotoLot, type PhotoAngle } from "@/lib/photos";
 import { adminProductEditPath, skuPath } from "@/lib/catalog-query";
 import { removeBackground, RemoveBgNotConfiguredError } from "@/lib/remove-bg";
 
@@ -119,4 +119,12 @@ export async function deleteProductPhotoAction(sku: string, angleRaw: string): P
   }
 
   revalidateProductPages(sku);
+}
+
+/** Photos and lot numbers currently saved for one SKU, for the photo station. */
+export async function listProductPhotosAction(
+  sku: string,
+): Promise<{ photos: Partial<Record<PhotoAngle, string>>; lots: Partial<Record<PhotoAngle, string>> }> {
+  const [photos, lots] = await Promise.all([getPhotosForSku(sku), getPhotoLotsForSku(sku)]);
+  return { photos, lots };
 }

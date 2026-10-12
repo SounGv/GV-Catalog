@@ -11,6 +11,7 @@ type HeaderNavProps = {
 const NAV_ITEMS = [
   { href: "/", label: "แค็ตตาล็อก" },
   { href: "/admin/products", label: "จัดการสินค้า" },
+  { href: "/admin/photo-station", label: "ถ่ายรูปแพ็กเกจ" },
   { href: "/stickers", label: "สต็อกสติกเกอร์" },
 ];
 
