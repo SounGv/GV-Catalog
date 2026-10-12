@@ -77,7 +77,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
   }, [still]);
 
   async function snap() {
-    const blob = await camera.snap();
+    const blob = await camera.snap({ square: true, maxSide: 2400, enhance: true });
     if (blob) {
       setMessage(null);
       setStill({ blob, url: URL.createObjectURL(blob) });
@@ -221,11 +221,33 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
             ) : null}
             {camera.error ? <p className="rounded-[10px] bg-red-50 p-3 text-base text-red-700">{camera.error}</p> : null}
 
-            <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-black">
+            {/* Square frame = the saved photo: what you see inside it is exactly what gets saved. */}
+            <div className="relative mx-auto flex aspect-square w-full max-w-[640px] items-center justify-center overflow-hidden rounded-xl bg-black">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {still ? <img src={still.url} alt="รูปที่ถ่าย" className="h-full w-full object-contain" /> : null}
-              <video ref={camera.videoRef} playsInline muted className={`h-full w-full object-contain ${still ? "hidden" : ""}`} />
+              {still ? <img src={still.url} alt="รูปที่ถ่าย" className="h-full w-full object-cover" /> : null}
+              <video ref={camera.videoRef} playsInline muted className={`h-full w-full object-cover ${still ? "hidden" : ""}`} />
+              {!still ? (
+                <svg viewBox="0 0 100 100" aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full">
+                  <g stroke="white" strokeOpacity="0.35" strokeWidth="0.3" fill="none">
+                    <path d="M33.3 0V100M66.6 0V100M0 33.3H100M0 66.6H100" />
+                  </g>
+                  <g stroke="#cdeb03" strokeWidth="0.8" fill="none" strokeLinecap="round">
+                    <path d="M8 18V8H18M82 8H92V18M92 82V92H82M18 92H8V82" />
+                  </g>
+                </svg>
+              ) : null}
+              {camera.resolution && !still ? (
+                <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                  {camera.resolution.width}×{camera.resolution.height}
+                </span>
+              ) : null}
             </div>
+            {camera.resolution && camera.resolution.width < 1920 && !still ? (
+              <p className="text-sm text-amber-700">
+                กล้องส่งภาพแค่ {camera.resolution.width}×{camera.resolution.height} ภาพเลยไม่คมเท่าที่ควร ลองเลือกกล้องอีกตัวในช่อง กล้อง หรือต่อกล้องเข้าพอร์ต USB 3 (สีฟ้า)
+              </p>
+            ) : null}
+            {!still ? <p className="text-center text-sm text-muted">วางสินค้ากลางกรอบ ให้เต็มกรอบพอดี ใช้พื้นหลังเรียบและแสงสว่างสม่ำเสมอ ภาพที่บันทึกคือส่วนในกรอบสี่เหลี่ยมนี้</p> : null}
 
             {replacing ? <p className="text-sm text-amber-700">มุมนี้มีรูปอยู่แล้ว ถ้าบันทึกจะแทนที่รูปเดิม</p> : null}
 
