@@ -1,9 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { detectBox, type BoxDetection } from "@/lib/box-measure";
+import { detectBox, type BoxDetection, type DetectFailure } from "@/lib/box-measure";
 
-export const BOX_LOCK_HINT: Record<string, string> = {
+const EDGE_TEXT = { left: "ซ้าย", right: "ขวา", top: "บน", bottom: "ล่าง" } as const;
+const AWAY_ARROW = { left: "→", right: "←", top: "↓", bottom: "↑" } as const;
+
+/** What to tell staff when the box cannot be locked. */
+export function boxLockHint(failure: DetectFailure): string {
+  if (failure.reason === "touches-edge") {
+    const sides = failure.edges.map((edge) => EDGE_TEXT[edge]).join(" ");
+    const arrows = failure.edges.map((edge) => AWAY_ARROW[edge]).join(" ");
+    return `${arrows}  กล่องชนขอบด้าน${sides} — เลื่อนกล่องเข้ากลางแผ่นรอง หรือยกกล้องให้สูงขึ้น`;
+  }
+  return BOX_LOCK_HINT[failure.reason];
+}
+
+const BOX_LOCK_HINT: Record<string, string> = {
   "no-mat": "ไม่เห็นแผ่นรองสีฟ้า — วางกล่องบนแผ่นรองและให้แผ่นรองเต็มภาพ",
   "no-box": "ยังหากล่องไม่เจอ — วางกล่องกลางแผ่นรอง ให้มีแผ่นรองล้อมรอบทุกด้าน",
   "no-grid": "อ่านเส้นตารางบนแผ่นรองไม่ได้ — เพิ่มแสงหรือเลื่อนกล้องให้เห็นเส้นตารางชัดขึ้น",
@@ -35,7 +48,7 @@ export function useBoxLock(frame: (maxSide: number) => ImageData | null, enabled
         history.current = [];
         setDetection(null);
         setLocked(false);
-        setFailure(BOX_LOCK_HINT[result.reason]);
+        setFailure(boxLockHint(result));
         return;
       }
       setFailure("");

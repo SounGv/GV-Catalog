@@ -119,6 +119,15 @@ export default async function SkuPage({ params, searchParams }: SkuPageProps) {
         </section>
       ) : null}
 
+      {photos.dimensions ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold">รูปบอกขนาดกล่อง</h2>
+          <a href={photos.dimensions} target="_blank" rel="noopener" className="relative block aspect-[4/3] w-full max-w-[480px] overflow-hidden rounded-[10px] bg-neutral-100">
+            <Image src={photos.dimensions} alt="รูปบอกขนาดกล่อง" fill sizes="480px" className="object-contain" />
+          </a>
+        </section>
+      ) : null}
+
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">รูปแพ็กเกจ</h2>
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">

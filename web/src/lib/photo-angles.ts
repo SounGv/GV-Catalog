@@ -10,9 +10,12 @@ export const PACKAGE_ANGLES = [
 
 export const UNIT_ANGLE = { id: "unit", label: "รูปตัวสินค้าและอุปกรณ์ภายใน" } as const;
 
-export type PhotoAngle = (typeof PACKAGE_ANGLES)[number]["id"] | typeof UNIT_ANGLE.id;
+/** The box photo with its measured size drawn on (made by the measuring screen, not uploaded by hand). */
+export const DIMENSIONS_ANGLE = { id: "dimensions", label: "รูปบอกขนาด" } as const;
 
-const VALID_ANGLES = new Set<string>([...PACKAGE_ANGLES.map((a) => a.id), UNIT_ANGLE.id]);
+export type PhotoAngle = (typeof PACKAGE_ANGLES)[number]["id"] | typeof UNIT_ANGLE.id | typeof DIMENSIONS_ANGLE.id;
+
+const VALID_ANGLES = new Set<string>([...PACKAGE_ANGLES.map((a) => a.id), UNIT_ANGLE.id, DIMENSIONS_ANGLE.id]);
 
 export function isPhotoAngle(value: string): value is PhotoAngle {
   return VALID_ANGLES.has(value);

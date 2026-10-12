@@ -93,6 +93,10 @@ CREATE TABLE IF NOT EXISTS product_photos (
 ALTER TABLE product_photos ADD COLUMN IF NOT EXISTS background_removed boolean NOT NULL DEFAULT false;
 -- The production lot this photo shows (packaging can change between lots). Free text, optional.
 ALTER TABLE product_photos ADD COLUMN IF NOT EXISTS lot text;
+-- 'dimensions': the box photo with its measured size drawn on (measuring screen).
+ALTER TABLE product_photos DROP CONSTRAINT IF EXISTS product_photos_angle_check;
+ALTER TABLE product_photos ADD CONSTRAINT product_photos_angle_check
+  CHECK (angle IN ('front', 'back', 'barcode', 'thai_label', 'top', 'bottom', 'unit', 'dimensions'));
 
 -- Receiving-discrepancy reports ("ของที่รับมาไม่ตรงรูป") filed by warehouse staff
 -- against a SKU, reviewed by an admin. Report photo attachments are still

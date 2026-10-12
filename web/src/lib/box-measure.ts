@@ -5,6 +5,11 @@
  * Rules the photo has to follow (shown to staff on screen):
  * - the camera looks straight down at the mat,
  * - the box is surrounded by mat on every side (it is found as a "hole" in the mat).
+ *
+ * The box's top face is closer to the camera than the mat, so it looks bigger
+ * than it is. The camera's distance is worked out for every photo from how big
+ * the grid looks (`distanceCm`), once the phone has been calibrated with one
+ * box measured by tape (`calibrateCamera`).
  */
 
 export type Point = { x: number; y: number };
@@ -20,9 +25,15 @@ export type BoxDetection = {
   /** Sides in cm, measured at mat level (not yet corrected for the box's own height). */
   longCm: number;
   shortCm: number;
+  /** Long side of the analysed frame, px (with gridPx it gives the camera distance). */
+  frameLongPx: number;
 };
 
-export type DetectFailure = { reason: "no-mat" | "no-box" | "no-grid" };
+export type Edge = "left" | "right" | "top" | "bottom";
+export type DetectFailure =
+  | { reason: "no-mat" | "no-box" | "no-grid" }
+  /** The box runs into the edge of the mat or the photo on these sides. */
+  | { reason: "touches-edge"; edges: Edge[] };
 
 /** Mat grid: printed lines every 10 mm. */
 const GRID_MM = 10;
@@ -215,10 +226,12 @@ export function detectBox(image: ImageData): BoxDetection | DetectFailure {
   // connected components of the object mask; keep holes (not touching the border)
   const label = new Int32Array(w * h).fill(-1);
   let best: { pixels: number[]; area: number; centre: number } | null = null;
+  let blocked: { edges: Edge[]; area: number } | null = null;
   const queue = new Int32Array(w * h);
   for (let start = 0; start < w * h; start++) {
     if (!object[start] || label[start] !== -1) continue;
     let head = 0, tail = 0, touches = false;
+    const edges = new Set<Edge>();
     queue[tail++] = start;
     label[start] = start;
     const pixels: number[] = [];
@@ -228,7 +241,13 @@ export function detectBox(image: ImageData): BoxDetection | DetectFailure {
       const x = i % w, y = (i - x) / w;
       pixels.push(i);
       sx += x; sy += y;
-      if (x === 0 || y === 0 || x === w - 1 || y === h - 1) touches = true;
+      if (x === 0 || y === 0 || x === w - 1 || y === h - 1) {
+        touches = true;
+        if (x === 0) edges.add("left");
+        if (x === w - 1) edges.add("right");
+        if (y === 0) edges.add("top");
+        if (y === h - 1) edges.add("bottom");
+      }
       const next = [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1];
       for (const j of next) {
         if (j >= 0 && object[j] && label[j] === -1) {
@@ -237,15 +256,22 @@ export function detectBox(image: ImageData): BoxDetection | DetectFailure {
         }
       }
     }
-    if (touches || pixels.length < w * h * 0.02) continue;
+    if (pixels.length < w * h * 0.02) continue;
     const cx = sx / pixels.length - w / 2, cy = sy / pixels.length - h / 2;
     const centre = Math.hypot(cx, cy);
+    if (touches) {
+      // Something big near the middle that runs off the mat: most likely the box, too close to an edge.
+      if (centre < Math.min(w, h) * 0.3 && (!blocked || pixels.length > blocked.area)) {
+        blocked = { edges: [...edges], area: pixels.length };
+      }
+      continue;
+    }
     // prefer the biggest hole, nearer the centre on ties
     if (!best || pixels.length > best.area * 1.2 || (pixels.length > best.area * 0.8 && centre < best.centre)) {
       best = { pixels, area: pixels.length, centre };
     }
   }
-  if (!best) return { reason: "no-box" };
+  if (!best) return blocked ? { reason: "touches-edge", edges: blocked.edges } : { reason: "no-box" };
 
   // boundary pixels only, for the hull
   const edge: Point[] = [];
@@ -267,37 +293,67 @@ export function detectBox(image: ImageData): BoxDetection | DetectFailure {
   const longPx = Math.max(...sides);
   const shortPx = Math.min(...sides);
   const pxPerCm = (gridPx * 10) / GRID_MM;
-  return { corners, longPx, shortPx, gridPx, longCm: longPx / pxPerCm, shortCm: shortPx / pxPerCm };
+  return { corners, longPx, shortPx, gridPx, longCm: longPx / pxPerCm, shortCm: shortPx / pxPerCm, frameLongPx: Math.max(w, h) };
+}
+
+/** One reading kept for solving: sides at mat level and the camera distance for that photo (0 = unknown). */
+export type Shot = { longCm: number; shortCm: number; distanceCm: number };
+
+/**
+ * A camera's own scale: grid size (px per cm) × distance (cm) ÷ frame size (px)
+ * stays the same for one phone camera at one zoom. Learnt once (`calibrateCamera`).
+ */
+export function distanceCm(detection: Pick<BoxDetection, "gridPx" | "frameLongPx">, cameraScale: number): number {
+  if (!cameraScale) return 0;
+  return (cameraScale * detection.frameLongPx) / detection.gridPx;
 }
 
 /**
- * Top-down shots see the box's top face, which is closer to the camera than the
- * mat, so it looks bigger. With the camera height above the mat (cm) and the
- * height of the face being photographed (cm), scale back to true size.
+ * Learns the camera's scale from one flat shot of a box whose length and height
+ * were measured by tape: the top face looks `longCm` long at mat level, really is
+ * `trueLengthCm`, and sits `trueHeightCm` above the mat, so
+ * distance = longCm × height ÷ (longCm − length). Returns 0 if the numbers do not fit.
  */
+export function calibrateCamera(
+  flat: Pick<BoxDetection, "longCm" | "gridPx" | "frameLongPx">,
+  trueLengthCm: number,
+  trueHeightCm: number,
+): number {
+  const grow = flat.longCm - trueLengthCm;
+  if (!(trueLengthCm > 0) || !(trueHeightCm > 0) || grow <= 0.05) return 0;
+  const distance = (flat.longCm * trueHeightCm) / grow;
+  if (distance < trueHeightCm * 2 || distance > 200) return 0;
+  return (distance * flat.gridPx) / flat.frameLongPx;
+}
+
+/** Scales a size seen at mat level back to its true size, for a face `faceHeightCm` above the mat. */
 export function correctForHeight(cmAtMat: number, faceHeightCm: number, cameraHeightCm: number): number {
   if (!cameraHeightCm || cameraHeightCm <= faceHeightCm) return cmAtMat;
   return (cmAtMat * (cameraHeightCm - faceHeightCm)) / cameraHeightCm;
 }
 
 /**
- * Two top-down shots: lying flat (shows width × length), then standing on its
- * side (shows height × one of the other sides). Solves the true width, length
- * and height, correcting each shot for how far its top face sits above the mat.
+ * Two top-down shots: lying flat (width × length on top), then standing on its
+ * side (height × one of the other sides on top). Each shot is corrected with its
+ * own camera distance. Tries both ways the box could have been turned and keeps
+ * the one whose shared side agrees best; `mismatchCm` is how far apart that side
+ * came out in the two shots (a quality check).
  */
 export function solveBoxSize(
-  flat: { longCm: number; shortCm: number },
-  side: { longCm: number; shortCm: number },
-  cameraHeightCm: number,
-): { lengthCm: number; widthCm: number; heightCm: number } {
-  // The side shot's long edge is either the box's length or its width: take whichever matches better.
-  const sideMatchesLong = Math.abs(side.longCm - flat.longCm) <= Math.abs(side.longCm - flat.shortCm);
-  let length = flat.longCm, width = flat.shortCm, height = side.shortCm;
-  for (let i = 0; i < 6; i++) {
-    const raisedSide = sideMatchesLong ? width : length; // the side shot stands on the other edge
-    height = correctForHeight(side.shortCm, raisedSide, cameraHeightCm);
-    length = correctForHeight(flat.longCm, height, cameraHeightCm);
-    width = correctForHeight(flat.shortCm, height, cameraHeightCm);
-  }
-  return { lengthCm: length, widthCm: width, heightCm: height };
+  flat: Shot,
+  side: Shot,
+): { lengthCm: number; widthCm: number; heightCm: number; mismatchCm: number } {
+  const options = [true, false].map((sharesLength) => {
+    let length = flat.longCm, width = flat.shortCm, height = side.shortCm;
+    for (let i = 0; i < 8; i++) {
+      const raised = sharesLength ? width : length; // standing on its side, this edge points up
+      height = correctForHeight(side.shortCm, raised, side.distanceCm);
+      length = correctForHeight(flat.longCm, height, flat.distanceCm);
+      width = correctForHeight(flat.shortCm, height, flat.distanceCm);
+    }
+    const shared = correctForHeight(side.longCm, sharesLength ? width : length, side.distanceCm);
+    const mismatchCm = Math.abs(shared - (sharesLength ? length : width));
+    return { lengthCm: length, widthCm: width, heightCm: height, mismatchCm };
+  });
+  return options[0].mismatchCm <= options[1].mismatchCm ? options[0] : options[1];
 }
