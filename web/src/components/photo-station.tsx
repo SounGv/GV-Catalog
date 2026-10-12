@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { listProductPhotosAction, uploadProductPhotoQuietAction } from "@/app/admin/products/photos-actions";
 import { PACKAGE_ANGLES, UNIT_ANGLE, type PhotoAngle } from "@/lib/photo-angles";
 import { useCamera } from "@/components/use-camera";
+import { BoxMeasurePanel } from "@/components/box-measure-panel";
 
 const ANGLES: { id: PhotoAngle; label: string }[] = [...PACKAGE_ANGLES, UNIT_ANGLE].map((angle) => ({
   id: angle.id,
@@ -22,6 +23,7 @@ function nextMissing(saved: Saved, after?: PhotoAngle): PhotoAngle {
 /** Pick a model, take a photo, choose the angle and save: the photo goes straight into that model. */
 export function PhotoStation({ initialSku }: { initialSku: string }) {
   const camera = useCamera();
+  const [mode, setMode] = useState<"photo" | "measure">("photo");
   const [query, setQuery] = useState(initialSku);
   const [found, setFound] = useState<FoundProduct[]>([]);
   const [product, setProduct] = useState<FoundProduct | null>(null);
@@ -169,6 +171,51 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
       </section>
 
       {product ? (
+        <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-surface p-1">
+          {(
+            [
+              ["photo", "ถ่ายรูปแพ็กเกจ"],
+              ["measure", "วัดขนาดกล่อง (cm)"],
+            ] as const
+          ).map(([id, text]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={mode === id}
+              onClick={() => setMode(id)}
+              className={`min-h-11 rounded-[10px] text-base ${mode === id ? "bg-ink font-semibold text-white" : "text-ink"}`}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {product && mode === "measure" ? (
+        <>
+          {camera.devices.length > 1 ? (
+            <label className="flex items-center gap-2 text-sm text-muted">
+              กล้อง
+              <select
+                value={camera.deviceId}
+                onChange={(event) => camera.chooseDevice(event.target.value)}
+                className="min-h-11 min-w-0 flex-1 rounded-[10px] border border-line bg-surface px-2 text-base text-ink"
+              >
+                {camera.devices.map((device, index) => (
+                  <option key={device.deviceId} value={device.deviceId}>
+                    {device.label || `กล้อง ${index + 1}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {camera.error ? <p className="rounded-[10px] bg-red-50 p-3 text-base text-red-700">{camera.error}</p> : null}
+          <BoxMeasurePanel key={product.sku} camera={camera} sku={product.sku} />
+        </>
+      ) : null}
+
+      {product && mode === "photo" ? (
         <>
           <section className="flex flex-col gap-2">
             <h2 className="text-base font-semibold">รูปนี้เป็นมุมไหน</h2>

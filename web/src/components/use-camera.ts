@@ -182,5 +182,19 @@ export function useCamera() {
     return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
   }
 
-  return { videoRef, devices, deviceId, error, resolution, chooseDevice, snap, stop };
+  /** The current live picture, scaled down for analysis (null until the camera is running). */
+  function frame(maxSide = 400): ImageData | null {
+    const video = videoEl.current;
+    if (!video || !video.videoWidth) return null;
+    const scale = Math.min(1, maxSide / Math.max(video.videoWidth, video.videoHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return ctx.getImageData(0, 0, canvas.width, canvas.height);
+  }
+
+  return { videoRef, devices, deviceId, error, resolution, chooseDevice, snap, frame, stop };
 }
