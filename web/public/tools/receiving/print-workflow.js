@@ -20,6 +20,34 @@ function createPackingPrint(app) {
     <div class="selection-toolbar"><button id="printRowsPrev" type="button">ก่อนหน้า</button><span id="printRowsPage"></span><button id="printRowsNext" type="button">ถัดไป</button></div>
     <div id="printRangeError" role="alert"></div>`;
   els.printCard.querySelector('.print-controls').after(section);
+  const batchBar = document.createElement('div');
+  batchBar.className = 'print-batch';
+  batchBar.innerHTML = '<label class="print-control">แบ่งพิมพ์ชุดละ <input id="printBatchSize" type="number" min="1" max="500" step="1" value="30"> ใบ</label><span id="printBatchStatus" role="status"></span><button id="printBatchRepeat" type="button" hidden>พิมพ์ชุดล่าสุดซ้ำ</button><button id="printBatchRestart" type="button" hidden>เริ่มชุดแรกใหม่</button>';
+  els.printCard.querySelector('.print-controls').after(batchBar);
+  const batchUi = { size: batchBar.querySelector('#printBatchSize'), status: batchBar.querySelector('#printBatchStatus'), repeat: batchBar.querySelector('#printBatchRepeat'), restart: batchBar.querySelector('#printBatchRestart') };
+  let batchKey = '', batchDone = 0, batchLast = null;
+  const batchSize = () => Math.max(1, Math.min(500, Math.floor(Number(batchUi.size.value)) || 30));
+  const keyOf = p => `${p.job}|${p.pages.length}|${p.pages[0]?.number}|${p.pages.at(-1)?.number}`;
+  function syncBatch(p) {
+    const k = keyOf(p);
+    if (k !== batchKey) { batchKey = k; batchDone = 0; batchLast = null; }
+    const total = p.pages.length, size = batchSize();
+    if (total <= size && !batchDone) {
+      batchUi.status.textContent = total ? `${total} ใบ — พิมพ์ครั้งเดียว` : '';
+      els.directPrint.textContent = els.directPrint.dataset.label || (els.directPrint.dataset.label = els.directPrint.textContent);
+    } else if (batchDone >= total) {
+      batchUi.status.textContent = `พิมพ์ครบแล้ว ${total}/${total} ใบ`;
+      els.directPrint.textContent = 'พิมพ์ครบแล้ว';
+    } else {
+      const to = Math.min(batchDone + size, total);
+      batchUi.status.textContent = `พิมพ์แล้ว ${batchDone}/${total} ใบ · ชุดถัดไป ใบที่ ${batchDone + 1}-${to}`;
+      els.directPrint.dataset.label ||= els.directPrint.textContent;
+      els.directPrint.textContent = batchDone ? `พิมพ์ชุดถัดไป (${batchDone + 1}-${to})` : `พิมพ์ชุดแรก (1-${to})`;
+    }
+    els.directPrint.disabled = !total || batchDone >= total;
+    batchUi.repeat.hidden = !batchLast;
+    batchUi.restart.hidden = !batchDone;
+  }
   const endLabel = els.printCopies.parentElement;
   endLabel.firstChild.nodeValue = 'ถึงใบที่ ';
   els.printCopies.placeholder = 'ใบสุดท้าย';
@@ -140,6 +168,7 @@ function createPackingPrint(app) {
       ui.printFrom.max = els.printCopies.max = p.total || 1;
       renderRows(p);
       els.directPrint.disabled = !p.pages.length;
+      syncBatch(p);
       els.printPreview.innerHTML = p.pages.length ? `<div class="print-grid cartons">${labels(24, p)}</div>` : '<div class="print-empty">ไม่มีใบพิมพ์ในรายการและช่วงที่เลือก</div>';
       els.printStatus.textContent = p.pages.length ? `${p.pages.length} ใบ · เริ่มใบ ${p.pages[0].number} · สุดท้ายใบ ${p.pages.at(-1).number} · งาน ${p.job}` : 'ไม่มีใบที่เลือก';
       const small = document.querySelector('#printModeTabs small');
@@ -160,20 +189,33 @@ function createPackingPrint(app) {
     return `<!doctype html><html lang="th"><head><meta charset="utf-8"><title>Carton Labels</title><style>${app.printStyles(app.activePrintProfile())}${sourceCss}</style></head><body><main class="print-document" data-expected-pages="${p.pages.length}">${labels(null, p)}</main><script>window.addEventListener('load',async()=>{await document.fonts.ready;if(document.querySelectorAll('.carton-label').length!==${p.pages.length}){alert('จำนวนใบพิมพ์ไม่ครบ');return}window.print()})<\/script></body></html>`;
   }
 
+  function openPrint(p) {
+    const w = window.open('', '_blank');
+    if (!w) { app.toast('เบราว์เซอร์บล็อกหน้าพิมพ์ กรุณาอนุญาต Pop-up', true); return false; }
+    try { w.document.open(); w.document.write(printable(p)); w.document.close(); return true; }
+    catch (e) { w.close(); app.toast(e.message || 'สร้างหน้าพิมพ์ไม่สำเร็จ', true); return false; }
+  }
+
   function print() {
     let p;
     try { p = plan(); if (!p.pages.length) throw Error('ไม่มีใบพิมพ์ในรายการและช่วงที่เลือก'); }
     catch (e) { app.toast(e.message, true); return; }
     if (!app.requireLot()) return;
-    const w = window.open('', '_blank');
-    if (!w) return app.toast('เบราว์เซอร์บล็อกหน้าพิมพ์ กรุณาอนุญาต Pop-up', true);
-    try { w.document.open(); w.document.write(printable(p)); w.document.close(); }
-    catch (e) { w.close(); app.toast(e.message || 'สร้างหน้าพิมพ์ไม่สำเร็จ', true); }
+    syncBatch(p);
+    if (batchDone >= p.pages.length) return;
+    const from = batchDone, to = Math.min(from + batchSize(), p.pages.length);
+    const part = { ...p, pages: p.pages.slice(from, to) };
+    if (openPrint(part)) { batchLast = part; batchDone = to; syncBatch(p); }
   }
+
+  batchUi.size.addEventListener('input', render);
+  batchUi.restart.addEventListener('click', () => { batchDone = 0; batchLast = null; render(); });
+  batchUi.repeat.addEventListener('click', () => { if (batchLast && app.requireLot()) openPrint(batchLast); });
 
   function reset() {
     excluded.clear();
     tablePage = 0;
+    batchKey = ''; batchDone = 0; batchLast = null;
     ui.printSkuFilter.value = ui.printCartonFilter.value = ui.printRowFilter.value = '';
     ui.printKindFilter.value = 'all';
     ui.printPlFilter.innerHTML = '<option value="">ทุก PL</option>' + [...new Set(queue().map(r => r.sourceId))].sort().map(id => `<option value="${esc(id)}">${esc(id)}</option>`).join('');
