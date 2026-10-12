@@ -3,15 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { detectBox, type BoxDetection, type DetectFailure } from "@/lib/box-measure";
 
-const EDGE_TEXT = { left: "ซ้าย", right: "ขวา", top: "บน", bottom: "ล่าง" } as const;
-const AWAY_ARROW = { left: "→", right: "←", top: "↓", bottom: "↑" } as const;
+const ARROWS = ["→", "↘", "↓", "↙", "←", "↖", "↑", "↗"];
 
 /** What to tell staff when the box cannot be locked. */
 export function boxLockHint(failure: DetectFailure): string {
   if (failure.reason === "touches-edge") {
-    const sides = failure.edges.map((edge) => EDGE_TEXT[edge]).join(" ");
-    const arrows = failure.edges.map((edge) => AWAY_ARROW[edge]).join(" ");
-    return `${arrows}  กล่องชนขอบด้าน${sides} — เลื่อนกล่องเข้ากลางแผ่นรอง หรือยกกล้องให้สูงขึ้น`;
+    const angle = Math.atan2(failure.toward.y, failure.toward.x);
+    const arrow = ARROWS[(Math.round(angle / (Math.PI / 4)) + 8) % 8];
+    return `${arrow} กล่องเลยขอบแผ่นรอง — เลื่อนกล่องไปทาง ${arrow} ให้อยู่บนแผ่นรองทั้งใบ`;
   }
   return BOX_LOCK_HINT[failure.reason];
 }
@@ -24,7 +23,7 @@ const BOX_LOCK_HINT: Record<string, string> = {
 
 /**
  * Looks for the box on the blue mat a few times a second while `enabled`.
- * "locked" once three readings in a row agree within 3 mm.
+ * "locked" once three readings in a row agree within 5 mm; the reading shown is their average.
  */
 export function useBoxLock(frame: (maxSide: number) => ImageData | null, enabled: boolean) {
   const [detection, setDetection] = useState<BoxDetection | null>(null);
@@ -52,12 +51,18 @@ export function useBoxLock(frame: (maxSide: number) => ImageData | null, enabled
         return;
       }
       setFailure("");
-      setDetection(result);
       const recent = [...history.current, result].slice(-3);
       history.current = recent;
+      const mean = (pick: (d: BoxDetection) => number) => recent.reduce((sum, d) => sum + pick(d), 0) / recent.length;
+      setDetection({
+        ...result,
+        longCm: mean((d) => d.longCm),
+        shortCm: mean((d) => d.shortCm),
+        gridPx: mean((d) => d.gridPx),
+      });
       setLocked(
         recent.length === 3 &&
-          recent.every((d) => Math.abs(d.longCm - result.longCm) < 0.3 && Math.abs(d.shortCm - result.shortCm) < 0.3),
+          recent.every((d) => Math.abs(d.longCm - result.longCm) < 0.5 && Math.abs(d.shortCm - result.shortCm) < 0.5),
       );
     }, 400);
     return () => clearInterval(timer);

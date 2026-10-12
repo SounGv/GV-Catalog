@@ -338,6 +338,11 @@ export function BoxMeasurePanel({
                 />
               </span>
             ) : null}
+            {lock.failure ? (
+              <p className="absolute inset-x-2 bottom-2 rounded-[10px] bg-amber-300/95 p-3 text-center text-lg font-semibold text-ink">
+                {lock.failure}
+              </p>
+            ) : null}
             {lock.detection ? (
               <span className="absolute right-2 bottom-2 rounded-lg bg-black/70 px-3 py-1.5 font-mono text-lg text-white tabular-nums">
                 {cm(lock.detection.longCm)} × {cm(lock.detection.shortCm)} cm
@@ -345,7 +350,6 @@ export function BoxMeasurePanel({
             ) : null}
           </div>
 
-          {lock.failure ? <p className="rounded-[10px] bg-amber-50 p-3 text-base text-amber-800">{lock.failure}</p> : null}
           {notFlipped ? (
             <p className="rounded-[10px] bg-red-50 p-3 text-base text-red-700">ยังไม่ได้พลิกกล่อง — ขนาดเหมือนรูปแรก ให้พลิกกล่องตั้งข้างก่อน</p>
           ) : null}

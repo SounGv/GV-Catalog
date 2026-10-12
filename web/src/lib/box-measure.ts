@@ -32,8 +32,11 @@ export type BoxDetection = {
 export type Edge = "left" | "right" | "top" | "bottom";
 export type DetectFailure =
   | { reason: "no-mat" | "no-box" | "no-grid" }
-  /** The box runs into the edge of the mat or the photo on these sides. */
-  | { reason: "touches-edge"; edges: Edge[] };
+  /**
+   * Something in the middle runs off the mat (usually the box hanging over the mat's edge).
+   * `toward` points from the middle of the photo to the middle of the mat: move the box that way.
+   */
+  | { reason: "touches-edge"; edges: Edge[]; toward: { x: number; y: number } };
 
 /** Mat grid: printed lines every 10 mm. */
 const GRID_MM = 10;
@@ -208,12 +211,16 @@ export function detectBox(image: ImageData): BoxDetection | DetectFailure {
   const blue = new Uint8Array(w * h);
   const gray = new Float32Array(w * h);
   let blueCount = 0;
+  let blueX = 0;
+  let blueY = 0;
   for (let i = 0, p = 0; i < w * h; i++, p += 4) {
     const r = data[p], g = data[p + 1], b = data[p + 2];
     gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
     if (isMatBlue(r, g, b)) {
       blue[i] = 1;
       blueCount++;
+      blueX += i % w;
+      blueY += Math.floor(i / w);
     }
   }
   if (blueCount < w * h * 0.15) return { reason: "no-mat" };
@@ -271,7 +278,13 @@ export function detectBox(image: ImageData): BoxDetection | DetectFailure {
       best = { pixels, area: pixels.length, centre };
     }
   }
-  if (!best) return blocked ? { reason: "touches-edge", edges: blocked.edges } : { reason: "no-box" };
+  if (!best) {
+    if (!blocked) return { reason: "no-box" };
+    const dx = blueX / blueCount - w / 2;
+    const dy = blueY / blueCount - h / 2;
+    const length = Math.hypot(dx, dy) || 1;
+    return { reason: "touches-edge", edges: blocked.edges, toward: { x: dx / length, y: dy / length } };
+  }
 
   // boundary pixels only, for the hull
   const edge: Point[] = [];
