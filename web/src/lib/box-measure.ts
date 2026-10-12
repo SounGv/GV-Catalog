@@ -90,7 +90,6 @@ function convexHull(points: Point[]): Point[] {
   return lower.slice(0, -1).concat(upper.slice(0, -1));
 }
 
-const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /** Four corners of a convex hull: orientation from the hull edge giving the smallest bounding box, corners as the extreme hull points on its diagonals. */
 function quadFromHull(hull: Point[]): { corners: [Point, Point, Point, Point]; sides: [number, number] } {

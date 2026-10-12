@@ -12,7 +12,7 @@ type CameraCaptureProps = {
 
 /** Full-screen camera for filling one photo slot: take, check, use or retake. */
 export function CameraCapture({ label, onCapture, onClose }: CameraCaptureProps) {
-  const camera = useCamera();
+  const { attachVideo, ...camera } = useCamera();
   const [still, setStill] = useState<{ blob: Blob; url: string } | null>(null);
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export function CameraCapture({ label, onCapture, onClose }: CameraCaptureProps)
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {still ? <img src={still.url} alt="รูปที่ถ่าย" className="max-h-full max-w-full object-contain" /> : null}
           <video
-            ref={camera.videoRef}
+            ref={attachVideo}
             playsInline
             muted
             className={`max-h-full max-w-full object-contain ${still ? "hidden" : ""}`}

@@ -22,7 +22,7 @@ function nextMissing(saved: Saved, after?: PhotoAngle): PhotoAngle {
 
 /** Pick a model, take a photo, choose the angle and save: the photo goes straight into that model. */
 export function PhotoStation({ initialSku }: { initialSku: string }) {
-  const camera = useCamera();
+  const { attachVideo, ...camera } = useCamera();
   const [mode, setMode] = useState<"photo" | "measure">("photo");
   const [query, setQuery] = useState(initialSku);
   const [found, setFound] = useState<FoundProduct[]>([]);
@@ -45,7 +45,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
     setLots(state.lots);
     setAngle(nextMissing(state.photos));
     setLot(Object.values(state.lots)[0] ?? "");
-  }, []);
+  }, [setProduct, setFound, setQuery, setMessage, setPhotos, setLots, setAngle, setLot]);
 
   // ?sku= opens that model straight away.
   useEffect(() => {
@@ -60,10 +60,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
 
   useEffect(() => {
     const text = query.trim();
-    if (product || text.length < 2) {
-      setFound([]);
-      return;
-    }
+    if (product || text.length < 2) return; // the list is hidden in this case (see below)
     const timer = setTimeout(async () => {
       const response = await fetch(`/api/catalog/search?q=${encodeURIComponent(text)}`);
       const data = (await response.json()) as { products: FoundProduct[] };
@@ -152,7 +149,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
                 className="min-h-[50px] rounded-[10px] border-2 border-line bg-surface px-3 text-base text-ink outline-none focus:border-accent"
               />
             </label>
-            {found.length > 0 ? (
+            {found.length > 0 && query.trim().length >= 2 ? (
               <ul className="flex flex-col overflow-hidden rounded-xl border border-line bg-surface">
                 {found.map((item) => (
                   <li key={item.sku} className="border-b border-line last:border-b-0">
@@ -211,7 +208,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
             </label>
           ) : null}
           {camera.error ? <p className="rounded-[10px] bg-red-50 p-3 text-base text-red-700">{camera.error}</p> : null}
-          <BoxMeasurePanel key={product.sku} camera={camera} sku={product.sku} />
+          <BoxMeasurePanel key={product.sku} camera={camera} attachVideo={attachVideo} sku={product.sku} />
         </>
       ) : null}
 
@@ -272,7 +269,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
             <div className="relative mx-auto flex aspect-square w-full max-w-[640px] items-center justify-center overflow-hidden rounded-xl bg-black">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {still ? <img src={still.url} alt="รูปที่ถ่าย" className="h-full w-full object-cover" /> : null}
-              <video ref={camera.videoRef} playsInline muted className={`h-full w-full object-cover ${still ? "hidden" : ""}`} />
+              <video ref={attachVideo} playsInline muted className={`h-full w-full object-cover ${still ? "hidden" : ""}`} />
               {!still ? (
                 <svg viewBox="0 0 100 100" aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full">
                   <g stroke="white" strokeOpacity="0.35" strokeWidth="0.3" fill="none">

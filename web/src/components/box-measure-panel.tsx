@@ -5,7 +5,7 @@ import { getProductBoxSizeAction, saveProductBoxSizeAction } from "@/app/admin/p
 import { correctForHeight, detectBox, solveBoxSize, type BoxDetection } from "@/lib/box-measure";
 import type { useCamera } from "@/components/use-camera";
 
-type Camera = ReturnType<typeof useCamera>;
+type Camera = Omit<ReturnType<typeof useCamera>, "attachVideo">;
 type Shot = { longCm: number; shortCm: number };
 type Step = "flat" | "side" | "done";
 
@@ -31,7 +31,15 @@ const cm = (v: number | null | undefined) => (v === null || v === undefined ? "â
  * the mat's 10 mm grid. Two top-down shots: lying flat (width Ã— length), then
  * standing on its side (height). Saves the result into the product's size.
  */
-export function BoxMeasurePanel({ camera, sku }: { camera: Camera; sku: string }) {
+export function BoxMeasurePanel({
+  camera,
+  attachVideo,
+  sku,
+}: {
+  camera: Camera;
+  attachVideo: (element: HTMLVideoElement | null) => void;
+  sku: string;
+}) {
   const [detection, setDetection] = useState<BoxDetection | null>(null);
   const [failure, setFailure] = useState("");
   const [frameSize, setFrameSize] = useState<{ w: number; h: number } | null>(null);
@@ -46,7 +54,9 @@ export function BoxMeasurePanel({ camera, sku }: { camera: Camera; sku: string }
   const [typedHeight, setTypedHeight] = useState("");
   const history = useRef<BoxDetection[]>([]);
   const grabFrame = useRef(camera.frame);
-  grabFrame.current = camera.frame;
+  useEffect(() => {
+    grabFrame.current = camera.frame;
+  });
 
   useEffect(() => {
     void getProductBoxSizeAction(sku).then(setSaved);
@@ -167,7 +177,7 @@ export function BoxMeasurePanel({ camera, sku }: { camera: Camera; sku: string }
       {step !== "done" ? (
         <>
           <div className="relative mx-auto w-full max-w-[720px] overflow-hidden rounded-xl bg-black" style={{ aspectRatio: String(aspect) }}>
-            <video ref={camera.videoRef} playsInline muted className="h-full w-full object-contain" />
+            <video ref={attachVideo} playsInline muted className="h-full w-full object-contain" />
             {corners && frameSize ? (
               <svg viewBox={`0 0 ${frameSize.w} ${frameSize.h}`} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full">
                 <polygon

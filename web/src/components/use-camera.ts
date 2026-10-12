@@ -59,7 +59,7 @@ export function useCamera() {
   const [resolution, setResolution] = useState<{ width: number; height: number } | null>(null);
 
   /** Callback ref: the <video> may appear after the stream is already open (e.g. once a model is picked). */
-  const videoRef = useCallback((element: HTMLVideoElement | null) => {
+  const attachVideo = useCallback((element: HTMLVideoElement | null) => {
     videoEl.current = element;
     if (element && streamRef.current) {
       element.srcObject = streamRef.current;
@@ -117,8 +117,12 @@ export function useCamera() {
   );
 
   useEffect(() => {
-    void start(readSavedDevice());
-    return stop;
+    // started on the next tick so the first state updates do not happen inside the effect itself
+    const timer = setTimeout(() => void start(readSavedDevice()), 0);
+    return () => {
+      clearTimeout(timer);
+      stop();
+    };
   }, [start, stop]);
 
   function chooseDevice(next: string) {
@@ -196,5 +200,5 @@ export function useCamera() {
     return ctx.getImageData(0, 0, canvas.width, canvas.height);
   }
 
-  return { videoRef, devices, deviceId, error, resolution, chooseDevice, snap, frame, stop };
+  return { attachVideo, devices, deviceId, error, resolution, chooseDevice, snap, frame, stop };
 }
