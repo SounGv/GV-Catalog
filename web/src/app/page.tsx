@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { catalogHref, parseCatalogQuery, skuHref } from "@/lib/catalog-query";
 import { filterProducts, listCategories, PAGE_SIZE } from "@/lib/products";
 import { getBarcodesForSkus } from "@/lib/barcodes";
+import { getPackagePhotoCounts } from "@/lib/photos";
 import type { CatalogQuery } from "@/lib/types";
 import { ProductCard } from "@/components/product-card";
 import { CategoryFilterDropdown } from "@/components/category-filter-dropdown";
@@ -38,7 +39,8 @@ export default async function Home({
     filterProducts(query),
     listCategories(query.brand),
   ]);
-  const barcodesBySku = await getBarcodesForSkus(shown.map((product) => product.sku));
+  const shownSkus = shown.map((product) => product.sku);
+  const [barcodesBySku, packagePhotoCounts] = await Promise.all([getBarcodesForSkus(shownSkus), getPackagePhotoCounts(shownSkus)]);
 
   return (
     <main className="mx-auto flex max-w-[1680px] flex-col gap-3 px-4 py-4 md:px-8 lg:px-12 xl:px-16">
@@ -123,6 +125,7 @@ export default async function Home({
                 sameFamily={product.sameFamilyCount > 1}
                 familySuffix={product.sameFamilyCount > 1 ? product.familySuffix : null}
                 retailerBarcodes={barcodesBySku[product.sku]}
+                packagePhotoCount={packagePhotoCounts[product.sku] ?? 0}
               />
             </li>
           ))}

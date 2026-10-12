@@ -18,9 +18,11 @@ type ProductCardProps = {
    * — shown alongside the main barcode so staff can tell them apart without
    * opening the product. */
   retailerBarcodes?: RetailerBarcode[];
+  /** Package angles (of 6) that have an uploaded photo — drives the status line. */
+  packagePhotoCount?: number;
 };
 
-export function ProductCard({ product, href, sameFamily, familySuffix, retailerBarcodes = [] }: ProductCardProps) {
+export function ProductCard({ product, href, sameFamily, familySuffix, retailerBarcodes = [], packagePhotoCount = 0 }: ProductCardProps) {
   const hasImage = Boolean(product.imageUrl);
   const skuBase = familySuffix ? product.sku.slice(0, product.sku.length - familySuffix.length) : product.sku;
 
@@ -80,8 +82,17 @@ export function ProductCard({ product, href, sameFamily, familySuffix, retailerB
         ) : null}
 
         <span className="flex items-center gap-1.5 text-sm text-muted">
-          <span className={`h-2 w-2 shrink-0 rounded-full ${hasImage ? "bg-amber-400" : "bg-slate-300"}`} aria-hidden="true" />
-          {hasImage ? "รอตรวจยืนยันต้นแบบ" : "ยังไม่มีรูปสินค้า"}
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${packagePhotoCount > 0 ? "bg-green-500" : hasImage ? "bg-amber-400" : "bg-slate-300"}`}
+            aria-hidden="true"
+          />
+          {packagePhotoCount >= 6
+            ? "รูปแพ็กเกจครบ 6 มุมแล้ว"
+            : packagePhotoCount > 0
+              ? `แนบรูปแพ็กเกจแล้ว ${packagePhotoCount}/6 มุม`
+              : hasImage
+                ? "รอตรวจยืนยันต้นแบบ"
+                : "ยังไม่มีรูปสินค้า"}
         </span>
 
         <span className="text-sm text-muted">

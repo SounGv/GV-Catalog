@@ -32,6 +32,16 @@ export async function getPhotosForSku(sku: string): Promise<Partial<Record<Photo
   return photos;
 }
 
+/** How many of the 6 package angles have a photo, per SKU (SKUs with none are left out). */
+export async function getPackagePhotoCounts(skus: string[]): Promise<Record<string, number>> {
+  if (skus.length === 0) return {};
+  const { rows } = await pool.query<{ sku: string; n: string }>(
+    "SELECT sku, count(*) AS n FROM product_photos WHERE sku = ANY($1) AND angle = ANY($2) GROUP BY sku",
+    [skus, PACKAGE_ANGLES.map((a) => a.id)],
+  );
+  return Object.fromEntries(rows.map((row) => [row.sku, Number(row.n)]));
+}
+
 /** Lot number typed for each photo, keyed by angle (only photos that have one). */
 export async function getPhotoLotsForSku(sku: string): Promise<Partial<Record<PhotoAngle, string>>> {
   const { rows } = await pool.query<{ angle: string; lot: string | null }>(
