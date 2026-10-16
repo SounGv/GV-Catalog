@@ -142,6 +142,43 @@ function createPackingPrint(app) {
     return (hash >>> 0).toString(16).toUpperCase().padStart(8, '0');
   }
 
+  // "Printed" marks, one per label row (2 pages), keyed by what the row is rather than its place in
+  // the queue, so changing the order keeps the ticks. Kept in this browser per set of PL rows.
+  let printedStore = '';
+  let printed = new Set();
+  function rowKeys(rows) {
+    const seen = new Map();
+    return rows.map(r => {
+      const base = [r.sourceId, r.ctn, r.kind, key(r.record.item), r.record.qty].join('|');
+      const n = (seen.get(base) || 0) + 1;
+      seen.set(base, n);
+      return base + '#' + n;
+    });
+  }
+  function loadPrinted(rows) {
+    const keys = rowKeys(rows);
+    let hash = 2166136261;
+    const input = [...keys].sort().join('\n');
+    for (let i = 0; i < input.length; i++) hash = Math.imul(hash ^ input.charCodeAt(i), 16777619);
+    const storeKey = 'gv-pl-printed:' + (hash >>> 0).toString(16);
+    if (storeKey !== printedStore) {
+      printedStore = storeKey;
+      try { printed = new Set(JSON.parse(localStorage.getItem(storeKey) || '[]')); } catch { printed = new Set(); }
+    }
+    return keys;
+  }
+  function savePrinted() {
+    try { localStorage.setItem(printedStore, JSON.stringify([...printed])); } catch { /* ticks then last until reload only */ }
+  }
+  /** Marks the rows whose two pages were both in a print job. */
+  function markPrintedPages(pages) {
+    const rows = queue(), keys = loadPrinted(rows), count = new Map();
+    for (const page of pages) count.set(page.row.index, (count.get(page.row.index) || 0) + 1);
+    for (const [index, n] of count) if (n >= 2) printed.add(keys[index - 1]);
+    savePrinted();
+  }
+  const pagesOf = rows => rows.flatMap(row => [0, 1].map(copy => ({ row, number: (row.index - 1) * 2 + copy + 1, side: copy === 0 ? 'ซ้าย' : 'ขวา' })));
+
   function plan() {
     const rows = queue(), total = rows.length * 2, available = candidates(rows);
     if (!total) return { rows, available, pages: [], total, job: '' };
@@ -184,6 +221,7 @@ function createPackingPrint(app) {
 
   function render() {
     app.syncLot();
+    renderSimple();
     try {
       const p = plan();
       ui.printRangeError.textContent = '';
@@ -227,7 +265,7 @@ function createPackingPrint(app) {
     if (batchDone >= p.pages.length) return;
     const from = batchDone, to = Math.min(from + batchSize(), p.pages.length);
     const part = { ...p, pages: p.pages.slice(from, to) };
-    if (openPrint(part)) { batchLast = part; batchDone = to; syncBatch(p); }
+    if (openPrint(part)) { batchLast = part; batchDone = to; markPrintedPages(part.pages); render(); }
   }
 
   batchUi.all.addEventListener('click', () => {
@@ -236,7 +274,7 @@ function createPackingPrint(app) {
     catch (e) { app.toast(e.message, true); return; }
     if (!app.requireLot()) return;
     if (p.pages.length > 100 && !confirm(`พิมพ์ ${p.pages.length} ใบเป็นงานเดียว เครื่องพิมพ์อาจหยุดกลางงานและหน้าพิมพ์โหลดช้า ยืนยันพิมพ์ทั้งหมดหรือไม่?`)) return;
-    if (openPrint(p)) { batchLast = p; batchDone = p.pages.length; syncBatch(p); }
+    if (openPrint(p)) { batchLast = p; batchDone = p.pages.length; markPrintedPages(p.pages); render(); }
   });
   batchUi.size.addEventListener('input', render);
   batchUi.restart.addEventListener('click', () => { batchDone = 0; batchLast = null; render(); });
@@ -279,5 +317,138 @@ function createPackingPrint(app) {
   document.getElementById('printClear').addEventListener('click', () => { reset(); render(); });
   ui.printRowsPrev.addEventListener('click', () => { tablePage--; render(); });
   ui.printRowsNext.addEventListener('click', () => { tablePage++; render(); });
+  // ---- Simple print panel: Lot, one "print next" button, and one button per model. Everything
+  // else (paper, printer, order, batch size, filters, preview) sits under "ตั้งค่า".
+  const simple = document.createElement('div');
+  simple.className = 'sp';
+  simple.innerHTML = `
+    <h3 class="sp-title">พิมพ์ใบแปะลัง</h3>
+    <div class="sp-lot" id="spLot"></div>
+    <div class="sp-box">
+      <div class="sp-prog"><span>② พิมพ์แล้ว</span><b id="spCount">–</b></div>
+      <div class="sp-bar"><i id="spBar"></i></div>
+      <button class="sp-go" id="spGo" type="button">พิมพ์ต่อ</button>
+      <p class="sp-hint">กดปุ่มนี้ซ้ำไปเรื่อยๆ ระบบพิมพ์ต่อจากที่ค้าง และติ๊กว่าพิมพ์แล้วให้เอง</p>
+    </div>
+    <div class="sp-box">
+      <h4>รายการรุ่น</h4>
+      <input class="sp-search" id="spSearch" placeholder="ค้นหา SKU หรือยิงบาร์โค้ด" aria-label="ค้นหา SKU">
+      <div class="sp-list" id="spList"></div>
+    </div>`;
+  const settings = document.createElement('details');
+  settings.className = 'sp-settings';
+  settings.innerHTML = '<summary>⚙ ตั้งค่า (เครื่องพิมพ์ กระดาษ การเรียง จำนวนต่อครั้ง ตัวกรอง และตัวอย่างใบ)</summary>';
+  const card = els.printCard;
+  const lotLabel = document.getElementById('lotInput')?.closest('label');
+  [...card.children].forEach(child => settings.append(child));
+  card.append(simple, settings);
+  if (lotLabel) {
+    if (lotLabel.firstChild?.nodeType === Node.TEXT_NODE) lotLabel.firstChild.nodeValue = '① เลข Lot / ตู้ ';
+    simple.querySelector('#spLot').append(lotLabel);
+  }
+  const sp = { count: simple.querySelector('#spCount'), bar: simple.querySelector('#spBar'), go: simple.querySelector('#spGo'), search: simple.querySelector('#spSearch'), list: simple.querySelector('#spList') };
+  let openModel = '';
+  const spStyle = document.createElement('style');
+  spStyle.textContent = `.sp{padding:16px 17px;display:grid;gap:12px}.sp-title{margin:0;font-size:17px}
+    .sp-lot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-weight:700}.sp-lot label{display:flex!important;align-items:center;gap:8px;flex:1;min-width:220px;margin:0!important;width:auto!important;font-weight:700}.sp-lot input{flex:1;min-height:46px;font-size:16px!important;border:2px solid #185c45!important;border-radius:10px!important;padding:0 12px!important}
+    .sp-box{border:1px solid #dbe4df;border-radius:14px;padding:14px;background:#fff}.sp-box h4{margin:0 0 8px;font-size:15px}
+    .sp-prog{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px;font-weight:700}.sp-prog b{font-size:22px;font-variant-numeric:tabular-nums}
+    .sp-bar{height:14px;border-radius:7px;background:#e2ebe6;overflow:hidden}.sp-bar i{display:block;height:100%;width:0;background:#14773e;transition:width .3s}
+    .sp-go{display:block;width:100%;min-height:60px;margin-top:12px;border:0;border-radius:12px;background:#185c45;color:#fff;font:inherit;font-size:18px;font-weight:800;cursor:pointer}.sp-go small{display:block;font-size:13px;font-weight:500;opacity:.9}.sp-go:disabled{background:#8fb9a5;cursor:default}
+    .sp-hint{margin:8px 2px 0;color:#5b6670;font-size:13px}
+    .sp-search{width:100%;min-height:44px;border:1px solid #cbd9df;border-radius:10px;padding:0 12px;font:inherit;margin-bottom:8px}
+    .sp-list{display:grid;gap:6px;max-height:520px;overflow:auto}
+    .sp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #dbe4df;border-radius:10px;padding:8px 10px;background:#fff}.sp-row.done{background:#eaf7ef;border-color:#bfe3cc}.sp-row.part{background:#fff6dc;border-color:#f0d58e}
+    .sp-sku{font-weight:800;font-size:16px}.sp-meta{color:#5b6670;font-size:12px}
+    .sp-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+    .sp-chip{min-height:42px;border-radius:999px;border:1px solid #cbd9df;background:#fff;padding:0 14px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+    .sp-chip.print{background:#185c45;color:#fff;border-color:#185c45}.sp-chip.ok{background:#c9ecd6;color:#14773e;border-color:#9fd3b3}.sp-chip.mid{background:#ffe7a6;color:#946200;border-color:#f0cf70}
+    .sp-settings{border-top:1px solid #dfe9e3}.sp-settings>summary{cursor:pointer;padding:14px 17px;font-weight:700;color:#185c45}`;
+  document.head.append(spStyle);
+
+  /** Per model: its label rows (single-model and mixed cartons), in print order, with printed state. */
+  function models() {
+    const rows = queue(), keys = loadPrinted(rows), byItem = new Map();
+    rows.forEach((row, i) => {
+      const id = key(row.record.item);
+      if (!byItem.has(id)) byItem.set(id, { id, item: row.record.item, loc: row.record.loc, rows: [], done: 0 });
+      const m = byItem.get(id);
+      m.rows.push(row);
+      if (printed.has(keys[i])) { m.done++; row.printed = true; }
+    });
+    return { rows, keys, list: [...byItem.values()] };
+  }
+
+  function printRows(rows, again = false) {
+    if (!rows.length) return;
+    if (!app.requireLot()) return;
+    const job = { pages: pagesOf(rows) };
+    if (openPrint(job)) { markPrintedPages(job.pages); render(); }
+    else if (again) render();
+  }
+
+  function renderSimple() {
+    let data;
+    try { data = models(); } catch { return; }
+    const { rows, list } = data;
+    const doneModels = list.filter(m => m.done === m.rows.length).length;
+    const donePages = rows.filter(r => r.printed).length * 2;
+    sp.count.textContent = `${doneModels} / ${list.length} รุ่น`;
+    sp.bar.style.width = list.length ? `${(doneModels / list.length) * 100}%` : '0';
+    const step = Math.max(2, batchSize() - (batchSize() % 2));
+    const next = rows.filter(r => !r.printed).slice(0, step / 2);
+    if (next.length) {
+      const first = next[0].record.item, last = next.at(-1).record.item;
+      sp.go.disabled = false;
+      sp.go.innerHTML = `พิมพ์ต่อ ${next.length * 2} ใบ<small>${first === last ? `รุ่น ${esc(first)}` : `รุ่น ${esc(first)} → ${esc(last)}`} · พิมพ์แล้ว ${donePages.toLocaleString()} / ${(rows.length * 2).toLocaleString()} ใบ</small>`;
+    } else {
+      sp.go.disabled = true;
+      sp.go.innerHTML = rows.length ? 'พิมพ์ครบทุกรุ่นแล้ว ✓' : 'อัปโหลดไฟล์ก่อน';
+    }
+    const q = key(sp.search.value);
+    const rank = m => (m.done && m.done < m.rows.length ? 0 : m.done === 0 ? 1 : 2);
+    const shown = list.filter(m => !q || m.id.includes(q)).sort((a, b) => rank(a) - rank(b));
+    sp.list.innerHTML = shown.map(m => {
+      const total = m.rows.length, left = total - m.done;
+      const state = m.done === total ? 'done' : m.done ? 'part' : '';
+      let actions;
+      if (state === 'done') {
+        actions = openModel === m.id
+          ? `<button class="sp-chip" data-sp="again" data-model="${esc(m.id)}" type="button">พิมพ์ซ้ำ</button><button class="sp-chip" data-sp="undo" data-model="${esc(m.id)}" type="button">ยกเลิกติ๊ก</button>`
+          : `<button class="sp-chip ok" data-sp="open" data-model="${esc(m.id)}" type="button">✓ พิมพ์แล้ว</button>`;
+      } else if (state === 'part') {
+        actions = `<button class="sp-chip mid" data-sp="print" data-model="${esc(m.id)}" type="button">พิมพ์ที่เหลือ ${left * 2} ใบ</button>`;
+      } else {
+        actions = `<button class="sp-chip print" data-sp="print" data-model="${esc(m.id)}" type="button">พิมพ์ ${total * 2} ใบ</button>`;
+      }
+      const mixed = m.rows.filter(r => r.kind === 'mixed').length;
+      return `<div class="sp-row ${state}"><div><div class="sp-sku">${esc(m.item)}</div><div class="sp-meta">${esc(m.loc || '—')} · ${total * 2} ใบ${mixed ? ` · อยู่ในลังรวม ${mixed} ลัง` : ''}${state === 'part' ? ` · พิมพ์ไป ${m.done * 2}/${total * 2}` : ''}</div></div><div class="sp-actions">${actions}</div></div>`;
+    }).join('') || '<p class="sp-hint">ไม่พบรุ่นที่ค้นหา</p>';
+  }
+
+  sp.go.addEventListener('click', () => {
+    const { rows } = models();
+    const step = Math.max(2, batchSize() - (batchSize() % 2));
+    printRows(rows.filter(r => !r.printed).slice(0, step / 2));
+  });
+  sp.search.addEventListener('input', renderSimple);
+  sp.list.addEventListener('click', event => {
+    const button = event.target.closest('[data-sp]');
+    if (!button) return;
+    const { list, rows, keys } = models();
+    const model = list.find(m => m.id === button.dataset.model);
+    if (!model) return;
+    const action = button.dataset.sp;
+    if (action === 'open') { openModel = model.id; renderSimple(); return; }
+    openModel = '';
+    if (action === 'print') printRows(model.rows.filter(r => !r.printed));
+    else if (action === 'again') printRows(model.rows, true);
+    else if (action === 'undo') {
+      for (const row of model.rows) printed.delete(keys[rows.indexOf(row)]);
+      savePrinted();
+      render();
+    }
+  });
+
   return { queue, labels, plan, render, printable, print, reset };
 }
