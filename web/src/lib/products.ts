@@ -129,7 +129,10 @@ export async function filterProducts(
   if (query.q) {
     params.push(`%${query.q}%`);
     const p = params.length;
-    conditions.push(`(sku ILIKE $${p} OR name ILIKE $${p} OR model ILIKE $${p} OR gtin ILIKE $${p})`);
+    // Retailer codes too (Jaymart part code, AIS material code, ...), so scanning a store's barcode finds the product.
+    conditions.push(
+      `(sku ILIKE $${p} OR name ILIKE $${p} OR model ILIKE $${p} OR gtin ILIKE $${p} OR EXISTS (SELECT 1 FROM product_barcodes rb WHERE rb.sku = products.sku AND rb.barcode ILIKE $${p}))`,
+    );
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";

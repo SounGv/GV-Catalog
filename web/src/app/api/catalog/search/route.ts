@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   const { rows } = await pool.query<{ sku: string; name: string; brand: string; gtin: string | null }>(
     `SELECT sku, name, brand, gtin FROM products
      WHERE sku ILIKE $1 OR name ILIKE $1 OR model ILIKE $1 OR gtin ILIKE $1
+        OR EXISTS (SELECT 1 FROM product_barcodes rb WHERE rb.sku = products.sku AND rb.barcode ILIKE $1)
      ORDER BY (sku = $2) DESC, sku LIMIT 8`,
     [`%${q}%`, q],
   );
