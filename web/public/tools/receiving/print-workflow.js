@@ -474,5 +474,25 @@ function createPackingPrint(app) {
     printRows(models().rows.filter(r => ids.has(key(r.record.item))));
   }
 
-  return { queue, labels, plan, render, printable, print, reset, modelStatusMap, printModels };
+  /** Same id the print queue gives a mixed carton. */
+  const mixedCartonId = g => 'mixed:' + (g.id || JSON.stringify([g.sourceId || g.file || 'PL', g.ctn]));
+  /** Printed state of every mixed carton: carton id -> { done, total } label rows. */
+  function cartonStatusMap() {
+    const map = new Map();
+    for (const row of models().rows) {
+      if (row.kind !== 'mixed') continue;
+      const s = map.get(row.groupId) || { done: 0, total: 0 };
+      s.total++;
+      if (row.printed) s.done++;
+      map.set(row.groupId, s);
+    }
+    return map;
+  }
+  /** Prints the picked models (all their labels) and the picked mixed cartons (every label in them), in print order. */
+  function printSelection(items, cartonIds) {
+    const ids = new Set(items.map(key)), cartons = new Set(cartonIds);
+    printRows(models().rows.filter(r => ids.has(key(r.record.item)) || cartons.has(r.groupId)));
+  }
+
+  return { queue, labels, plan, render, printable, print, reset, modelStatusMap, printModels, mixedCartonId, cartonStatusMap, printSelection };
 }
