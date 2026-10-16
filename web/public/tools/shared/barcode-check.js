@@ -26,5 +26,14 @@
  const tagHtml=s=>s==='change'?'<span class="bc-tag-change">⚠ ต้องเปลี่ยนบาร์โค้ด</span>':s==='unknown'?'<span class="bc-tag-unknown">เช็กรุ่นใน Catalog ไม่ได้</span>':'';
  // The Catalog SKU a shop's own item code is registered to (Catalog > product > retailer barcodes), '' when none.
  const skuOf=(shop,code)=>byRetailer.get(norm(shop)+'|'+String(code??'').trim())||'';
- window.GVBarcodeCheck={load,status,skuOf,rowClass,tagHtml,isLoaded:()=>!!map};
+ // For shops whose PO carries the shop's own item code (AIS material code), not a product barcode:
+ // is that code saved in the Catalog for this model?  'ok' | 'other' (saved for another model) | 'new' | 'unknown' (not loaded)
+ const base=v=>(norm(v).match(/^\d{4,6}/)||[norm(v)])[0];
+ function retailerStatus(shop,model,code){
+  if(!map)return{state:'unknown',sku:''};
+  const sku=skuOf(shop,code);
+  if(!sku)return{state:'new',sku:''};
+  return{state:base(sku)===base(model)?'ok':'other',sku};
+ }
+ window.GVBarcodeCheck={load,status,skuOf,retailerStatus,rowClass,tagHtml,isLoaded:()=>!!map};
 })();
