@@ -9,6 +9,7 @@ function createPackingPrint(app) {
   section.innerHTML = `
     <h3>เลือกรายการพิมพ์</h3>
     <div class="selection-fields">
+      <label>เรียงลำดับใบ<select id="printSort"><option value="sku-all">ตามรุ่น · ทุกใบของรุ่นเดียวกันออกติดกัน (รวมลังรวม)</option><option value="sku">ตามรุ่น · ลังรวมแยกไว้ท้าย</option><option value="loc">ตามที่เก็บ (Picking Location)</option><option value="ctn">ตามเลขลัง CTN (แบบเดิม)</option></select></label>
       <label>PL<select id="printPlFilter"><option value="">ทุก PL</option></select></label>
       <label>รุ่น / SKU<textarea id="printSkuFilter" rows="2" placeholder="20134, 25830"></textarea></label>
       <label>เลขลังจริง<input id="printCartonFilter" placeholder="900-907, 912"></label>
@@ -56,7 +57,8 @@ function createPackingPrint(app) {
   startLabel.className = 'print-control';
   startLabel.innerHTML = 'เริ่มจากใบที่ <input id="printFrom" type="number" min="1" step="1" value="1">';
   endLabel.before(startLabel);
-  const ui = Object.fromEntries(['printPlFilter', 'printSkuFilter', 'printCartonFilter', 'printRowFilter', 'printKindFilter', 'printSelectionTable', 'printSelectionCount', 'printRangeError', 'printRowsPage', 'printRowsPrev', 'printRowsNext', 'printFrom'].map(id => [id, document.getElementById(id)]));
+  const ui = Object.fromEntries(['printSort', 'printPlFilter', 'printSkuFilter', 'printCartonFilter', 'printRowFilter', 'printKindFilter', 'printSelectionTable', 'printSelectionCount', 'printRangeError', 'printRowsPage', 'printRowsPrev', 'printRowsNext', 'printFrom'].map(id => [id, document.getElementById(id)]));
+  try { const saved = localStorage.getItem('gv-pl-print-sort'); if (saved) ui.printSort.value = saved; } catch { /* default order */ }
   const sourceCss = '.label-ref{white-space:normal;overflow-wrap:anywhere;font-size:12pt!important;line-height:1.25}';
   const style = document.createElement('style');
   style.textContent = `${sourceCss}
@@ -83,11 +85,30 @@ function createPackingPrint(app) {
         ctn: group.ctn, record, sourceId: group.sourceId || group.file || 'PL', kind: 'mixed', groupId: id
       })) });
     }
-    const result = [];
-    for (const group of [...groups.values()].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id, undefined, { numeric: true }))) {
-      for (const row of group.rows) result.push({ ...row, totalSingleCartons: group.total, index: result.length + 1 });
+    // Order of the printed labels. "sku" / "loc": every label of one model comes out together, models in
+    // SKU or picking-location order, mixed cartons last (by CTN). "ctn": the old order by first CTN.
+    const mode = ui?.printSort?.value || 'sku-all';
+    const byCtn = (a, b) => a.order - b.order || a.id.localeCompare(b.id, undefined, { numeric: true });
+    const sku = g => text(g.rows[0]?.record.item);
+    const loc = g => text(g.rows[0]?.record.loc) || '\uffff';
+    const compare = mode === 'ctn' ? byCtn : (a, b) => {
+      const mixedA = a.id.startsWith('mixed:'), mixedB = b.id.startsWith('mixed:');
+      if (mixedA !== mixedB) return mixedA ? 1 : -1;
+      if (mixedA) return byCtn(a, b);
+      if (mode === 'loc') { const d = loc(a).localeCompare(loc(b), undefined, { numeric: true }); if (d) return d; }
+      return sku(a).localeCompare(sku(b), undefined, { numeric: true }) || byCtn(a, b);
+    };
+    for (const group of groups.values()) group.rows.sort((a, b) => cartonOrder(a.ctn) - cartonOrder(b.ctn));
+    let rows = [...groups.values()].sort(compare).flatMap(group => group.rows.map(row => ({ ...row, totalSingleCartons: group.total })));
+    if (mode === 'sku-all') {
+      // Every label of one model together, whether its carton is single-model or mixed: SKU, then
+      // single-model cartons before mixed ones, then carton number.
+      rows = rows.map((row, i) => ({ row, i })).sort((a, b) =>
+        text(a.row.record.item).localeCompare(text(b.row.record.item), undefined, { numeric: true }) ||
+        (a.row.kind === b.row.kind ? 0 : a.row.kind === 'single' ? -1 : 1) ||
+        cartonOrder(a.row.ctn) - cartonOrder(b.row.ctn) || a.i - b.i).map(x => x.row);
     }
-    return result;
+    return rows.map((row, i) => ({ ...row, index: i + 1 }));
   }
 
   function parseRanges(value, label) {
@@ -232,6 +253,11 @@ function createPackingPrint(app) {
     els.printCopies.value = '';
   }
 
+  ui.printSort.addEventListener('change', () => {
+    try { localStorage.setItem('gv-pl-print-sort', ui.printSort.value); } catch { /* not remembered */ }
+    excluded.clear(); tablePage = 0; ui.printFrom.value = '1'; els.printCopies.value = '';
+    render();
+  });
   for (const id of ['printPlFilter', 'printSkuFilter', 'printCartonFilter', 'printRowFilter', 'printKindFilter']) {
     ui[id].addEventListener(id === 'printKindFilter' || id === 'printPlFilter' ? 'change' : 'input', () => { tablePage = 0; render(); });
   }
