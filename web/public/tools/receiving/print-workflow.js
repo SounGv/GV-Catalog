@@ -337,11 +337,25 @@ function createPackingPrint(app) {
     </div>`;
   const settings = document.createElement('details');
   settings.className = 'sp-settings';
-  settings.innerHTML = '<summary>⚙ ตั้งค่า (เครื่องพิมพ์ กระดาษ การเรียง จำนวนต่อครั้ง ตัวกรอง และตัวอย่างใบ)</summary>';
+  settings.innerHTML = '<summary>⚙ ตั้งค่า</summary>';
   const card = els.printCard;
   const lotLabel = document.getElementById('lotInput')?.closest('label');
   [...card.children].forEach(child => settings.append(child));
   card.append(simple, settings);
+  // Settings shows only three choices and the label preview; the older detailed controls stay in the
+  // page (hidden) because the print engine still reads them with their defaults.
+  const essentials = document.createElement('div');
+  essentials.className = 'sp-essentials';
+  for (const field of [document.getElementById('printerProfile'), ui.printSort, batchUi.size]) {
+    const label = field?.closest('label');
+    if (label) essentials.append(label);
+  }
+  const previewTitle = document.createElement('p');
+  previewTitle.className = 'sp-hint';
+  previewTitle.textContent = 'ตัวอย่างใบแปะ (24 ใบแรก)';
+  for (const child of [...settings.children]) if (child.tagName !== 'SUMMARY' && child !== els.printPreview) child.style.display = 'none';
+  settings.querySelector('summary').after(essentials, previewTitle);
+  if (els.printPreview.parentElement !== settings) settings.append(els.printPreview);
   if (lotLabel) {
     if (lotLabel.firstChild?.nodeType === Node.TEXT_NODE) lotLabel.firstChild.nodeValue = '① เลข Lot / ตู้ ';
     simple.querySelector('#spLot').append(lotLabel);
@@ -363,7 +377,7 @@ function createPackingPrint(app) {
     .sp-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
     .sp-chip{min-height:42px;border-radius:999px;border:1px solid #cbd9df;background:#fff;padding:0 14px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
     .sp-chip.print{background:#185c45;color:#fff;border-color:#185c45}.sp-chip.ok{background:#c9ecd6;color:#14773e;border-color:#9fd3b3}.sp-chip.mid{background:#ffe7a6;color:#946200;border-color:#f0cf70}
-    .sp-settings{border-top:1px solid #dfe9e3}.sp-settings>summary{cursor:pointer;padding:14px 17px;font-weight:700;color:#185c45}`;
+    .sp-settings{border-top:1px solid #dfe9e3}.sp-essentials{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:0 17px 8px}.sp-essentials label{display:flex!important;flex-direction:column;align-items:stretch!important;gap:4px;width:auto!important;margin:0!important;font-size:13px}.sp-essentials select,.sp-essentials input{min-height:44px;width:100%!important;font-size:15px}.sp-settings>.sp-hint{padding:0 17px}.sp-settings>summary{cursor:pointer;padding:14px 17px;font-weight:700;color:#185c45}`;
   document.head.append(spStyle);
 
   /** Per model: its label rows (single-model and mixed cartons), in print order, with printed state. */
@@ -450,5 +464,15 @@ function createPackingPrint(app) {
     }
   });
 
-  return { queue, labels, plan, render, printable, print, reset };
+  /** Printed state of every model at once: id -> { done, total } label rows. */
+  function modelStatusMap() {
+    return new Map(models().list.map(m => [m.id, { done: m.done, total: m.rows.length }]));
+  }
+  /** Prints every label of the given models (single-model and mixed cartons), in print order. */
+  function printModels(items) {
+    const ids = new Set(items.map(key));
+    printRows(models().rows.filter(r => ids.has(key(r.record.item))));
+  }
+
+  return { queue, labels, plan, render, printable, print, reset, modelStatusMap, printModels };
 }
