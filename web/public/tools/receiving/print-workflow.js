@@ -380,12 +380,18 @@ function createPackingPrint(app) {
     .sp-settings{border-top:1px solid #dfe9e3}.sp-essentials{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:0 17px 8px}.sp-essentials label{display:flex!important;flex-direction:column;align-items:stretch!important;gap:4px;width:auto!important;margin:0!important;font-size:13px}.sp-essentials select,.sp-essentials input{min-height:44px;width:100%!important;font-size:15px}.sp-settings>.sp-hint{padding:0 17px}.sp-settings>summary{cursor:pointer;padding:14px 17px;font-weight:700;color:#185c45}`;
   document.head.append(spStyle);
 
-  /** Per model: its label rows (single-model and mixed cartons), in print order, with printed state. */
+  /**
+   * Print units in print order with printed state: one per model for its single-model (full) cartons,
+   * and one per mixed carton. A model never includes its labels inside mixed cartons: those print
+   * only with their mixed carton.
+   */
   function models() {
     const rows = queue(), keys = loadPrinted(rows), byItem = new Map();
     rows.forEach((row, i) => {
-      const id = key(row.record.item);
-      if (!byItem.has(id)) byItem.set(id, { id, item: row.record.item, loc: row.record.loc, rows: [], done: 0 });
+      const id = row.kind === 'mixed' ? row.groupId : key(row.record.item);
+      const name = row.kind === 'mixed' ? `ลังรวม ${row.ctn}` : row.record.item;
+      if (!byItem.has(id)) byItem.set(id, { id, item: name, loc: row.kind === 'mixed' ? '' : row.record.loc, mixed: row.kind === 'mixed', members: [], rows: [], done: 0 });
+      if (row.kind === 'mixed') byItem.get(id).members.push(row.record.item);
       const m = byItem.get(id);
       m.rows.push(row);
       if (printed.has(keys[i])) { m.done++; row.printed = true; }
@@ -421,7 +427,7 @@ function createPackingPrint(app) {
     }
     const q = key(sp.search.value);
     const rank = m => (m.done && m.done < m.rows.length ? 0 : m.done === 0 ? 1 : 2);
-    const shown = list.filter(m => !q || m.id.includes(q)).sort((a, b) => rank(a) - rank(b));
+    const shown = list.filter(m => !q || m.id.includes(q) || key(m.item).includes(q) || m.members.some(x => key(x).includes(q))).sort((a, b) => rank(a) - rank(b));
     sp.list.innerHTML = shown.map(m => {
       const total = m.rows.length, left = total - m.done;
       const state = m.done === total ? 'done' : m.done ? 'part' : '';
@@ -435,8 +441,8 @@ function createPackingPrint(app) {
       } else {
         actions = `<button class="sp-chip print" data-sp="print" data-model="${esc(m.id)}" type="button">พิมพ์ ${total * 2} ใบ</button>`;
       }
-      const mixed = m.rows.filter(r => r.kind === 'mixed').length;
-      return `<div class="sp-row ${state}"><div><div class="sp-sku">${esc(m.item)}</div><div class="sp-meta">${esc(m.loc || '—')} · ${total * 2} ใบ${mixed ? ` · อยู่ในลังรวม ${mixed} ลัง` : ''}${state === 'part' ? ` · พิมพ์ไป ${m.done * 2}/${total * 2}` : ''}</div></div><div class="sp-actions">${actions}</div></div>`;
+      const where = m.mixed ? `รุ่น ${m.members.map(esc).join(', ')}` : esc(m.loc || '—');
+      return `<div class="sp-row ${state}"><div><div class="sp-sku">${esc(m.item)}</div><div class="sp-meta">${where} · ${total * 2} ใบ${state === 'part' ? ` · พิมพ์ไป ${m.done * 2}/${total * 2}` : ''}</div></div><div class="sp-actions">${actions}</div></div>`;
     }).join('') || '<p class="sp-hint">ไม่พบรุ่นที่ค้นหา</p>';
   }
 
@@ -468,10 +474,10 @@ function createPackingPrint(app) {
   function modelStatusMap() {
     return new Map(models().list.map(m => [m.id, { done: m.done, total: m.rows.length }]));
   }
-  /** Prints every label of the given models (single-model and mixed cartons), in print order. */
+  /** Prints the single-model (full) carton labels of the given models, in print order. */
   function printModels(items) {
     const ids = new Set(items.map(key));
-    printRows(models().rows.filter(r => ids.has(key(r.record.item))));
+    printRows(models().rows.filter(r => r.kind === 'single' && ids.has(key(r.record.item))));
   }
 
   /** Same id the print queue gives a mixed carton. */
@@ -488,10 +494,10 @@ function createPackingPrint(app) {
     }
     return map;
   }
-  /** Prints the picked models (all their labels) and the picked mixed cartons (every label in them), in print order. */
+  /** Prints the picked models' full cartons and the picked mixed cartons (every label in them), in print order. */
   function printSelection(items, cartonIds) {
     const ids = new Set(items.map(key)), cartons = new Set(cartonIds);
-    printRows(models().rows.filter(r => ids.has(key(r.record.item)) || cartons.has(r.groupId)));
+    printRows(models().rows.filter(r => (r.kind === 'single' && ids.has(key(r.record.item))) || cartons.has(r.groupId)));
   }
 
   return { queue, labels, plan, render, printable, print, reset, modelStatusMap, printModels, mixedCartonId, cartonStatusMap, printSelection };
