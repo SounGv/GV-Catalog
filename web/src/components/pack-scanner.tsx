@@ -173,6 +173,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
     setOverlay,
     clipReference,
     attachPreview,
+    setFocus,
   } = useEvidenceRecorder();
   const queueRef = useRef<{ barcode: string; at: number }[]>([]);
   const isDrainingRef = useRef(false);
@@ -926,6 +927,45 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
               </button>
               {!isRecorderReady ? (
                 <p className="text-xs text-amber-700">เลือกกล้องและโฟลเดอร์ แล้วกดยืนยัน — สแกนได้ตามปกติแม้ยังไม่บันทึก</p>
+              ) : null}
+              {recorderStatus.resolution ? (
+                <div className="flex flex-col gap-1 rounded-[8px] bg-bg p-2 text-sm">
+                  <span className="text-muted">ความละเอียดภาพ {recorderStatus.resolution}</span>
+                  {recorderStatus.focus ? (
+                    <>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={recorderStatus.focus.value === null}
+                          disabled={!recorderStatus.focus.canAuto}
+                          onChange={(e) =>
+                            void setFocus(
+                              e.target.checked ? null : Math.round((recorderStatus.focus!.min + recorderStatus.focus!.max) / 2),
+                            )
+                          }
+                          className="h-5 w-5"
+                        />
+                        โฟกัสอัตโนมัติ
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span>ปรับโฟกัสเอง (เลื่อนจนตัวหนังสือบนกล่องคม)</span>
+                        <input
+                          type="range"
+                          min={recorderStatus.focus.min}
+                          max={recorderStatus.focus.max}
+                          step={recorderStatus.focus.step}
+                          value={recorderStatus.focus.value ?? Math.round((recorderStatus.focus.min + recorderStatus.focus.max) / 2)}
+                          onChange={(e) => void setFocus(Number(e.target.value))}
+                          aria-label="ปรับโฟกัสกล้อง"
+                        />
+                      </label>
+                    </>
+                  ) : (
+                    <span className="text-xs text-amber-700">
+                      กล้องนี้ปรับโฟกัสจากโปรแกรมไม่ได้ (โฟกัสคงที่) — ถ้าภาพไม่ชัด ให้ยกกล้องให้ห่างจากกล่องมากขึ้น (ประมาณ 40–60 ซม.) หรือหมุนวงแหวนโฟกัสที่ตัวกล้อง (ถ้ามี)
+                    </span>
+                  )}
+                </div>
               ) : null}
             </div>
           </details>

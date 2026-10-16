@@ -100,7 +100,17 @@ export type RecorderStatus = {
   /** Last clip whose file finished closing on disk — shown so the packer sees it was saved. */
   savedFile: string | null;
   error: string | null;
+  /** Picture size the camera actually gives, e.g. "1920×1080". */
+  resolution: string | null;
+  /**
+   * Focus control the camera offers from the browser (null = fixed focus or not offered).
+   * `value` null means autofocus is on.
+   */
+  focus: { min: number; max: number; step: number; value: number | null; canAuto: boolean } | null;
 };
+
+type FocusCapabilities = { focusMode?: string[]; focusDistance?: { min: number; max: number; step?: number } };
+const FOCUS_KEY = "gv-pack-camera-focus:";
 
 export function useEvidenceRecorder() {
   const [status, setStatus] = useState<RecorderStatus>({
@@ -115,6 +125,8 @@ export function useEvidenceRecorder() {
     fileName: null,
     savedFile: null,
     error: null,
+    resolution: null,
+    focus: null,
   });
   const patch = useCallback((next: Partial<RecorderStatus>) => setStatus((s) => ({ ...s, ...next })), []);
 
@@ -265,7 +277,8 @@ export function useEvidenceRecorder() {
   const openCamera = useCallback(
     async (cameraId: string) => {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: cameraId }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        // Ask for Full HD: the box labels and barcodes in the clip need the detail.
+        video: { deviceId: { exact: cameraId }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
         audio: false,
       });
       streamRef.current = stream;
@@ -274,13 +287,49 @@ export function useEvidenceRecorder() {
       video.playsInline = true;
       video.srcObject = stream;
       await video.play();
-      const settings = stream.getVideoTracks()[0]?.getSettings() ?? {};
+      const track = stream.getVideoTracks()[0];
+      // Sharp picture: autofocus where the camera has it, or the focus this station saved last time.
+      const caps = (track?.getCapabilities?.() ?? {}) as FocusCapabilities;
+      const saved = readLocal(FOCUS_KEY + cameraId);
+      const canAuto = Boolean(caps.focusMode?.includes("continuous"));
+      let focusValue: number | null = null;
+      if (caps.focusDistance && saved && saved !== "auto" && caps.focusMode?.includes("manual")) {
+        focusValue = Number(saved);
+        await track.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: focusValue } as MediaTrackConstraintSet] }).catch(() => (focusValue = null));
+      } else if (canAuto) {
+        await track.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] }).catch(() => undefined);
+      }
+      const settings = track?.getSettings() ?? {};
       const canvas = (canvasRef.current ??= document.createElement("canvas"));
       canvas.width = settings.width ?? 1280;
       canvas.height = settings.height ?? 720;
+      patch({
+        resolution: `${canvas.width}×${canvas.height}`,
+        focus:
+          caps.focusDistance && caps.focusMode?.includes("manual")
+            ? { min: caps.focusDistance.min, max: caps.focusDistance.max, step: caps.focusDistance.step || 1, value: focusValue, canAuto }
+            : null,
+      });
       drawTimerRef.current = window.setInterval(draw, 1000 / FPS);
     },
-    [draw],
+    [draw, patch],
+  );
+
+  /** Focus slider: a number sets manual focus, null turns autofocus back on. Remembered per camera. */
+  const setFocus = useCallback(
+    async (value: number | null) => {
+      const track = streamRef.current?.getVideoTracks()[0];
+      if (!track) return;
+      const constraint = value === null ? { focusMode: "continuous" } : { focusMode: "manual", focusDistance: value };
+      try {
+        await track.applyConstraints({ advanced: [constraint as MediaTrackConstraintSet] });
+        writeLocal(FOCUS_KEY + status.cameraId, value === null ? "auto" : String(value));
+        setStatus((s) => (s.focus ? { ...s, focus: { ...s.focus, value } } : s));
+      } catch {
+        patch({ error: "กล้องนี้ไม่รับการปรับโฟกัสจากโปรแกรม" });
+      }
+    },
+    [patch, status.cameraId],
   );
 
   /** Confirm button: checks camera + folder access now (while the user is clicking) and shows the live view. */
@@ -325,7 +374,7 @@ export function useEvidenceRecorder() {
         const clip = { fileName, startedAt: Date.now(), writable: await handle.createWritable(), writes: Promise.resolve() };
 
         const mimeType = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((t) => MediaRecorder.isTypeSupported(t));
-        const recorder = new MediaRecorder(canvas.captureStream(FPS), { mimeType, videoBitsPerSecond: 2_000_000 });
+        const recorder = new MediaRecorder(canvas.captureStream(FPS), { mimeType, videoBitsPerSecond: canvas.width >= 1920 ? 4_000_000 : 2_000_000 });
         recorder.ondataavailable = (event) => {
           if (!event.data.size) return;
           const data = event.data;
@@ -375,5 +424,5 @@ export function useEvidenceRecorder() {
 
   useEffect(() => () => void stop(), [stop]);
 
-  return { status, scanCameras, selectCamera, pickFolder, grantFolder, confirm, start, stop, setOverlay, clipReference, attachPreview };
+  return { status, scanCameras, selectCamera, pickFolder, grantFolder, confirm, start, stop, setOverlay, clipReference, attachPreview, setFocus };
 }
