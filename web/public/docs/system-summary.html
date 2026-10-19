@@ -59,6 +59,7 @@ figure img{display:block;width:100%;height:auto;border:1px solid var(--line);bor
 figcaption{font-size:.82rem;color:var(--muted);margin-top:6px}
 .warn{background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:10px 14px;margin:14px 0 0}
 .todo ul{margin:6px 0 0;padding-left:1.2em}
+#status .pillg,#status .pilly,#status .pillr{white-space:nowrap;display:inline-block}
 footer{color:var(--muted);font-size:.85rem;padding-block:0 40px}
 
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
@@ -100,7 +101,7 @@ footer{color:var(--muted);font-size:.85rem;padding-block:0 40px}
 <a href="/" style="display:inline-flex;align-items:center;min-height:44px;padding:0 16px;color:#c3d2de;font-size:.9rem;text-decoration:none;background:#18364c">‹ กลับหน้าหลัก GV Catalog</a>
 <header class="top"><div class="wrap"><h1>สรุประบบแปลงไฟล์ PO</h1><p>เครื่องมือแปลงใบสั่งซื้อของแต่ละร้าน ตรวจบาร์โค้ด พิมพ์เอกสาร และยิงสแกนลงลัง ใน GV Catalog</p><div class="meta">ตุลาคม 2569 · ภาพประกอบจากหน้าจอระบบจริง</div></div></header>
 <nav class="jump" aria-label="ไปยังหัวข้อ"><div class="wrap">
-<a href="#overview">ภาพรวม</a><a href="#compare">เทียบเวลา</a><a href="#jaymart">Jaymart</a><a href="#ais">AIS</a><a href="#itcity">IT City</a><a href="#com7">Com7</a><a href="#officemate">OfficeMate</a><a href="#scan">ยิงสแกน</a><a href="#report">รายงาน</a><a href="#progress">ความคืบหน้า</a>
+<a href="#overview">ภาพรวม</a><a href="#compare">เทียบเวลา</a><a href="#jaymart">Jaymart</a><a href="#ais">AIS</a><a href="#itcity">IT City</a><a href="#com7">Com7</a><a href="#officemate">OfficeMate</a><a href="#scan">ยิงสแกน</a><a href="#report">รายงาน</a><a href="#progress">ความคืบหน้า</a><a href="#status">สถานะและสิ่งที่รอ</a>
 </div></nav>
 <main class="wrap">
 <section id="overview" class="intro">
@@ -272,6 +273,56 @@ footer{color:var(--muted);font-size:.85rem;padding-block:0 40px}
       <tr><td>ยิงสแกนลงลัง</td><td>งานทดลองหลายสาขา</td><td>ทดลองครบทุกกรณี: ถูกรุ่น · ครบจำนวน · ยิงเกิน · ผิดรุ่น · แปะสติกเกอร์ลูกค้า · ครบทุกรายการ · ขาด จอและเสียงบอกผลทุกครั้ง</td><td><span class="pillg">ทดลองแล้ว</span></td></tr>
       <tr><td>รายงานย้อนหลัง</td><td>งานยิงสแกนของ Jaymart · IT City · Com7</td><td>ดูย้อนหลัง กรองตามวันที่และสถานะ ตั้งชื่องานและแก้หมายเหตุ ลบงานที่ยังไม่เริ่มยิง และดาวน์โหลดรายงาน Excel ต่องานได้</td><td><span class="pillg">ทดลองแล้ว</span></td></tr>
     </tbody></table></div>
+</section>
+<section id="status">
+  <h2 style="font-size:1.6rem">สถานะงาน และสิ่งที่รอตัดสินใจ</h2>
+  <p class="lead">ทุกงานมีป้ายบอกสถานะ เพื่อให้เห็นทันทีว่าอะไรใช้ได้แล้ว อะไรต้องลองที่หน้างาน และอะไรต้องรอข้อมูลก่อนทำต่อ</p>
+  <div class="legend"><span class="pillg">ใช้งานได้แล้ว</span><span>ทดสอบแล้ว ใช้กับงานจริงได้</span><span class="pilly">รอทดสอบหน้างาน</span><span>ทำเสร็จในระบบแล้ว ต้องลองกับเครื่องพิมพ์ กล้อง หรือไฟล์จริงที่หน้างาน</span><span class="pillr">รอข้อมูลจากทีม</span><span>ทำต่อไม่ได้จนกว่าทีมจะส่งข้อมูลหรือตัดสินใจ</span></div>
+
+  <h3 class="sub">1. งานที่เพิ่มหลังรายงานรอบก่อน</h3>
+  <div class="tw"><table>
+    <thead><tr><th>ร้าน / งาน</th><th>เพิ่มอะไร</th><th>แก้ปัญหาอะไร</th><th>สถานะ</th></tr></thead>
+    <tbody>
+      <tr><td>AIS</td><td>ตรวจบาร์โค้ดกับรหัสที่ลงทะเบียนกับ AIS · ติ๊กเลือกรุ่นที่จะพิมพ์ · ชื่อสินค้าย่อให้พอดีความกว้างบาร์โค้ด · ปรับระยะแถวและเลื่อนซ้ายขวาได้ · ใส่น้ำหนักรุ่น 85166, 85166B, 65958B</td><td>สติกเกอร์พิมพ์ไม่ตรงตั้งแต่แถวที่ 2 · ชื่อล้นขอบ · เปลี่ยนไซส์กล่องแล้วหน้าจอค้าง (เดิม 1 ถึง 1.7 วินาทีต่อครั้ง ตอนนี้ไม่ถึง 0.01 วินาที)</td><td><span class="pillg">ใช้งานได้แล้ว</span><br><small>บาร์โค้ดผ่านการพิมพ์จริงแล้ว</small></td></tr>
+      <tr><td>Jaymart</td><td>อ่าน PO แบบ PDF ที่ส่งสาขาเดียว โดยเอาสาขาจากชื่อไฟล์ เช่น "11111019042 YAS.pdf" · ตรวจจำนวน × ราคา = ยอดเงิน และยอดรวมต้องตรงท้าย PO</td><td>Jaymart ส่ง PO มาอีกรูปแบบ ระบบเดิมอ่านไม่ได้</td><td><span class="pilly">รอทดสอบหน้างาน</span></td></tr>
+      <tr><td>Jaymart</td><td>เลือกระยะสติกเกอร์ 30 หรือ 33 มม. · พิมพ์ทดสอบ 3 แถว · จำค่าที่ตั้งไว้ในเครื่อง</td><td>สติกเกอร์พิมพ์แล้วกระโดดข้ามดวง ขึ้นบนเกิน</td><td><span class="pilly">รอทดสอบหน้างาน</span></td></tr>
+      <tr><td>Packing list (รับสินค้าเข้า)</td><td>เรียงตามรุ่นก่อนพิมพ์ · ติ๊กเลือกรุ่นหรือลังรวมแล้วกดพิมพ์ปุ่มเดียว · ขึ้นว่ารุ่นไหน "พิมพ์แล้ว" · ลดช่องตั้งค่าเหลือเท่าที่ใช้</td><td>ในไฟล์รุ่นไม่เรียง ใบที่พิมพ์ออกมากระจาย · ไม่รู้ว่ารุ่นไหนพิมพ์ไปแล้ว · ช่องตั้งค่าเยอะจนงง</td><td><span class="pilly">รอทดสอบหน้างาน</span><br><small>จำ "พิมพ์แล้ว" เฉพาะในเครื่องที่พิมพ์</small></td></tr>
+      <tr><td>GV Catalog</td><td>ค้นหาด้วยบาร์โค้ดของร้าน (AIS, Jaymart ฯลฯ) ได้ · สถานะสินค้าเปลี่ยนเองตามจำนวนรูปแพ็กเกจที่แนบ (n/6 มุม)</td><td>เอาบาร์โค้ดร้านไปค้นในเว็บไม่เจอ · ต้องมาแก้สถานะเอง</td><td><span class="pillg">ใช้งานได้แล้ว</span></td></tr>
+      <tr><td>ถ่ายรูปแพ็กเกจ</td><td>เลือกรุ่น เลือกมุม (หน้า หลัง ข้าง บน ล่าง) ถ่ายแล้วบันทึกเข้ารุ่นนั้นทันที ระบบเลื่อนไปมุมที่ยังขาดให้เอง</td><td>แนบรูปทีละรูปช้า ไม่รู้ว่ารุ่นไหนขาดมุมไหน</td><td><span class="pillg">ใช้งานได้แล้ว</span></td></tr>
+      <tr><td>วัดขนาดกล่อง</td><td>วางกล่องบนแผ่นรองตัด ถ่าย 2 รูป (นอนกับตั้ง) ระบบคำนวณ กว้าง × ยาว × สูง เป็น cm และทำรูปบอกขนาดเก็บไว้ในหน้าสินค้า</td><td>ต้องวัดด้วยตลับเมตรแล้วจดเอง</td><td><span class="pilly">รอทดสอบหน้างาน</span><br><small>ต้องลองกับมือถือจริงหลายรุ่นกล่อง</small></td></tr>
+      <tr><td>ยิงสแกนลงลัง</td><td>กล้องบันทึกหลักฐานความละเอียด Full HD · ตั้งโฟกัสอัตโนมัติ หรือเลื่อนปรับเองได้</td><td>วิดีโอหลักฐานไม่ชัด อ่านฉลากบนกล่องไม่ออก</td><td><span class="pilly">รอทดสอบหน้างาน</span><br><small>บางกล้องโฟกัสคงที่ ปรับจากโปรแกรมไม่ได้</small></td></tr>
+    </tbody></table></div>
+
+  <h3 class="sub">2. เจอกรณีผิดปกติ ระบบทำอะไร</h3>
+  <p class="lead">ระบบไม่ได้ทำงานแค่กรณีปกติ ตารางนี้รวมกรณีที่เคยพลาดหน้างาน และสิ่งที่พนักงานจะเห็น</p>
+  <div class="tw"><table>
+    <thead><tr><th>กรณี</th><th>ระบบทำอะไร</th><th>พนักงานต้องทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td>บาร์โค้ดลูกค้าไม่ตรงกับ Catalog</td><td>แถวเป็นสีแดง "ต้องเปลี่ยนบาร์โค้ด"</td><td>แปะสติกเกอร์บาร์โค้ดลูกค้าก่อนส่ง</td></tr>
+      <tr><td>หารุ่นใน Catalog ไม่เจอ</td><td>แถวเป็นสีเหลือง</td><td>เช็กรุ่น หรือแจ้งให้เพิ่มรุ่นลง Catalog</td></tr>
+      <tr><td>PDF สแกนอ่านตัวเลขผิด</td><td>ตรวจเลขท้ายบาร์โค้ด และผลรวมต้องตรงยอดท้ายใบ ถ้าไม่ผ่านจะไม่ยอมให้ใช้</td><td>แก้ตัวเลขในหน้าต่างตรวจ ให้ตรงกับใบจริง</td></tr>
+      <tr><td>PO Jaymart แบบ PDF ชื่อไฟล์ไม่บอกสาขา หรือชื่อตรงหลายสาขา</td><td>แจ้งเตือนและไม่เดาสาขาให้</td><td>เปลี่ยนชื่อไฟล์เป็น "เลข PO รหัสสาขา" เช่น "11111019042 1822"</td></tr>
+      <tr><td>AIS ข้อมูลรุ่นไม่ครบ (ไม่มีราคาหรือบาร์โค้ด)</td><td>ข้ามแถวนั้นและบอกจำนวนที่ข้าม</td><td>เติมข้อมูลใน Master แล้วพิมพ์ใหม่เฉพาะรุ่นนั้น</td></tr>
+      <tr><td>ยิงเกิน PO หรือผิดรุ่น</td><td>ไม่นับ มีเสียงบอก "เกิน" หรือ "ผิดรุ่น"</td><td>แยกชิ้นนั้นวางออก</td></tr>
+      <tr><td>กดปิดบิลทั้งที่ยังแพ็คไม่ครบ</td><td>ปิดไม่ได้ บอกว่าขาดกี่ชิ้นและรุ่นไหน</td><td>แพ็คให้ครบก่อน</td></tr>
+      <tr><td>บิลปิดแล้วแต่ต้องแก้</td><td>ต้องกด "แก้ไข" และใส่เหตุผล ทุกครั้งเก็บไว้ในรายงาน</td><td>ใส่เหตุผลให้ชัด</td></tr>
+      <tr><td>สติกเกอร์พิมพ์เลื่อนหรือข้ามดวง</td><td>มีค่าปรับระยะแถวและเลื่อนตำแหน่ง จำไว้ในเครื่อง</td><td>พิมพ์ทดสอบ ปรับจนตรง แล้วใช้ค่านั้นต่อ</td></tr>
+    </tbody></table></div>
+
+  <h3 class="sub">3. สิ่งที่รอคำตอบ แยกตามทีม</h3>
+  <div class="tw"><table>
+    <thead><tr><th>ทีม</th><th>ต้องการอะไร</th><th>ใช้ทำอะไร</th><th>สถานะ</th></tr></thead>
+    <tbody>
+      <tr><td>คลัง</td><td>จับเวลาทำ PO 1 ใบแบบเดิม (IT City, Com7) เป็นนาที และนับจำนวนครั้งที่แพ็คผิดต่อเดือน</td><td>คำนวณเวลาที่ได้คืนและความถูกต้องในหัวข้อ "เทียบเวลา" ตอนนี้ยังเป็นค่าประมาณ</td><td><span class="pillr">รอข้อมูลจากทีม</span></td></tr>
+      <tr><td>คลัง</td><td>ค่าตั้งเครื่องพิมพ์ที่พิมพ์ตรงแล้ว (AIS, Jaymart)</td><td>ตั้งเป็นค่าเริ่มต้น เครื่องอื่นจะได้ไม่ต้องปรับใหม่</td><td><span class="pillr">รอข้อมูลจากทีม</span></td></tr>
+      <tr><td>คลัง</td><td>ลองวัดกล่องด้วยมือถือ และลองกล้องยิงสแกนที่หน้างาน</td><td>ยืนยันว่าใช้แทนการวัดมือและได้วิดีโอชัดจริง</td><td><span class="pilly">รอทดสอบหน้างาน</span></td></tr>
+      <tr><td>ขาย / ประสานร้าน</td><td>PO งานจริงของ Com7 และตัวอย่าง PO แบบแยกสาขา</td><td>ทำส่วนกระจายสาขาของ Com7 (ตอนนี้ตรวจบาร์โค้ดได้อย่างเดียว)</td><td><span class="pillr">รอข้อมูลจากทีม</span></td></tr>
+      <tr><td>ผู้บริหาร</td><td>กำหนดสิทธิ์ผู้ใช้งาน: ใครต้องเข้าสู่ระบบ ใช้รหัสร่วมหรือรายคน</td><td>แยกสิทธิ์ดูกับแก้ข้อมูล และรู้ว่าใครเป็นคนทำ</td><td><span class="pillr">รอข้อมูลจากทีม</span></td></tr>
+    </tbody></table></div>
+
+  <h3 class="sub">4. ลำดับงานต่อไป</h3>
+  <div class="sflow"><span class="fs">ได้ตัวเลขเวลาจากคลัง</span><span class="ar">→</span><span class="fs">ลองงานสีเหลืองที่หน้างาน</span><span class="ar">→</span><span class="fs">ตั้งค่าเครื่องพิมพ์เป็นค่าเริ่มต้น</span><span class="ar">→</span><span class="fs">Com7 กระจายสาขา</span><span class="ar">→</span><span class="fs">สิทธิ์ผู้ใช้งาน</span></div>
+  <p class="inf2">ยังไม่กำหนดวันที่ เพราะแต่ละขั้นรอข้อมูลจากทีมตามตารางที่ 3</p>
 </section>
 <footer>รายงานนี้ทำจากหน้าจอระบบ GV Catalog ที่ gv-catalog.vercel.app</footer>
 </main>
