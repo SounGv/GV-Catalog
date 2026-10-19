@@ -108,6 +108,9 @@ footer{color:var(--muted);font-size:.85rem;padding-block:0 40px}
 :root[data-theme="dark"]{--q-bg:#3a2612;--q-ink:#ffc890;--q-line:#b8661c}
 .q{background:var(--q-bg);color:var(--q-ink);border-left:4px solid var(--q-line);border-radius:8px;padding:10px 14px;margin:12px 0 0;max-width:72ch}
 .q .tg{background:var(--surface);border:1px solid var(--q-line)}
+.cols5{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px}
+.pro{background:var(--ok-bg);color:var(--ok-ink);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}.pro span{font-size:.88rem}
+.tw td.man{color:var(--bad-ink)}.tw td.sys{color:var(--ok-ink);font-weight:500}
 .q-inline{background:var(--q-bg);color:var(--q-ink);padding:0 6px;border-radius:4px}
 .tags-explain{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .tags-explain>div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}.tags-explain p{margin:6px 0 0;font-size:.92rem}
@@ -125,7 +128,7 @@ code{font-size:.9em;background:var(--surface);padding:0 4px;border-radius:4px}
   <div class="meta">ตุลาคม 2569 · ภาพจากหน้าจอระบบจริง</div>
 </div></header>
 <nav class="jump" aria-label="ไปยังหัวข้อ"><div class="wrap">
-<a href="#overview">สรุป</a><a href="#check">ฝากเช็ค</a><a href="#time">ประหยัดเวลา</a><a href="#jaymart">Jaymart</a><a href="#ais">AIS</a><a href="#itcity">IT City</a><a href="#com7">Com7</a><a href="#officemate">OfficeMate</a><a href="#scan">ยิงสแกน</a><a href="#receiving">ฝ่ายรับเข้า</a><a href="#new">งานใหม่</a><a href="#problems">เจอปัญหา</a><a href="#next">ทำต่อ</a>
+<a href="#overview">สรุป</a><a href="#check">ฝากเช็ค</a><a href="#time">คนกับระบบ</a><a href="#jaymart">Jaymart</a><a href="#ais">AIS</a><a href="#itcity">IT City</a><a href="#com7">Com7</a><a href="#officemate">OfficeMate</a><a href="#scan">ยิงสแกน</a><a href="#receiving">ฝ่ายรับเข้า</a><a href="#new">งานใหม่</a><a href="#problems">เจอปัญหา</a><a href="#next">ทำต่อ</a>
 </div></nav>
 <main class="wrap">
 
@@ -169,16 +172,38 @@ code{font-size:.9em;background:var(--surface);padding:0 4px;border-radius:4px}
 </section>
 
 <section id="time">
-  <h2 class="h2">ประหยัดเวลาได้เท่าไร</h2>
+  <h2 class="h2">ระบบช่วยอะไร เทียบกับคนทำเอง</h2>
+  <div class="cols5">
+    <div class="pro"><b>ไม่ต้องจำ</b><span>ระบบจำแทนว่ารุ่นไหน สาขาไหน กี่ชิ้น</span></div>
+    <div class="pro"><b>ตรวจทุกชิ้น</b><span>ไม่ได้สุ่มตรวจ ยิงทุกชิ้น เทียบทุกบรรทัด</span></div>
+    <div class="pro"><b>รู้ก่อนส่ง</b><span>ถ้าผิด รู้ตอนแพ็ค ไม่ต้องรอลูกค้าแจ้ง</span></div>
+    <div class="pro"><b>ใครทำก็ได้ผลเหมือนกัน</b><span>ไม่ขึ้นอยู่กับคนเก่งคนเดียว</span></div>
+    <div class="pro"><b>มีหลักฐาน</b><span>มีวิดีโอกับประวัติ ใช้ตอบลูกค้าได้</span></div>
+  </div>
+  <div class="tw" style="margin-top:14px"><table>
+    <thead><tr><th>เรื่อง</th><th>คนทำเอง (ต้องจำ)</th><th>ระบบตรวจให้</th></tr></thead>
+    <tbody>
+      <tr><td><b>แยกของตามสาขา</b></td><td class="man">อ่าน PO ทีละบรรทัด แล้วจดหรือจำเองว่าสาขาไหนได้อะไร</td><td class="sys">แยกเป็นรายสาขาให้ทันทีที่ใส่ไฟล์</td></tr>
+      <tr><td><b>บาร์โค้ดของลูกค้า</b></td><td class="man">ต้องจำว่ารุ่นไหนใช้บาร์โค้ดลูกค้า แล้วเทียบด้วยตา</td><td class="sys">เทียบทุกรุ่นกับ Catalog รุ่นที่ไม่ตรงขึ้นสีแดง</td></tr>
+      <tr><td><b>ราคาและข้อมูลบนสติกเกอร์</b></td><td class="man">พิมพ์เอง จึงพิมพ์ผิดได้</td><td class="sys">ดึงจาก Master ไม่ต้องพิมพ์เอง</td></tr>
+      <tr><td><b>จำนวนต่อกล่องและน้ำหนัก</b></td><td class="man">คิดเลขเอง และชั่งทีละลัง</td><td class="sys">คำนวณจำนวนกล่องและน้ำหนักรวมให้</td></tr>
+      <tr><td><b>ตัวเลขใน PDF สแกน</b></td><td class="man">อ่านด้วยตา อ่านเลขผิดได้</td><td class="sys">ตรวจยอดรวมกับยอดท้ายใบ ถ้าไม่ตรงจะไม่ให้ใช้</td></tr>
+      <tr><td><b>แพ็คครบหรือยัง</b></td><td class="man">นับเองและจำเอง</td><td class="sys">ยิงสแกนแล้วระบบนับให้ ถ้ายังไม่ครบจะปิดบิลไม่ได้</td></tr>
+      <tr><td><b>เกินหรือผิดรุ่น</b></td><td class="man">รู้ตอนลูกค้าแจ้งกลับมา</td><td class="sys">รู้ตอนแพ็ค มีเสียงเตือน และบอกว่าเป็นของสาขาไหน</td></tr>
+      <tr><td><b>หลักฐาน</b></td><td class="man">ไม่มี ต้องใช้ความจำ</td><td class="sys">มีวิดีโอ และมีประวัติว่าใครยิง เมื่อไร</td></tr>
+      <tr><td><b>พิมพ์ไปแล้วหรือยัง</b></td><td class="man">ต้องจำเอง</td><td class="sys">ขึ้นว่า "พิมพ์แล้ว"</td></tr>
+      <tr><td><b>ตำแหน่งหยิบ</b></td><td class="man">ต้องจำ หรือถามกัน</td><td class="sys">พิมพ์ไว้บนใบแปะลัง ดึงมาจาก BigSeller</td></tr>
+      <tr><td><b>คนใหม่มาทำงาน</b></td><td class="man">ต้องสอนนาน และงานขึ้นอยู่กับคนเก่ง</td><td class="sys">ทุกร้านใช้ขั้นตอนเดียวกัน และมีสีบอกว่าต้องทำอะไร</td></tr>
+    </tbody></table></div>
+  <h3 class="sub">เวลาที่ทีมแจ้ง</h3>
   <div class="tw"><table>
     <thead><tr><th>ร้าน</th><th>เดิม (ทำมือ)</th><th>ตอนนี้</th><th>เวลาเดิม</th></tr></thead>
     <tbody>
       <tr><td><b>AIS</b></td><td>พิมพ์บาร์โค้ดกับราคาเอง ผิดบ่อย ชั่งและวัดลังทีละลัง</td><td>เลือกไฟล์ เลือกไซส์กล่อง แล้วพิมพ์ ระบบคำนวณกล่องและน้ำหนักให้</td><td>ประมาณครึ่งวันต่อ 1 PO</td></tr>
-      <tr><td><b>IT City</b></td><td>บิลเดียวมีหลายสาขาหลายรุ่น ต้องแยกของเองทีละสาขา</td><td>ระบบแยกรายสาขาให้ แล้วยิงสแกนบอกว่าสาขาไหนขาดหรือเกิน</td><td>นานพอสมควร <span class="tg ask">เปิด</span></td></tr>
-      <tr><td><b>Com7</b></td><td>เหมือน IT City และบาร์โค้ดผิดบ่อย</td><td>ตรวจบาร์โค้ด PO หลายใบพร้อมกัน แล้วยิงสแกน</td><td>นานพอสมควร <span class="tg ask">เปิด</span></td></tr>
+      <tr><td><b>IT City</b></td><td>บิลเดียวมีหลายสาขาหลายรุ่น ต้องแยกของเองทีละสาขา</td><td>ระบบแยกรายสาขาให้ แล้วยิงสแกนบอกว่าสาขาไหนขาดหรือเกิน</td><td>นานพอสมควร</td></tr>
+      <tr><td><b>Com7</b></td><td>เหมือน IT City และบาร์โค้ดผิดบ่อย</td><td>ตรวจบาร์โค้ด PO หลายใบพร้อมกัน แล้วยิงสแกน</td><td>นานพอสมควร</td></tr>
     </tbody></table></div>
   <p class="inf2">ตัวระบบเองประมวลผลไม่ถึง 2 วินาทีต่อไฟล์ ยกเว้น PDF สแกนที่ใช้ประมาณ 11–15 วินาที เวลาที่ใช้จริงหน้างานจะนานกว่านี้ เพราะยังต้องรวมเวลาพิมพ์และแพ็คของ</p>
-  <div class="q"><b>ฝากเช็ค · คลัง</b> ช่วยจับเวลาทำ PO 1 ใบแบบเดิมเป็นนาที (IT City, Com7) และนับว่าเดือนหนึ่งแพ็คผิดกี่ครั้ง จะได้ใส่ตัวเลขว่าระบบช่วยประหยัดเวลาได้กี่ชั่วโมงต่อเดือน</div>
 </section>
 
 <h2 class="part">ส่วนที่ 1 · ใช้งานแล้ว</h2>
@@ -295,7 +320,6 @@ code{font-size:.9em;background:var(--surface);padding:0 4px;border-radius:4px}
       <p><a class="open" href="https://gv-catalog.vercel.app/receiving/pick-locations" target="_blank" rel="noopener">เปิดหน้าตำแหน่งหยิบ ↗</a></p>
       <div class="q"><b>ฝากเช็ค · รับเข้า</b> <span class="tg ask">เปิด</span> ใครเป็นคนกดซิงค์ และควรซิงค์บ่อยแค่ไหน เช่น ทุกครั้งที่ย้ายของ หรือวันละครั้งก่อนรับตู้</div></div>
   </div>
-  <div class="q"><b>ฝากเช็ค · รับเข้า</b> <span class="tg ask">เปิด</span> ช่วยจับเวลาทำใบแปะลัง 1 ตู้ ทั้งแบบเดิมและแบบใช้ระบบ เพื่อใส่ตัวเลขว่าประหยัดเวลาได้เท่าไร</div>
 </section>
 
 <section id="new" class="store">
@@ -333,16 +357,15 @@ code{font-size:.9em;background:var(--surface);padding:0 4px;border-radius:4px}
   <div class="tw"><table>
     <thead><tr><th>ทีม</th><th>ขออะไร</th><th>เอาไปทำอะไร</th><th>สถานะ</th></tr></thead>
     <tbody>
-      <tr><td>คลัง</td><td>จับเวลาทำ PO แบบเดิมเป็นนาที และนับครั้งที่แพ็คผิดต่อเดือน</td><td>ใส่ตัวเลขว่าระบบประหยัดเวลาได้เท่าไร</td><td><span class="tg ask">เปิด</span></td></tr>
       <tr><td>คลัง</td><td>ค่าตั้งเครื่องพิมพ์ที่พิมพ์ตรงแล้ว (AIS, Jaymart)</td><td>ตั้งเป็นค่าเริ่มต้นให้ทุกเครื่อง</td><td><span class="tg ask">เปิด</span></td></tr>
       <tr><td>คลัง</td><td>ลองวัดกล่อง และลองกล้องยิงสแกน</td><td>ยืนยันว่าใช้กับงานจริงได้</td><td><span class="tg try">ลองหน้างาน</span></td></tr>
-      <tr><td>รับเข้า</td><td>ลองพิมพ์ใบแปะลังกับ Packing List ของตู้จริง และจับเวลา 1 ตู้</td><td>ยืนยันว่าใช้กับงานจริงได้ และใส่ตัวเลขเวลา</td><td><span class="tg try">ลองหน้างาน</span></td></tr>
+      <tr><td>รับเข้า</td><td>ลองพิมพ์ใบแปะลังกับ Packing List ของตู้จริง</td><td>ยืนยันว่าใช้กับงานจริงได้</td><td><span class="tg try">ลองหน้างาน</span></td></tr>
       <tr><td>รับเข้า</td><td>ใครเป็นคนกดซิงค์ตำแหน่งหยิบ และซิงค์บ่อยแค่ไหน · ต้องให้ทุกเครื่องเห็นว่า "พิมพ์แล้ว" ไหม</td><td>ตั้งขั้นตอนให้ตำแหน่งหยิบในใบแปะลังตรงเสมอ</td><td><span class="tg ask">เปิด</span></td></tr>
       <tr><td>ขาย</td><td>PO งานจริงของ Com7 และ PO แบบหลายสาขา</td><td>ทำส่วนกระจายสาขาของ Com7</td><td><span class="tg ask">เปิด</span></td></tr>
       <tr><td>ผู้บริหาร</td><td>ใครต้องเข้าสู่ระบบ และใช้รหัสร่วมกันหรือแยกรายคน</td><td>แยกสิทธิ์คนที่ดูได้อย่างเดียวกับคนที่แก้ได้ และรู้ว่าใครเป็นคนทำ</td><td><span class="tg ask">เปิด</span></td></tr>
     </tbody></table></div>
   <h3 class="sub">ลำดับงานต่อไป</h3>
-  <div class="sflow"><span class="fs">ได้ตัวเลขเวลา</span><span class="ar">→</span><span class="fs">ลองงานหน้างาน</span><span class="ar">→</span><span class="fs">ตั้งค่าเครื่องพิมพ์</span><span class="ar">→</span><span class="fs">Com7 แยกสาขา</span><span class="ar">→</span><span class="fs">สิทธิ์ผู้ใช้</span></div>
+  <div class="sflow"><span class="fs">ลองงานหน้างาน</span><span class="ar">→</span><span class="fs">ตั้งค่าเครื่องพิมพ์</span><span class="ar">→</span><span class="fs">Com7 แยกสาขา</span><span class="ar">→</span><span class="fs">สิทธิ์ผู้ใช้</span></div>
   <p class="inf2">ยังไม่ได้กำหนดวันที่ เพราะแต่ละขั้นต้องรอคำตอบจากทีมก่อน</p>
 </section>
 <footer>รายงานนี้ทำจากหน้าจอระบบ GV Catalog ที่ gv-catalog.vercel.app</footer>
