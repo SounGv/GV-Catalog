@@ -155,7 +155,7 @@ function combine(orders){
 }
 function makeMatcher(master){
   const bySku=new Map(),byBar=new Map();
-  for(const r of master){const sku=key(r.sku);if(!bySku.has(sku))bySku.set(sku,[]);bySku.get(sku).push(r);const b=bars(r.gtin)[0];if(b){if(!byBar.has(b))byBar.set(b,[]);byBar.get(b).push(r)}}
+  for(const r of master){const sku=key(r.sku);if(!bySku.has(sku))bySku.set(sku,[]);bySku.get(sku).push(r);for(const b of bars(r.gtin)){if(!byBar.has(b))byBar.set(b,[]);byBar.get(b).push(r)}}
   return row=>{
     const description=key(row.description),tokens=[...new Set(description.match(/\b\d{5}[A-Z]?(?:[- ]?BOX)?\b/g)||[])];
     let candidates=[];
@@ -168,14 +168,14 @@ function makeMatcher(master){
     const customer=bars(row.customerBarcode),barHits=[...new Set(customer.flatMap(b=>byBar.get(b)||[]))];
     let hit=null,reason='';
     if(candidates.length===1)hit=candidates[0];
-    else if(candidates.length>1){const same=candidates.filter(c=>customer.includes(c.gtin));if(same.length===1)hit=same[0];else reason='พบหลาย SKU หรือหลายรุ่นย่อย ต้องยืนยันสินค้าที่จัด'}
+    else if(candidates.length>1){const same=candidates.filter(c=>bars(c.gtin).some(b=>customer.includes(b)));if(same.length===1)hit=same[0];else reason='พบหลาย SKU หรือหลายรุ่นย่อย ต้องยืนยันสินค้าที่จัด'}
     else if(!tokens.length&&barHits.length===1)hit=barHits[0];
     else reason=tokens.length?'ไม่พบ SKU ของรุ่นที่ระบุในชื่อสินค้า':'ไม่พบ SKU หรือบาร์โค้ดที่จับคู่ได้แน่ชัด';
     const result={sku:hit?.sku||'',systemBarcode:hit?.gtin||'',customerBarcode:row.customerBarcode||'',status:'review',reason,target:'',candidates:candidates.map(c=>c.sku)};
     if(!hit)return result;
     if(!hit.gtin){result.reason='SKU ระบบไม่มี GTIN';return result}
     if(!customer.length){result.status='unchecked';result.reason='ไม่มีบาร์โค้ดลูกค้าให้ตรวจ (ส่งตรงสาขา)';return result}
-    if(customer.includes(hit.gtin)){result.status='match';result.reason=customer.length>1?'ตรงกับหนึ่งในบาร์โค้ดลูกค้า':'SKU และบาร์โค้ดตรงกัน';return result}
+    if(bars(hit.gtin).some(b=>customer.includes(b))){result.status='match';result.reason=customer.length>1?'ตรงกับหนึ่งในบาร์โค้ดลูกค้า':'SKU และบาร์โค้ดตรงกัน';return result}
     if(barHits.some(r=>key(r.sku)!==key(hit.sku))){result.reason='รุ่นในชื่อสินค้าและบาร์โค้ดชี้ไปคนละ SKU';return result}
     if(customer.length!==1||/[eE][+-]\d+/.test(customer[0])){result.reason='มีหลายบาร์โค้ดหรือรูปแบบบาร์ไม่ชัดเจน ต้องยืนยันบาร์ที่จะใช้';return result}
     result.status='relabel';result.reason='รุ่นตรง แต่บาร์โค้ดต่าง: ต้องเปลี่ยนบาร์โค้ด';result.target=customer[0];return result;

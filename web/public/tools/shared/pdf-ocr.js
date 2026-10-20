@@ -183,6 +183,8 @@
   for(let i=0;i<pages.length;i++){
    const pg=pages[i],head=parseHeader(pg.words,pg.width),table=parseTable(pg.words,pg.width);
    if(pg.scanned&&table.rows.length){onProgress(`ตรวจตัวเลขหน้า ${i+1} / ${pages.length}…`);await refineDigits(pg.canvas,table.rows,pg.workers)}
+   // a text-layer barcode is exactly what the PO says, even when its check digit is wrong (some brands print such codes)
+   else for(const r of table.rows)r.printed=r.barcode;
    // a continuation page repeats the PO number ("Page 2 of 2"); one with no number belongs to the PO before it
    const sameAsCurrent=current&&(!head.po||head.po===current.po);
    if(!sameAsCurrent){current={po:head.po,date:head.date,shipTo:head.shipTo,rows:[],subtotal:NaN,total:NaN,pageNos:[]};docs.push(current)}
@@ -231,7 +233,7 @@
   return rows.map(r=>{
    const flags=[],qty=Number(String(r.qty).replace(/,/g,'')),unit=money(r.unit),amount=money(r.amount);
    const code=digitsOf(r.barcode);
-   if(!checkDigitOk(code))flags.push(['bad','เลขบาร์โค้ดไม่ผ่านการตรวจเลขท้าย ตรวจเทียบกับใบจริง']);
+   if(!checkDigitOk(code))flags.push(r.printed&&digitsOf(r.printed)===code?['warn','เลขท้ายบาร์โค้ดไม่ผ่านสูตรตรวจ แต่ตรงกับที่พิมพ์ใน PO (ไม่ต้องแก้)']:['bad','เลขบาร์โค้ดไม่ผ่านการตรวจเลขท้าย ตรวจเทียบกับใบจริง']);
    if(!(Number.isInteger(qty)&&qty>0))flags.push(['bad','จำนวนไม่ถูกต้อง']);
    else if(Number.isFinite(unit)&&Number.isFinite(amount)&&Math.abs(qty*unit-amount)>0.06)flags.push(['bad',`จำนวน × ราคา ≠ ยอดเงิน (${(qty*unit).toLocaleString(undefined,{maximumFractionDigits:2})})`]);
    if(!String(r.item).trim())flags.push(['warn','ไม่มีรหัสสินค้า']);
