@@ -101,6 +101,7 @@
   host.querySelectorAll('select[data-f=code]').forEach(s=>{s.value=branches[Number(s.dataset.i)].code});
   const on=branches.filter(b=>b.on),missing=on.filter(b=>!b.code).length;
   $('carrierSummary').textContent=`${on.length} สาขา · ${on.reduce((a,b)=>a+(Number(b.box)||0),0)} กล่อง`+(missing?` · ไม่มีไอดีสาขา ${missing} สาขา (ไฟล์จะเว้นว่างไว้)`:'');
+  $('carrierWarn').hidden=!!data;
   $('carrierDownload').disabled=!on.length; // no DATA file: the PO's own ship-to address is used
  }
  function onEdit(e){
@@ -136,7 +137,7 @@
    <p class="muted">ชีต ORDER ตามแบบฟอร์มขนส่ง · เลือกไอดีสาขา (IT0xx จากไฟล์หลัก DATA) ให้สาขาใน PO ครั้งแรกครั้งเดียว ระบบจำไว้ในเครื่องนี้ · กรอกจำนวนกล่องแล้วดาวน์โหลด</p>
    <div class="carrier-file"><label class="field">ไฟล์ที่อยู่ขนส่ง (DATA ORDER … .xlsx)<input id="carrierFile" type="file" accept=".xlsx,.xls"></label><p id="carrierData" class="muted"></p></div>
    <div id="carrierBody"></div>
-   <div class="carrier-go"><button id="carrierDownload" type="button">ดาวน์โหลด Excel</button><span class="muted">ไฟล์เดียว: ชีต ORDER (ส่งขนส่ง) · Order Matrix · ตรวจบาร์โค้ด · สรุปรายสาขา</span></div>`;
+   <p id="carrierWarn" class="carrier-warn" hidden>ยังไม่ได้เลือกไฟล์ DATA ORDER · ช่องแขวง เขต ผู้ติดต่อ เบอร์โทร จะไม่ครบ (อ่านจาก PO) · เลือกไฟล์ด้านบนครั้งเดียว ระบบจำไว้ในเครื่องนี้</p><div class="carrier-go"><button id="carrierDownload" type="button">ดาวน์โหลด Excel</button><span class="muted">ไฟล์เดียว: ชีต ORDER (ส่งขนส่ง) · Order Matrix · ตรวจบาร์โค้ด · สรุปรายสาขา</span></div>`;
   $('carrierFile').addEventListener('change',onFile);
   $('carrierBody').addEventListener('change',onEdit);
   $('carrierBody').addEventListener('input',e=>{if(e.target.dataset.f==='box')onEdit(e)});

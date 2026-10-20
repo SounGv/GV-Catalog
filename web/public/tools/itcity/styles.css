@@ -52,3 +52,4 @@ input[type=number]{width:100%;padding:9px;border:1px solid #bdccc5;background:wh
 .carrier-table{min-width:1500px;font-size:13px}.carrier-table td{vertical-align:top}.carrier-table td:nth-child(4){min-width:320px}.carrier-table select{max-width:220px}.carrier-table tr.off td{opacity:.45}.carrier-table .pill{display:inline-block;margin-top:4px}
 .carrier-go{display:flex;flex-wrap:wrap;gap:8px}.carrier-go button{margin:0}
 .branch-address{font-size:12px;line-height:1.5;margin-top:4px;max-width:120mm}
+.carrier-warn{background:#fdeceb;color:#9b1c1c;border:1px solid #f3b4ae;border-radius:8px;padding:10px 12px;font-weight:600;margin:10px 0}
