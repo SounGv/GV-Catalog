@@ -7,6 +7,7 @@ const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const SCRIPT_BASE=document.currentScript?.src||location.href;
 const state={pos:[],custBarcodes:null,catalog:null,gtinToSku:new Map(),busy:false};
+const stickers=GVProductStickers.mount($('stepSticker'),{shop:'Com7'});
 
 function toast(text){const t=$('toast');t.textContent=text;t.className='toast show';clearTimeout(toast.timer);toast.timer=setTimeout(()=>{t.className='toast'},4200)}
 function setStep(done,now){document.querySelectorAll('#steps .stp').forEach(s=>{const n=Number(s.dataset.step);s.classList.toggle('done',n<=done);s.classList.toggle('now',n===now)})}
@@ -117,7 +118,7 @@ function render(){
  $('packNeed').hidden=hasPo;
  $('empty').hidden=hasPo||state.busy;$('result').hidden=!hasPo;$('checkChip').hidden=!hasPo;
  setStep(hasPo?1:0,hasPo?2:1);
- if(!hasPo){window.Com7Stickers?.update([]);return}
+ if(!hasPo){$('stepSticker').hidden=true;return}
  const rows=allLines();
  const cur=$('poSelect').value;
  $('poSelect').innerHTML='<option value="">ทุกใบ</option>'+state.pos.map(p=>`<option value="${esc(p.po)}">${esc(p.po)} (${p.lines.length} รายการ)</option>`).join('');
@@ -128,7 +129,7 @@ function render(){
  $('stats').innerHTML=[['ใบ PO',state.pos.length,''],['รายการ',rows.length,''],['จำนวนชิ้น',rows.reduce((a,r)=>a+(r.l.qty||0),0).toLocaleString(),''],['ต้องเปลี่ยนบาร์โค้ด',count('change'),'bad'],['เช็กไม่ได้',count('unknown'),'warn']].map(([a,b,c])=>`<div class="${c}"><span>${a}</span><strong>${b}</strong></div>`).join('');
  const custHead=state.custBarcodes?'<th>ไฟล์ลูกค้า</th>':'';
  $('table').innerHTML=`<thead><tr><th>PO</th><th class="num">#</th><th>บาร์โค้ดใน PO (ลูกค้า)</th><th>รุ่น</th><th>รายการสินค้า</th><th class="num">จำนวน</th><th>บาร์โค้ดใน Catalog</th><th>ผลตรวจ</th>${custHead}</tr></thead><tbody>${shown.map(r=>`<tr class="${GVBarcodeCheck.rowClass(r.status)}"><td class="code">${esc(r.po)}</td><td class="num">${r.l.seq}</td><td class="code">${esc(r.l.barcode)}</td><td class="code">${esc(r.model||'—')}</td><td class="desc">${esc(r.l.desc)}</td><td class="num">${r.l.qty}</td><td class="code">${esc(r.catalogGtin.split(/[\s,;|/]+/).filter(Boolean).join(' · ')||'—')}</td><td>${r.status==='same'?'<span class="ok">✓ ตรงกับ Catalog</span>':GVBarcodeCheck.tagHtml(r.status)}${r.note?`<span class="mute">${esc(r.note)}</span>`:''}</td>${state.custBarcodes?`<td>${r.inCust?'<span class="ok">✓ มีในไฟล์</span>':'<span class="mute">ไม่มีในไฟล์</span>'}</td>`:''}</tr>`).join('')}</tbody>`;
- window.Com7Stickers?.update(rows);
+ $('stepSticker').hidden=!stickers.update(rows.map(r=>({code:r.l.barcode,model:r.model,desc:r.l.desc,qty:r.l.qty,status:r.status})));
  $('rowCount').textContent=`แสดง ${shown.length} จาก ${rows.length} รายการ`+(shown.length?'':' · ไม่มีรายการตรงกับตัวกรอง ลองล้างช่องค้นหาหรือเลือก "ทุกใบ"');
 }
 

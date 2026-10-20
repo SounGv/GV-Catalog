@@ -9,7 +9,7 @@
  const $=id=>document.getElementById(id);
  const STORE='gv-itcity-progress-v1';
  const tiles=[...document.querySelectorAll('#stepWork .tile[data-panel]')];
- const panels={delivery:'panelDelivery',pack:'packView'};
+ const panels={delivery:'panelDelivery',sticker:'panelSticker',pack:'packView'};
  const blank=()=>({printed:[],excel:false,scan:false,skip:false});
  let hasLines=false,isSample=false,fileKey='',branchIds=[],kinds={},prog=blank(),skipArmed=0;
  const kindNames={direct:'ส่งตรงสาขา',pickpack:'Pickpack'};
@@ -52,7 +52,7 @@
   const why=lockReason();
   paint(excel,{done:t&&prog.excel,locked:!!why,reason:why,sub:why?`🔒 ${why}`:t&&prog.excel?'ดาวน์โหลดแล้ว':''});
   paint(pack,{done:t&&prog.scan,locked:!!why,reason:why,sub:why?`🔒 ${why}`:t&&prog.scan?'สร้างงานยิงสแกนแล้ว':''});
-  excel.classList.toggle('need',!hasLines);delivery.classList.toggle('need',!hasLines);
+  excel.classList.toggle('need',!hasLines);delivery.classList.toggle('need',!hasLines);tiles.find(x=>x.dataset.panel==='sticker')?.classList.toggle('need',!hasLines);
   const link=$('skipLock');link.hidden=!why;
   if(!why)skipArmed=0;
   link.textContent=skipArmed?'กดอีกครั้งเพื่อยืนยัน: ข้ามขั้นตอนที่ล็อก (ใช้เมื่อพิมพ์ไม่ได้จริงๆ)':'พิมพ์ไม่ได้ / ข้ามขั้นตอนที่ล็อก';
@@ -76,7 +76,7 @@
  }
  for(const t of tiles)t.addEventListener('click',()=>{
   const name=t.dataset.panel;
-  if(name==='delivery'&&!hasLines)return toast('เลือกไฟล์ออเดอร์ก่อน');
+  if((name==='delivery'||name==='sticker')&&!hasLines)return toast('เลือกไฟล์ออเดอร์ก่อน');
   const why=lockOf(name);
   if(why)return toast(why);
   openPanel(name);

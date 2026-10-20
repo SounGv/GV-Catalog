@@ -1,6 +1,7 @@
 (function(){
 'use strict';
 const C=window.ITCity,$=id=>document.getElementById(id),esc=v=>C.text(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const stickers=GVProductStickers.mount(document.getElementById('panelSticker'),{shop:'IT City',note:'รายการส่งตรงสาขาไม่มีบาร์โค้ดลูกค้า จึงไม่ขึ้นในรายการนี้'});
 const state={master:IT_CITY_MASTER.rows,masterName:IT_CITY_MASTER.file,orders:[],lines:[],view:'checks',busy:false};
 let task=0,renderTimer;
 const kindOf=r=>r.trb?'pickpack':'direct',kindLabel={direct:'ส่งตรงสาขา',pickpack:'Pickpack'};
@@ -107,6 +108,8 @@ function render(){
   $('printScope').textContent=scopeText();
   $('printButton').disabled=$('exportButton').disabled=state.busy;
   renderTables();renderDelivery();switchView(state.view);
+  // stickers carry IT City's barcode: lines without one (direct-to-branch) have nothing to print
+  stickers.update(state.lines.map(r=>({code:r.check.target||C.bars(r.customerBarcode)[0]||'',model:r.check.sku,desc:r.description,qty:r.qty,status:r.check.status==='relabel'?'change':r.check.status==='match'?'same':'unknown'})));
   window.dispatchEvent(new CustomEvent('itcity-render',{detail:{branches:[...new Set(state.lines.map(r=>r.branch))],kinds:Object.fromEntries([...branchKinds()].map(([id,b])=>[id,b.kind])),isSample:!!state.isSample,hasLines:state.lines.length>0}}));
 }
 async function print(){
