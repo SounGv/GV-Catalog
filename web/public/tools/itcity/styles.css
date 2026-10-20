@@ -49,3 +49,4 @@ input[type=number]{width:100%;padding:9px;border:1px solid #bdccc5;background:wh
 .relabel-cta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fdeceb;border-color:#f2b3ae;color:#9b2a22}.relabel-cta button{margin:0}
 
 .carrier-file{margin:8px 0 12px}.carrier-table select{min-height:40px;max-width:340px;font:inherit}.carrier-table input[type=number]{width:72px;min-height:40px;text-align:right}.carrier-table tr.need-code td{background:#fff6dc}.carrier-go{margin-top:12px}
+.carrier-table{min-width:1500px;font-size:13px}.carrier-table td{vertical-align:top}.carrier-table td:nth-child(4){min-width:320px}.carrier-table select{max-width:220px}.carrier-table tr.off td{opacity:.45}.carrier-table .pill{display:inline-block;margin-top:4px}
