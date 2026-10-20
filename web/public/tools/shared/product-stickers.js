@@ -1,6 +1,6 @@
 // Product barcode stickers for the retailer tools (Com7, IT City): one row per customer barcode in the open
 // orders (quantities added up); the models whose customer barcode differs from the Catalog are ticked first.
-// Prints the customer's barcode on 32.3 x 20 mm labels, 3 per row, one 100 x row-pitch mm page per row — the
+// Name on top, the customer's barcode underneath, on 32.3 x 20 mm labels, 3 per row, one 100 x row-pitch mm page per row — the
 // same roll and geometry as the AIS stickers, starting from the AIS printer adjustments saved on this station.
 //
 //   const st = GVProductStickers.mount(hostElement, { shop: 'Com7', note: '…' })
@@ -33,9 +33,10 @@
 .st-row{display:flex;box-sizing:border-box;background:#fff;margin-bottom:6px}
 .st-label{box-sizing:border-box;overflow:hidden;font-family:Arial,sans-serif;color:#000;text-align:center;outline:1px dashed #b8c4cc;position:relative}
 .st-label.st-blank{outline-style:dotted;opacity:.5}
-.st-in{position:relative;padding-top:1.5mm}
+.st-in{position:relative;padding-top:1.3mm;height:100%;box-sizing:border-box;display:flex;flex-direction:column}
+.st-bc{margin-top:auto;padding-bottom:1.3mm}
 .st-digits{font-size:7.6pt;line-height:1.05;margin-top:.25mm;font-weight:700}
-.st-line{font-weight:800;line-height:1.1;white-space:nowrap;margin-top:.3mm}.st-line span{display:inline-block;transform-origin:center}
+.st-line{font-weight:800;line-height:1.1;white-space:nowrap}.st-line span{display:inline-block;transform-origin:center}
 .st-detail{font-weight:700;font-size:5.4pt;line-height:1.15;margin:.2mm auto 0;padding:0 1mm;max-height:2.3em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}`;
 
  function brandOf(desc){const w=String(desc).trim().split(/\s+/)[0]||'';return /^[A-Z][A-Z0-9-]+$/i.test(w)?w.toUpperCase():''}
@@ -132,7 +133,7 @@
   function label(it,p){
    const maxPx=Math.min(p.dieW-p.padX*2,p.bcW-1)*PX,title=[it.brand,it.model].filter(Boolean).join(' '),f=fit(title,maxPx,p.nameBase,p.nameMin);
    const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail">${esc(it.text)}</div>`:'');
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${barcode(it.code)}<div class="st-digits">${esc(it.code)}</div>${lines}</div></div>`;
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${lines}<div class="st-bc">${barcode(it.code)}<div class="st-digits">${esc(it.code)}</div></div></div></div>`;
   }
   // rows of 3; after each model the row is finished with blanks and one empty row is left (switch)
   function rows(test){
