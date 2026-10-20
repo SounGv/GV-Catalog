@@ -75,12 +75,12 @@
   const codes=byCode(),opts=(data?.rows||[]).filter(r=>/^IT/i.test(r.code)).map(r=>`<option value="${esc(r.code)}">${esc(r.code)} · ${esc(r.name)}</option>`).join('');
   // the same columns as the carrier's ORDER sheet, plus the PO branch it comes from
   const cell=v=>`<td>${esc(v??'')}</td>`;
-  host.innerHTML=`<div class="table-scroll"><table class="carrier-table"><thead><tr><th>ส่ง</th><th>สาขาใน PO</th><th>รหัสร้าน</th><th>ที่อยู่</th><th>ถนน*แขวง</th><th>เขต</th><th>จังหวัด</th><th>รหัสไปรษณีย์</th><th>Zone</th><th>ชื่อผู้ติดต่อ</th><th>เบอร์โทร1</th><th>เบอร์โทร2 / Fax</th><th class="num">BOX</th></tr></thead><tbody>${branches.map((b,i)=>{
+  host.innerHTML=`<div class="table-scroll"><table class="carrier-table"><thead><tr><th>ส่ง</th><th>สาขาใน PO</th><th>ไอดีสาขา (รหัสร้าน)</th><th>ที่อยู่</th><th>ถนน*แขวง</th><th>เขต</th><th>จังหวัด</th><th>รหัสไปรษณีย์</th><th>Zone</th><th>ชื่อผู้ติดต่อ</th><th>เบอร์โทร1</th><th>เบอร์โทร2 / Fax</th><th class="num">BOX</th></tr></thead><tbody>${branches.map((b,i)=>{
    const r=codes.get(b.code)||{},tag=!b.code?'<span class="pill review">ยังไม่เลือก</span>':b.auto?'<span class="pill unchecked">ระบบเดา ตรวจก่อน</span>':'';
    return`<tr class="${b.code?'':'need-code'}${b.on?'':' off'}"><td><input type="checkbox" data-i="${i}" data-f="on" ${b.on?'checked':''} aria-label="ส่ง ${esc(b.id)}"></td><td><b>${esc(b.id)}</b><br><small>${esc(b.name)}</small></td><td><select data-i="${i}" data-f="code"><option value="">— เลือก —</option>${opts}</select>${tag}</td>${cell([r.name,r.address].filter(Boolean).join(' '))}${cell(r.sub)}${cell(r.district)}${cell(r.province)}${cell(r.zip)}${cell('')}${cell(r.contact)}${cell(r.phone1)}${cell(r.phone2||(b.code?'0':''))}<td class="num"><input type="number" min="0" max="999" step="1" data-i="${i}" data-f="box" value="${b.box}"></td></tr>`}).join('')}</tbody></table></div>`;
   host.querySelectorAll('select[data-f=code]').forEach(s=>{s.value=branches[Number(s.dataset.i)].code});
   const on=branches.filter(b=>b.on),missing=on.filter(b=>!b.code).length;
-  $('carrierSummary').textContent=`${on.length} สาขา · ${on.reduce((a,b)=>a+(Number(b.box)||0),0)} กล่อง`+(missing?` · ยังไม่เลือกรหัสขนส่ง ${missing} สาขา`:'');
+  $('carrierSummary').textContent=`${on.length} สาขา · ${on.reduce((a,b)=>a+(Number(b.box)||0),0)} กล่อง`+(missing?` · ยังไม่เลือกไอดีสาขา ${missing} สาขา`:'');
   $('carrierDownload').disabled=!data||!on.length;
  }
  function onEdit(e){
@@ -101,7 +101,7 @@
  // the ORDER rows for the ticked branches; null (with a message) when a branch has no carrier code yet
  function build(){
   const on=branches.filter(b=>b.on),missing=on.filter(b=>!b.code);
-  if(missing.length)return{error:'ยังไม่ได้เลือกรหัสขนส่งของสาขา: '+missing.map(b=>b.id).join(', ')};
+  if(missing.length)return{error:'ยังไม่ได้เลือกไอดีสาขาของ: '+missing.map(b=>b.id).join(', ')};
   const codes=byCode(),head=['','ที่อยู่','ถนน*แขวง','เขต','จังหวัด','รหัสไปรษณีย์','Zone','ชื่อผู้ติดต่อ','เบอร์โทร1','เบอร์โทร2 / Fax','BOX','น้ำหนัก','Client code','Order No.'];
   const rows=on.map(b=>{const r=codes.get(b.code)||{};const zip=/^\d+$/.test(r.zip||'')?Number(r.zip):(r.zip||'');return[b.code,[r.name,r.address].filter(Boolean).join(' '),r.sub||'',r.district||'',r.province||'',zip,'',r.contact||'',r.phone1||'',r.phone2||0,Number(b.box)||0,'','','']});
   const ws=XLSX.utils.aoa_to_sheet([head,...rows]);
@@ -118,7 +118,7 @@
  function init(){
   const host=$('panelCarrier');if(!host)return;
   host.innerHTML=`<div class="view-heading"><h2>สรุปส่งขนส่ง</h2><span id="carrierSummary"></span></div>
-   <p class="muted">ไฟล์ Excel ตามแบบฟอร์มขนส่ง (ชีต ORDER) · จับคู่รหัสสาขา IT City กับรหัสขนส่งครั้งแรกครั้งเดียว ระบบจำไว้ในเครื่องนี้ · กรอกจำนวนกล่องแล้วดาวน์โหลด</p>
+   <p class="muted">ไฟล์ Excel ตามแบบฟอร์มขนส่ง (ชีต ORDER) · เลือกไอดีสาขา (IT0xx จากไฟล์หลัก DATA) ให้สาขาใน PO ครั้งแรกครั้งเดียว ระบบจำไว้ในเครื่องนี้ · กรอกจำนวนกล่องแล้วดาวน์โหลด</p>
    <div class="carrier-file"><label class="field">ไฟล์ที่อยู่ขนส่ง (DATA ORDER … .xlsx)<input id="carrierFile" type="file" accept=".xlsx,.xls"></label><p id="carrierData" class="muted"></p></div>
    <div id="carrierBody"></div>
    <div class="carrier-go"><button id="carrierDownload" type="button">ดาวน์โหลด Excel สรุปส่งขนส่ง</button></div>`;
