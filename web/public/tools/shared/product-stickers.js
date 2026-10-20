@@ -1,6 +1,6 @@
 // Product barcode stickers for the retailer tools (Com7, IT City): one row per customer barcode in the open
 // orders (quantities added up); the models whose customer barcode differs from the Catalog are ticked first.
-// Name on top, the customer's barcode underneath, on 32.3 x 20 mm labels, 3 per row, one 100 x row-pitch mm page per row — the
+// Name on top, the customer's barcode underneath (EAN-13 for valid 13-digit codes, Code 128 otherwise), on 32.3 x 20 mm labels, 3 per row, one 100 x row-pitch mm page per row — the
 // same roll and geometry as the AIS stickers, starting from the AIS printer adjustments saved on this station.
 //
 //   const st = GVProductStickers.mount(hostElement, { shop: 'Com7', note: '…' })
@@ -53,6 +53,32 @@
   let lo=min,hi=base;if(w(hi)<=maxPx)return{size:hi,scale:1};
   for(let i=0;i<16;i++){const m=(lo+hi)/2;if(w(m)<=maxPx)lo=m;else hi=m}
   return{size:lo,scale:Math.min(1,maxPx/Math.max(w(lo),1))};
+ }
+ // EAN-13 (the retail barcode on the product box): used for 13-digit codes with a valid check digit.
+ // Drawn here in module units — 0.25 mm per module (2 dots at 203 dpi), 11 / 7 module quiet zones,
+ // guard bars longer than the data bars, digits under the bars as on retail packs.
+ const EAN={L:['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'],
+  G:['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'],
+  R:['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'],
+  P:['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL']};
+ function eanOk(code){
+  if(!/^\d{13}$/.test(code))return false;
+  const d=[...code].map(Number),last=d.pop();let sum=0;
+  d.reverse().forEach((v,i)=>{sum+=v*(i%2===0?3:1)});
+  return (10-sum%10)%10===last;
+ }
+ function ean13(code){
+  const d=[...code].map(Number),par=EAN.P[d[0]];
+  let bits='101';for(let i=1;i<=6;i++)bits+=EAN[par[i-1]][d[i]];
+  bits+='01010';for(let i=7;i<=12;i++)bits+=EAN.R[d[i]];bits+='101';
+  const Q=11,W=Q+95+7,BAR=24,GUARD=28,H=34,guard=i=>i<3||(i>=45&&i<50)||i>=92;
+  let rects='';
+  for(let i=0;i<95;){if(bits[i]!=='1'){i++;continue}let j=i;while(j<95&&bits[j]==='1'&&guard(j)===guard(i))j++;rects+=`<rect x="${Q+i}" y="0" width="${j-i}" height="${guard(i)?GUARD:BAR}"/>`;i=j}
+  const t=(x,s)=>`<text x="${x}" y="${H-.6}" text-anchor="middle">${s}</text>`;
+  let text=t(Q-5,d[0]);
+  for(let i=0;i<6;i++)text+=t(Q+3+7*i+3.5,d[i+1]);
+  for(let i=0;i<6;i++)text+=t(Q+50+7*i+3.5,d[i+7]);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${(W*.25).toFixed(2)}mm;height:${(H*.25).toFixed(2)}mm" role="img" aria-label="EAN-13 ${code}"><g fill="#000">${rects}</g><g font-family="Arial,Helvetica,sans-serif" font-size="8.6" font-weight="700" fill="#000">${text}</g></svg>`;
  }
  function barcode(code){
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -133,7 +159,7 @@
   function label(it,p){
    const maxPx=Math.min(p.dieW-p.padX*2,p.bcW-1)*PX,title=[it.brand,it.model].filter(Boolean).join(' '),f=fit(title,maxPx,p.nameBase,p.nameMin);
    const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail">${esc(it.text)}</div>`:'');
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${lines}<div class="st-bc">${barcode(it.code)}<div class="st-digits">${esc(it.code)}</div></div></div></div>`;
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${lines}<div class="st-bc">${eanOk(it.code)?ean13(it.code):barcode(it.code)+`<div class="st-digits">${esc(it.code)}</div>`}</div></div></div>`;
   }
   // rows of 3; after each model the row is finished with blanks and one empty row is left (switch)
   function rows(test){
