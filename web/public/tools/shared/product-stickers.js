@@ -12,8 +12,8 @@
  // Label sizes. dot = printer dots per barcode module at 203 dpi (2 = 0.25 mm, 3 = 0.375 mm).
  const SIZES={
   s3:{label:'3 ดวง/แถว · 32.3 × 20 มม. (ม้วนเดียวกับ AIS)',dieW:32.3,dieH:20,cols:3,pageW:100,sheetLeft:1.5,padX:.8,bcW:28.5,bcH:5.6,dot:2,nameBase:7.4,nameMin:5,detail:5.4,digits:7.6},
-  // wider label, same order as the 3-up one (name on top, barcode centred below) with bigger text and longer lines
-  s2:{label:'2 ดวง/แถว · 50 × 20 มม.',dieW:50,dieH:20,cols:2,pageW:100,sheetLeft:0,padX:2,bcW:34,bcH:5.6,dot:2,nameBase:10,nameMin:6,detail:6.2,digits:7.8,detailLines:1}};
+  // laid out like the Jaymart 50 x 30 sticker (bold title, one detail line, wide barcode, bold digits, all centred), scaled to 20 mm high
+  s2:{label:'2 ดวง/แถว · 50 × 20 มม. (แบบ Jaymart)',dieW:50,dieH:20,cols:2,pageW:100,sheetLeft:0,padX:4,bcW:40,bcH:6.4,dot:2,nameBase:9.5,nameMin:7,detail:7,digits:8.8,detailLines:1,center:true}};
  const AIS={pitch:'gv-ais-productPitch',shift:'gv-ais-productShift',shiftX:'gv-ais-productShiftX'};
  const read=k=>{try{return localStorage.getItem(k)}catch{return null}};
  const write=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
@@ -37,6 +37,7 @@
 .gv-st .st-preview{background:#eef3f5;border-radius:10px;padding:12px;overflow:auto}
 .st-row{display:flex;box-sizing:border-box;background:#fff;margin-bottom:6px}
 .st-label{box-sizing:border-box;overflow:hidden;font-family:Arial,sans-serif;color:#000;text-align:center;outline:1px dashed #b8c4cc;position:relative}
+.st-center .st-in{justify-content:center;padding:0 0 .4mm}.st-center .st-bc{margin-top:.6mm;padding-bottom:0}
 .st-label.st-blank{outline-style:dotted;opacity:.5}
 .st-in{position:relative;padding-top:1.3mm;height:100%;box-sizing:border-box;display:flex;flex-direction:column}
 .st-bc{margin-top:auto;padding-bottom:1.3mm}
@@ -172,7 +173,7 @@
   function label(it,p){
    const maxPx=Math.min(p.dieW-p.padX*2,p.bcW-1)*PX,title=[it.brand,it.model].filter(Boolean).join(' '),f=fit(title,maxPx,p.nameBase,p.nameMin);
    const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail" style="font-size:${p.detail}pt;-webkit-line-clamp:${p.detailLines||2};max-height:${(p.detailLines||2)*1.15}em">${esc(it.text)}</div>`:'');
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${lines}<div class="st-bc">${useEan(it.code)?ean13(it.code,p):barcode(it.code,p)+`<div class="st-digits" style="font-size:${p.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
+   return`<div class="st-label${p.center?' st-center':''}" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm${p.center?`;padding-left:${p.padX}mm;padding-right:${p.padX}mm`:''}">${lines}<div class="st-bc">${useEan(it.code)?ean13(it.code,p):barcode(it.code,p)+`<div class="st-digits" style="font-size:${p.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
   }
   // rows of 3; after each model the row is finished with blanks and one empty row is left (switch)
   function rows(test){
