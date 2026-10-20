@@ -119,7 +119,7 @@
  let pdfjsPromise;
  const pdfjs=()=>pdfjsPromise||(pdfjsPromise=import(BASE+'pdf.mjs').then(m=>{m.GlobalWorkerOptions.workerSrc=BASE+'pdf.worker.mjs';return m}));
  // Several page readers work side by side (a 47-page scan was read one page at a time before).
- const POOL=Math.max(1,Math.min(3,(navigator.hardwareConcurrency||4)-1));
+ const POOL=Math.max(1,Math.min(5,(navigator.hardwareConcurrency||4)-2));
  let ocr=null;
  async function ocrWorkers(onProgress){
   if(ocr)return ocr;
@@ -182,7 +182,9 @@
     const page=await doc.getPage(p),scale=2.6,vp=page.getViewport({scale}),canvas=document.createElement('canvas');
     canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
     await page.render({canvasContext:canvas.getContext('2d',{alpha:false}),viewport:vp}).promise;
-    const res=await text.recognize(canvas),words=toWords(res.data),table=parseTable(words,canvas.width);
+    // Thai + English on the whole page: reading the table in English only was twice as fast but misread PO numbers,
+    // which put pages under the wrong PO
+    const words=toWords((await text.recognize(canvas)).data),table=parseTable(words,canvas.width);
     if(table.rows.length)await refineDigits(canvas,table.rows,workers);
     canvas.width=canvas.height=0; // free the page image straight away
     pages[p-1]={words,width:vp.width,scanned:true,table};
@@ -347,10 +349,7 @@
      const noPo=problems.filter(t=>/เลข PO|รหัสปลายทาง|ไม่มีรายการ/.test(t));
      if(noPo.length){box.querySelector('.err').textContent='ยังใช้ไม่ได้: '+noPo.slice(0,4).join(' · ');return}
      // red rows left: say what they are; a second press uses the data anyway and the rows stay listed as warnings
-     if(problems.length&&!e.target.closest('[data-force]')){
-      box.querySelector('.err').innerHTML=esc('ยังมี '+problems.length+' จุดไม่ผ่าน: '+problems.slice(0,3).join(' · ')+(problems.length>3?` · และอีก ${problems.length-3} จุด`:''))+'<br><button type="button" class="force" data-ok data-force>ใช้ข้อมูลนี้ต่อ (จุดที่ไม่ผ่านจะขึ้นเตือนในหน้าหลัก)</button>';
-      return;
-     }
+     // red rows do not block: the data is used and they are listed as warnings on the main page
      docs.unverified=problems;
      back.remove();resolve(docs);
     }

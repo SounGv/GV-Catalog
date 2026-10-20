@@ -44,7 +44,9 @@ async function readWorkbook(file){
 }
 async function loadOrders(files){
   if(!files.length)return;const ticket=++task;busy(true);error('');
-  try{const orders=[];for(const file of files){const sheets=await readWorkbook(file),o=C.parseOrder(sheets,file.name);if(sheets.extraWarnings?.length)o.warnings=[...(o.warnings||[]),...sheets.extraWarnings];orders.push(o)}await document.fonts.ready;if(ticket===task)setOrders(orders)}
+  try{const orders=[];for(const file of files){const sheets=await readWorkbook(file),o=C.parseOrder(sheets,file.name);if(sheets.extraWarnings?.length)o.warnings=[...(o.warnings||[]),...sheets.extraWarnings];orders.push(o)}await document.fonts.ready;if(ticket===task){setOrders(orders);
+    // models whose barcode must change: go straight to the sticker list
+    if(state.lines.some(r=>r.check.status==='relabel')){const panel=$('panelSticker');if(panel?.hidden)document.querySelector('#stepWork .tile[data-panel="sticker"]')?.click();else panel?.scrollIntoView({behavior:'smooth',block:'start'})}}}
   catch(e){if(ticket===task){state.orders=[];state.lines=[];$('fileNames').textContent='อ่านไฟล์ไม่สำเร็จ';fillKinds();fillBranches();render();error(e.message)}}
   finally{if(ticket===task)busy(false)}
 }

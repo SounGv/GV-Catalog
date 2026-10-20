@@ -1,5 +1,5 @@
 // Product barcode stickers for the retailer tools (Com7, IT City): one row per customer barcode in the open
-// orders (quantities added up); the models whose customer barcode differs from the Catalog are ticked first.
+// orders (quantities added up); the models whose customer barcode differs from the Catalog are listed first in red.
 // Name on top, the customer's barcode underneath (EAN-13 for valid 13-digit codes, Code 128 otherwise), on 32.3 x 20 mm labels, 3 per row, one 100 x row-pitch mm page per row — the
 // same roll and geometry as the AIS stickers, starting from the AIS printer adjustments saved on this station.
 //
@@ -103,7 +103,7 @@
   const KEY=`gv-${String(shop).toLowerCase().replace(/[^a-z0-9]+/g,'')}-sticker-`;
   host.classList.add('gv-st');
   host.innerHTML=`<div class="st-head"><h2>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h2><span class="st-note">บาร์โค้ดตามไฟล์ของ ${esc(shop)}</span></div>
-   <p class="st-note">ติ๊กรุ่นที่จะพิมพ์ (รุ่นที่ต้องเปลี่ยนบาร์โค้ดติ๊กไว้ให้แล้ว) · จำนวนดวงเริ่มจากยอดรวมในไฟล์ที่เปิดอยู่ แก้ได้${note?' · '+esc(note):''}</p>
+   <p class="st-note">ติ๊กรุ่นที่จะพิมพ์ · แถวสีแดง = บาร์โค้ดในไฟล์ร้านไม่ตรงกับ Catalog ต้องเปลี่ยนบาร์โค้ด · จำนวนดวงเริ่มจากยอดรวมในไฟล์ที่เปิดอยู่ แก้ได้${note?' · '+esc(note):''}</p>
    <div class="st-actions"><button type="button" class="secondary" data-act="pick-change">เลือกเฉพาะรุ่นที่ต้องเปลี่ยนบาร์โค้ด</button><span class="st-note" data-el="summary"></span></div>
    <div class="st-wrap"><table data-el="table"></table></div>
    <div class="st-actions"><label class="st-type">ขนาดสติกเกอร์ <select data-set="size">${Object.entries(SIZES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select></label><label class="st-type">ชนิดบาร์โค้ด <select data-set="type"><option value="auto">อัตโนมัติ (EAN-13 ถ้าเลขถูก ไม่งั้น Code 128)</option><option value="ean">EAN-13</option><option value="c128">Code 128</option></select></label></div>
@@ -140,7 +140,7 @@
    for(const it of items){
     it.brand=brandOf(it.desc);
     const k=kept.get(it.code)||{};
-    it.pick=k.pick??(it.status==='change');it.qty=k.qty??it.qty;it.text=k.text??detailOf(it.desc,it.brand,it.model);
+    it.pick=k.pick??false; /* nothing ticked until staff choose; red rows show what must change */ it.qty=k.qty??it.qty;it.text=k.text??detailOf(it.desc,it.brand,it.model);
    }
    draw();
    return items.length;
