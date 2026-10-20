@@ -35,7 +35,8 @@ async function readPo(file){
   for(const r of rows){
    const seq=r.f.find(f=>f.x<60&&/^\d{1,3}$/.test(f.s)),bc=r.f.find(f=>f.x>=60&&f.x<140&&/^\d{8,14}$/.test(f.s));
    if(!seq||!bc)continue;
-   const desc=r.f.filter(f=>f.x>=140&&f.x<340).sort((a,b)=>a.x-b.x).map(f=>f.s).join(' ');
+   // a long name can run into the price column ("…Black519.00"): drop a trailing money figure
+   const desc=r.f.filter(f=>f.x>=140&&f.x<340).sort((a,b)=>a.x-b.x).map(f=>f.s).join(' ').replace(/\s*\d{1,3}(?:,\d{3})*\.\d{2}$/,'');
    const right=r.f.filter(f=>f.x>=340&&/^[\d,.]+$/.test(f.s));
    const qty=right.find(f=>f.end>380&&f.end<=440),price=right.find(f=>f.end>440&&f.end<=520),amount=right.find(f=>f.end>520);
    const line={seq:Number(seq.s),barcode:bc.s,desc,qty:qty?number(qty.s):NaN,price:price?number(price.s):NaN,amount:amount?number(amount.s):NaN};
@@ -163,15 +164,43 @@ $('packJobs').addEventListener('click',e=>{const id=e.target.closest('[data-pack
 $('packJobButton').addEventListener('click',createPackJob);$('packRefresh').addEventListener('click',loadPackJobs);$('packBack').addEventListener('click',closePackJob);
 loadPackJobs();
 
+// ---- .zip of PDFs (the PO set is often sent zipped): read the ZIP central directory, inflate each PDF ----
+async function unzipPdfs(file){
+ const buf=new Uint8Array(await file.arrayBuffer()),dv=new DataView(buf.buffer);
+ let eocd=-1;for(let i=buf.length-22;i>=Math.max(0,buf.length-65557);i--)if(dv.getUint32(i,true)===0x06054b50){eocd=i;break}
+ if(eocd<0)throw Error('ไฟล์ zip เสียหรือไม่ใช่ไฟล์ zip');
+ const count=dv.getUint16(eocd+10,true),out=[];let p=dv.getUint32(eocd+16,true);
+ for(let n=0;n<count;n++){
+  if(dv.getUint32(p,true)!==0x02014b50)throw Error('อ่านรายชื่อไฟล์ใน zip ไม่ได้');
+  const method=dv.getUint16(p+10,true),size=dv.getUint32(p+20,true),nameLen=dv.getUint16(p+28,true),extraLen=dv.getUint16(p+30,true),commentLen=dv.getUint16(p+32,true),local=dv.getUint32(p+42,true);
+  const name=new TextDecoder().decode(buf.subarray(p+46,p+46+nameLen));p+=46+nameLen+extraLen+commentLen;
+  const base=name.split('/').pop();
+  if(!/\.pdf$/i.test(base)||name.includes('__MACOSX/'))continue;
+  const start=local+30+dv.getUint16(local+26,true)+dv.getUint16(local+28,true),raw=buf.subarray(start,start+size);
+  let data;
+  if(method===0)data=raw;
+  else if(method===8)data=await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+  else throw Error(`${base}: zip แบบนี้ยังไม่รองรับ`);
+  out.push(new File([data],base,{type:'application/pdf'}));
+ }
+ if(!out.length)throw Error('ใน zip ไม่มีไฟล์ PDF');
+ return out;
+}
+
 // ---- file events ----
 function showError(list){const e=$('error');e.hidden=!list.length;e.innerHTML=list.map(esc).join('<br>')}
 async function onPoFiles(){
- const files=[...$('poFiles').files];
- $('poNames').textContent=files.map(f=>f.name).join(' · ');
+ const picked=[...$('poFiles').files];
+ $('poNames').textContent=picked.map(f=>f.name).join(' · ');
  state.pos=[];showError([]);
- if(!files.length){render();return}
+ if(!picked.length){render();return}
  state.busy=true;$('loading').hidden=false;render();
- const warnings=[];
+ const warnings=[],files=[];
+ for(const f of picked){
+  if(!/\.zip$/i.test(f.name)){files.push(f);continue}
+  try{const inside=await unzipPdfs(f);files.push(...inside);$('poNames').textContent=picked.map(x=>x===f?`${x.name} (${inside.length} ไฟล์ PDF)`:x.name).join(' · ')}
+  catch(e){warnings.push(`${f.name}: ${e.message||e}`)}
+ }
  const results=await Promise.allSettled(files.map(readPo));
  const read=[];
  for(const [i,r] of results.entries()){
