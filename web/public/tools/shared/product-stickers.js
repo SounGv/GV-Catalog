@@ -12,8 +12,9 @@
  // Label sizes. dot = printer dots per barcode module at 203 dpi (2 = 0.25 mm, 3 = 0.375 mm).
  const SIZES={
   s3:{label:'3 ดวง/แถว · 32.3 × 20 มม. (ม้วนเดียวกับ AIS)',dieW:32.3,dieH:20,cols:3,pageW:100,sheetLeft:1.5,padX:.8,bcW:28.5,bcH:5.6,dot:2,nameBase:7.4,nameMin:5,detail:5.4,digits:7.6},
-  // laid out like the Jaymart 50 x 30 sticker (bold title, one detail line, wide barcode, bold digits, all centred), scaled to 20 mm high
-  s2:{label:'2 ดวง/แถว · 50 × 20 มม. (แบบ Jaymart)',dieW:50,dieH:20,cols:2,pageW:100,sheetLeft:0,padX:4,bcW:40,bcH:6.4,dot:2,nameBase:9.5,nameMin:7,detail:7,digits:8.8,detailLines:1,center:true}};
+  // the Jaymart roll: 50 x 30 mm, 2 across, same look and spacing as the Jaymart sticker; page size, row height and
+  // offsets start from what this computer saved in the Jaymart tool (gv-jm-label-*)
+  s2:{label:'2 ดวง/แถว · 50 × 30 มม. (ม้วนเดียวกับ Jaymart)',jaymart:true,dieW:50,dieH:30,cols:2,pageW:106,sheetLeft:3,gapX:0,padX:4,bcW:40,bcH:9.5,dot:2,eanDot:3,eanBarH:8,nameBase:10,nameMin:7,detail:7.5,digits:9.5,detailLines:2,center:true}};
  const AIS={pitch:'gv-ais-productPitch',shift:'gv-ais-productShift',shiftX:'gv-ais-productShiftX'};
  const read=k=>{try{return localStorage.getItem(k)}catch{return null}};
  const write=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
@@ -37,7 +38,7 @@
 .gv-st .st-preview{background:#eef3f5;border-radius:10px;padding:12px;overflow:auto}
 .st-row{display:flex;box-sizing:border-box;background:#fff;margin-bottom:6px}
 .st-label{box-sizing:border-box;overflow:hidden;font-family:Arial,sans-serif;color:#000;text-align:center;outline:1px dashed #b8c4cc;position:relative}
-.st-center .st-in{justify-content:center;padding:0 0 .4mm}.st-center .st-bc{margin-top:.6mm;padding-bottom:0}
+.st-center .st-in{justify-content:center;padding:2mm 0 1mm}.st-center .st-line{line-height:1.15}.st-center .st-detail{margin:.5mm auto .9mm}.st-center .st-bc{margin-top:0;padding-bottom:0}.st-center .st-digits{margin-top:.6mm}
 .st-label.st-blank{outline-style:dotted;opacity:.5}
 .st-in{position:relative;padding-top:1.3mm;height:100%;box-sizing:border-box;display:flex;flex-direction:column}
 .st-bc{margin-top:auto;padding-bottom:1.3mm}
@@ -78,14 +79,14 @@
   let bits='101';for(let i=1;i<=6;i++)bits+=EAN[par[i-1]][d[i]];
   bits+='01010';for(let i=7;i<=12;i++)bits+=EAN.R[d[i]];bits+='101';
   // heights in modules: data bars p.bcH mm, guard bars 0.9 mm longer, digits sized like the Code 128 digits
-  const m=mod(p),FS=p.digits*.3528/m,Q=11,W=Q+95+7,BAR=Math.round(p.bcH/m),GUARD=BAR+Math.round(.9/m),H=Math.ceil(GUARD+FS*.75),guard=i=>i<3||(i>=45&&i<50)||i>=92;
+  const m=(p.eanDot||p.dot)*25.4/203,FS=p.digits*.3528/m,Q=11,W=Q+95+7,BAR=Math.round((p.eanBarH||p.bcH)/m),GUARD=BAR+Math.round(.9/m),H=Math.ceil(GUARD+FS*.75),guard=i=>i<3||(i>=45&&i<50)||i>=92;
   let rects='';
   for(let i=0;i<95;){if(bits[i]!=='1'){i++;continue}let j=i;while(j<95&&bits[j]==='1'&&guard(j)===guard(i))j++;rects+=`<rect x="${Q+i}" y="0" width="${j-i}" height="${guard(i)?GUARD:BAR}"/>`;i=j}
   const t=(x,s)=>`<text x="${x}" y="${H-.6}" text-anchor="middle">${s}</text>`;
   let text=t(Q-5,d[0]);
   for(let i=0;i<6;i++)text+=t(Q+3+7*i+3.5,d[i+1]);
   for(let i=0;i<6;i++)text+=t(Q+50+7*i+3.5,d[i+7]);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${(W*mod(p)).toFixed(2)}mm;height:${(H*mod(p)).toFixed(2)}mm" role="img" aria-label="EAN-13 ${code}"><g fill="#000">${rects}</g><g font-family="Arial,Helvetica,sans-serif" font-size="${FS.toFixed(2)}" font-weight="700" fill="#000">${text}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${(W*m).toFixed(2)}mm;height:${(H*m).toFixed(2)}mm" role="img" aria-label="EAN-13 ${code}"><g fill="#000">${rects}</g><g font-family="Arial,Helvetica,sans-serif" font-size="${FS.toFixed(2)}" font-weight="700" fill="#000">${text}</g></svg>`;
  }
  const mod=p=>p.dot*25.4/203; // one barcode module in mm
  function barcode(code,p){
@@ -115,7 +116,7 @@
      <label>เลื่อนซ้าย–ขวา (มม.)<input data-set="shiftX" type="number" min="-4" max="6" step="0.5" value="0"></label>
      <label class="st-check"><input data-set="sep" type="checkbox" checked> เว้น 1 แถวว่างหลังจบแต่ละรุ่น</label>
     </div>
-    <p class="st-note">ตั้งไดรเวอร์เป็นกระดาษกว้าง 100 มม. สูง 20 มม. และ Scale 100% · ถ้าเครื่องนี้เคยปรับค่าใน AIS ไว้ ระบบใช้ค่านั้นเป็นค่าเริ่มต้น</p>
+    <p class="st-note">ตั้งไดรเวอร์: 3 ดวง/แถว = กระดาษ 100 × 20 มม. · 2 ดวง/แถว = ใช้ขนาดกระดาษเดียวกับสติกเกอร์ Jaymart (ระบบใช้ค่าระยะที่ตั้งไว้ใน Jaymart) · Scale 100% · ถ้าเครื่องนี้เคยปรับค่าใน AIS ไว้ ระบบใช้ค่านั้นเป็นค่าเริ่มต้น</p>
    </details>
    <div class="st-preview" data-el="preview"></div>`;
   const q=s=>host.querySelector(s),setting=k=>q(`[data-set="${k}"]`);
@@ -169,7 +170,12 @@
    keep(it);if(f==='pick')syncAll();sum();
   }
   const num=(k,lo,hi)=>{const v=Number(setting(k).value);return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):0};
-  const profile=()=>{const P=SIZES[setting('size').value]||SIZES.s3;return{...P,rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
+  const jm=(id,def)=>{const v=Number(read('gv-jm-label-'+id));return read('gv-jm-label-'+id)!==null&&Number.isFinite(v)?v:def};
+  const profile=()=>{
+   const P=SIZES[setting('size').value]||SIZES.s3;
+   if(P.jaymart){const gap=jm('labelGap',0),left=jm('labelLeft',3),right=jm('labelRight',3);
+    return{...P,gapX:gap,pageW:100+gap+left+right,rowPitch:jm('labelPitch',30)+num('pitch',0,6),shift:jm('labelY',0)+num('shift',-6,8),sheetLeft:Math.max(0,left+num('shiftX',-4,6))}}
+   return{...P,rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
   function label(it,p){
    const maxPx=Math.min(p.dieW-p.padX*2,p.bcW-1)*PX,title=[it.brand,it.model].filter(Boolean).join(' '),f=fit(title,maxPx,p.nameBase,p.nameMin);
    const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail" style="font-size:${p.detail}pt;-webkit-line-clamp:${p.detailLines||2};max-height:${(p.detailLines||2)*1.15}em">${esc(it.text)}</div>`:'');
@@ -189,7 +195,7 @@
    if(row.length){while(row.length<p.cols)row.push(blank);out.push(row)}
    return{p,out};
   }
-  const rowHtml=(p,r)=>`<div class="st-row" style="width:${p.pageW}mm;height:${p.rowPitch}mm;padding-left:${p.sheetLeft}mm">${r.join('')}</div>`;
+  const rowHtml=(p,r)=>`<div class="st-row" style="width:${p.pageW}mm;height:${p.rowPitch}mm;padding-left:${p.sheetLeft}mm;column-gap:${p.gapX||0}mm">${r.join('')}</div>`;
   function preview(){
    const host2=q('[data-el=preview]');
    if(!items.some(x=>x.pick&&x.qty>0)){host2.innerHTML='<p class="st-note">เลือกรุ่นและจำนวนดวงเพื่อดูตัวอย่าง</p>';return}
