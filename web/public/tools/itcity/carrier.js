@@ -76,11 +76,11 @@
   // the same columns as the carrier's ORDER sheet, plus the PO branch it comes from
   const cell=v=>`<td>${esc(v??'')}</td>`;
   host.innerHTML=`<div class="table-scroll"><table class="carrier-table"><thead><tr><th>ส่ง</th><th>สาขาใน PO</th><th>ไอดีสาขา (รหัสร้าน)</th><th>ที่อยู่</th><th>ถนน*แขวง</th><th>เขต</th><th>จังหวัด</th><th>รหัสไปรษณีย์</th><th>Zone</th><th>ชื่อผู้ติดต่อ</th><th>เบอร์โทร1</th><th>เบอร์โทร2 / Fax</th><th class="num">BOX</th></tr></thead><tbody>${branches.map((b,i)=>{
-   const r=codes.get(b.code)||{},tag=!b.code?'<span class="pill review">ยังไม่เลือก</span>':b.auto?'<span class="pill unchecked">ระบบเดา ตรวจก่อน</span>':'';
+   const r=codes.get(b.code)||{},tag=!b.code?'<span class="pill review">ไม่มี · เว้นว่าง</span>':b.auto?'<span class="pill unchecked">ระบบเดา ตรวจก่อน</span>':'';
    return`<tr class="${b.code?'':'need-code'}${b.on?'':' off'}"><td><input type="checkbox" data-i="${i}" data-f="on" ${b.on?'checked':''} aria-label="ส่ง ${esc(b.id)}"></td><td><b>${esc(b.id)}</b><br><small>${esc(b.name)}</small></td><td><select data-i="${i}" data-f="code"><option value="">— เลือก —</option>${opts}</select>${tag}</td>${cell([r.name,r.address].filter(Boolean).join(' '))}${cell(r.sub)}${cell(r.district)}${cell(r.province)}${cell(r.zip)}${cell('')}${cell(r.contact)}${cell(r.phone1)}${cell(r.phone2||(b.code?'0':''))}<td class="num"><input type="number" min="0" max="999" step="1" data-i="${i}" data-f="box" value="${b.box}"></td></tr>`}).join('')}</tbody></table></div>`;
   host.querySelectorAll('select[data-f=code]').forEach(s=>{s.value=branches[Number(s.dataset.i)].code});
   const on=branches.filter(b=>b.on),missing=on.filter(b=>!b.code).length;
-  $('carrierSummary').textContent=`${on.length} สาขา · ${on.reduce((a,b)=>a+(Number(b.box)||0),0)} กล่อง`+(missing?` · ยังไม่เลือกไอดีสาขา ${missing} สาขา`:'');
+  $('carrierSummary').textContent=`${on.length} สาขา · ${on.reduce((a,b)=>a+(Number(b.box)||0),0)} กล่อง`+(missing?` · ไม่มีไอดีสาขา ${missing} สาขา (ไฟล์จะเว้นว่างไว้)`:'');
   $('carrierDownload').disabled=!data||!on.length;
  }
  function onEdit(e){
@@ -100,10 +100,10 @@
  }
  // the ORDER rows for the ticked branches; null (with a message) when a branch has no carrier code yet
  function build(){
-  const on=branches.filter(b=>b.on),missing=on.filter(b=>!b.code);
-  if(missing.length)return{error:'ยังไม่ได้เลือกไอดีสาขาของ: '+missing.map(b=>b.id).join(', ')};
+  // a branch with no branch ID is kept with the ID left blank (and its PO name in the address so it can be found)
+  const on=branches.filter(b=>b.on);
   const codes=byCode(),head=['','ที่อยู่','ถนน*แขวง','เขต','จังหวัด','รหัสไปรษณีย์','Zone','ชื่อผู้ติดต่อ','เบอร์โทร1','เบอร์โทร2 / Fax','BOX','น้ำหนัก','Client code','Order No.'];
-  const rows=on.map(b=>{const r=codes.get(b.code)||{};const zip=/^\d+$/.test(r.zip||'')?Number(r.zip):(r.zip||'');return[b.code,[r.name,r.address].filter(Boolean).join(' '),r.sub||'',r.district||'',r.province||'',zip,'',r.contact||'',r.phone1||'',r.phone2||0,Number(b.box)||0,'','','']});
+  const rows=on.map(b=>{if(!b.code)return['',`${b.name} (${b.id})`,'','','','','','','','',Number(b.box)||0,'','',''];const r=codes.get(b.code)||{};const zip=/^\d+$/.test(r.zip||'')?Number(r.zip):(r.zip||'');return[b.code,[r.name,r.address].filter(Boolean).join(' '),r.sub||'',r.district||'',r.province||'',zip,'',r.contact||'',r.phone1||'',r.phone2||0,Number(b.box)||0,'','','']});
   const ws=XLSX.utils.aoa_to_sheet([head,...rows]);
   ws['!cols']=[10,90,14,14,14,12,8,18,16,16,8,10,12,12].map(w=>({wch:w}));
   ws['!autofilter']={ref:`A1:N${rows.length+1}`};
