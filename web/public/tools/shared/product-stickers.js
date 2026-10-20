@@ -29,6 +29,7 @@
 .gv-st details{margin:10px 0;border:1px solid #d3ded8;border-radius:10px;padding:8px 12px}.gv-st summary{cursor:pointer;font-weight:700}
 .gv-st .st-grid{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}.gv-st .st-grid label{display:flex;flex-direction:column;font-size:13px;gap:4px}
 .gv-st .st-grid input[type=number]{width:120px;min-height:36px;border:1px solid #c8d5d0;border-radius:6px;padding:4px 8px}.gv-st .st-grid .st-check{flex-direction:row;align-items:center;gap:6px}
+.gv-st .st-type{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}.gv-st .st-type select{min-height:40px;border:1px solid #c8d5d0;border-radius:6px;padding:4px 8px;font:inherit;font-weight:400}
 .gv-st .st-preview{background:#eef3f5;border-radius:10px;padding:12px;overflow:auto}
 .st-row{display:flex;box-sizing:border-box;background:#fff;margin-bottom:6px}
 .st-label{box-sizing:border-box;overflow:hidden;font-family:Arial,sans-serif;color:#000;text-align:center;outline:1px dashed #b8c4cc;position:relative}
@@ -98,6 +99,7 @@
    <p class="st-note">ติ๊กรุ่นที่จะพิมพ์ (รุ่นที่ต้องเปลี่ยนบาร์โค้ดติ๊กไว้ให้แล้ว) · จำนวนดวงเริ่มจากยอดรวมในไฟล์ที่เปิดอยู่ แก้ได้${note?' · '+esc(note):''}</p>
    <div class="st-actions"><button type="button" class="secondary" data-act="pick-change">เลือกเฉพาะรุ่นที่ต้องเปลี่ยนบาร์โค้ด</button><span class="st-note" data-el="summary"></span></div>
    <div class="st-wrap"><table data-el="table"></table></div>
+   <div class="st-actions"><label class="st-type">ชนิดบาร์โค้ด <select data-set="type"><option value="auto">อัตโนมัติ (EAN-13 ถ้าเลขถูก ไม่งั้น Code 128)</option><option value="ean">EAN-13</option><option value="c128">Code 128</option></select></label></div>
    <div class="st-actions"><button type="button" data-act="print">พิมพ์สติกเกอร์ที่เลือก</button><button type="button" class="secondary" data-act="test">พิมพ์ทดสอบ 2 แถว</button></div>
    <details><summary>ตั้งค่าเครื่องพิมพ์ (ปรับเมื่อพิมพ์ไม่ตรง · จำไว้ในเครื่องนี้)</summary>
     <div class="st-grid">
@@ -114,6 +116,9 @@
 
   for(const k of ['pitch','shift','shiftX']){const v=read(KEY+k)??read(AIS[k]);if(v!==null&&v!=='')setting(k).value=v}
   {const v=read(KEY+'sep');if(v!==null)setting('sep').checked=v==='1'}
+  {const v=read(KEY+'type');if(['auto','ean','c128'].includes(v))setting('type').value=v}
+  // EAN-13 only for a 13-digit code with a valid check digit; anything else stays Code 128 whatever is chosen
+  const useEan=code=>setting('type').value!=='c128'&&eanOk(code);
 
   function update(lines){
    const by=new Map();
@@ -141,7 +146,8 @@
   function syncAll(){const all=q('[data-all]');if(!all)return;all.checked=items.length>0&&items.every(x=>x.pick);all.indeterminate=!all.checked&&items.some(x=>x.pick)}
   function sum(){
    const sel=items.filter(x=>x.pick&&x.qty>0),n=sel.reduce((a,x)=>a+x.qty,0),bad=items.filter(x=>x.status==='change').length;
-   q('[data-el=summary]').textContent=`เลือก ${sel.length} รุ่น · ${n.toLocaleString()} ดวง`+(bad?` · รุ่นที่ต้องเปลี่ยนบาร์โค้ด ${bad} รุ่น`:' · ไม่มีรุ่นที่ต้องเปลี่ยนบาร์โค้ด');
+   const notEan=setting('type').value==='ean'?sel.filter(x=>!eanOk(x.code)).length:0;
+   q('[data-el=summary]').textContent=`เลือก ${sel.length} รุ่น · ${n.toLocaleString()} ดวง`+(bad?` · รุ่นที่ต้องเปลี่ยนบาร์โค้ด ${bad} รุ่น`:' · ไม่มีรุ่นที่ต้องเปลี่ยนบาร์โค้ด')+(notEan?` · ${notEan} รุ่นเลขไม่ใช่ EAN-13 ที่ถูกต้อง จะพิมพ์เป็น Code 128`:'');
    const btn=q('[data-act=print]');btn.textContent=n?`พิมพ์สติกเกอร์ที่เลือก (${n.toLocaleString()} ดวง)`:'พิมพ์สติกเกอร์ที่เลือก';btn.disabled=!n;q('[data-act=test]').disabled=!n;
    preview();
   }
@@ -159,7 +165,7 @@
   function label(it,p){
    const maxPx=Math.min(p.dieW-p.padX*2,p.bcW-1)*PX,title=[it.brand,it.model].filter(Boolean).join(' '),f=fit(title,maxPx,p.nameBase,p.nameMin);
    const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail">${esc(it.text)}</div>`:'');
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${lines}<div class="st-bc">${eanOk(it.code)?ean13(it.code):barcode(it.code)+`<div class="st-digits">${esc(it.code)}</div>`}</div></div></div>`;
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${lines}<div class="st-bc">${useEan(it.code)?ean13(it.code):barcode(it.code)+`<div class="st-digits">${esc(it.code)}</div>`}</div></div></div>`;
   }
   // rows of 3; after each model the row is finished with blanks and one empty row is left (switch)
   function rows(test){
@@ -199,7 +205,7 @@
    window.addEventListener('afterprint',clean);
    requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
   }
-  const save=()=>{for(const k of ['pitch','shift','shiftX'])write(KEY+k,setting(k).value);write(KEY+'sep',setting('sep').checked?'1':'0');preview()};
+  const save=()=>{for(const k of ['pitch','shift','shiftX','type'])write(KEY+k,setting(k).value);write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
 
   host.addEventListener('change',e=>{if(e.target.dataset.set)save();else onEdit(e)});
   host.addEventListener('input',e=>{const f=e.target.dataset.f;if(f==='text'||f==='qty')onEdit(e)});
