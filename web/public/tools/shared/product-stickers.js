@@ -54,6 +54,24 @@
   if(model)s=s.replace(new RegExp('\\(?\\b'+String(model).replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')+'\\b\\)?\\s*','i'),'');
   return s.replace(/^CS\s+/i,'').replace(/\s+/g,' ').trim();
  }
+ // The detail line from the Catalog name ("UGR-ALL-53| Ugreen CM570... 90514 HDMI Splitter 1 In 4 Out" ->
+ // "HDMI Splitter 1 In 4 Out"): the shop's file can be a scan whose text is misread.
+ let catalogNames=null,catalogLoading=null;
+ function loadCatalogNames(){
+  if(!catalogLoading)catalogLoading=fetch('/api/catalog/barcodes',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{catalogNames=new Map(d.rows.map(r=>[String(r.sku).trim().toUpperCase(),String(r.name||'')]))}).catch(()=>{catalogNames=new Map()});
+  return catalogLoading;
+ }
+ function catalogDetail(model){
+  if(!catalogNames||!model)return'';
+  let n=catalogNames.get(String(model).trim().toUpperCase())||'';if(!n)return'';
+  n=n.replace(/^[^|]*\|\s*/,'').replace(/^\[[^\]]*\]\s*/,'').replace(/\S*[\u00c0-\u00ff]\S*/g,' ').replace(/\s+/g,' ').trim();
+  n=n.replace(/^.*?\b(ugreen|fantech|orsen|eloop)\b\s*/i,''); // drop notes before the brand (e.g. a Thai reminder)
+  n=n.replace(/^[A-Z]{1,4}\d{2,4}[A-Z]?\s*(?:\.{2,}|#)?\s*/i,'');      // internal code: CM570... / DP102 .. / NW102..
+  const m=String(model).toUpperCase(),base=m.replace(/-BOX$/,'');
+  for(const t of [m,base+'BOX',base])n=n.replace(new RegExp('^\\(?'+t.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')+'\\)?\\s*','i'),'');
+  return n.replace(/^[.#\s]+/,'').trim();
+ }
+
  function fit(text,maxPx,base,min){
   const s=String(text||'');if(!s)return{size:base,scale:1};
   const ctx=document.createElement('canvas').getContext('2d'),w=size=>{ctx.font=`700 ${size}pt Arial,sans-serif`;return ctx.measureText(s).width};
@@ -129,7 +147,10 @@
   // EAN-13 only for a 13-digit code with a valid check digit; anything else stays Code 128 whatever is chosen
   const useEan=code=>setting('type').value!=='c128'&&eanOk(code);
 
+  let lastLines=[];
   function update(lines){
+   lastLines=lines;
+   if(!catalogNames)loadCatalogNames().then(()=>{if(lastLines===lines)update(lines)});
    const by=new Map();
    for(const r of lines){
     const code=String(r.code||'').trim();if(!code)continue;
@@ -141,7 +162,7 @@
    for(const it of items){
     it.brand=brandOf(it.desc);
     const k=kept.get(it.code)||{};
-    it.pick=k.pick??false; /* nothing ticked until staff choose; red rows show what must change */ it.qty=k.qty??it.qty;it.text=k.text??detailOf(it.desc,it.brand,it.model);
+    it.pick=k.pick??false; /* nothing ticked until staff choose; red rows show what must change */ it.qty=k.qty??it.qty;it.text=k.text??(catalogDetail(it.model)||detailOf(it.desc,it.brand,it.model));
    }
    draw();
    return items.length;
