@@ -12,8 +12,8 @@
  // Label sizes. dot = printer dots per barcode module at 203 dpi (2 = 0.25 mm, 3 = 0.375 mm).
  const SIZES={
   s3:{label:'3 ดวง/แถว · 32.3 × 20 มม. (ม้วนเดียวกับ AIS)',dieW:32.3,dieH:20,cols:3,pageW:100,sheetLeft:1.5,padX:.8,bcW:28.5,bcH:5.6,dot:2,nameBase:7.4,nameMin:5,detail:5.4,digits:7.6},
-  // wide and short: barcode on the left, brand / model / detail on the right
-  s2:{label:'2 ดวง/แถว · 50 × 20 มม.',side:true,dieW:50,dieH:20,cols:2,pageW:100,sheetLeft:0,padX:1.2,bcW:29,bcH:9,dot:2,textW:16.5,nameBase:12,nameMin:6,detail:5.6,digits:7.6}};
+  // wider label, same order as the 3-up one (name on top, barcode centred below) with bigger text and longer lines
+  s2:{label:'2 ดวง/แถว · 50 × 20 มม.',dieW:50,dieH:20,cols:2,pageW:100,sheetLeft:0,padX:2,bcW:34,bcH:5.6,dot:2,nameBase:10,nameMin:6,detail:6.2,digits:7.8,detailLines:1}};
  const AIS={pitch:'gv-ais-productPitch',shift:'gv-ais-productShift',shiftX:'gv-ais-productShiftX'};
  const read=k=>{try{return localStorage.getItem(k)}catch{return null}};
  const write=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
@@ -37,11 +37,6 @@
 .gv-st .st-preview{background:#eef3f5;border-radius:10px;padding:12px;overflow:auto}
 .st-row{display:flex;box-sizing:border-box;background:#fff;margin-bottom:6px}
 .st-label{box-sizing:border-box;overflow:hidden;font-family:Arial,sans-serif;color:#000;text-align:center;outline:1px dashed #b8c4cc;position:relative}
-.st-side .st-in{flex-direction:row;align-items:center;gap:1mm;padding:0}
-.st-side .st-bcs{flex:none;overflow:hidden}.st-side .st-bcs svg{max-width:100%}.st-side .st-txt{flex:1 1 auto;min-width:0;text-align:left;overflow:hidden}
-.st-brand{font-weight:700;font-size:6.4pt;line-height:1.1;letter-spacing:.3pt}
-.st-model{font-weight:800;line-height:1.05;white-space:nowrap;overflow:hidden}
-.st-side .st-detail{margin:.4mm 0 0;padding:0;text-align:left}.st-detail3{-webkit-line-clamp:3!important;max-height:3.5em!important}
 .st-label.st-blank{outline-style:dotted;opacity:.5}
 .st-in{position:relative;padding-top:1.3mm;height:100%;box-sizing:border-box;display:flex;flex-direction:column}
 .st-bc{margin-top:auto;padding-bottom:1.3mm}
@@ -175,14 +170,8 @@
   const num=(k,lo,hi)=>{const v=Number(setting(k).value);return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):0};
   const profile=()=>{const P=SIZES[setting('size').value]||SIZES.s3;return{...P,rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
   function label(it,p){
-   if(p.side){
-    // model size from its length: bold Arial is about 0.62 em per character
-    const model=String(it.model||''),size=Math.max(p.nameMin,Math.min(p.nameBase,p.textW/(Math.max(model.length,1)*.68*.3528)));
-    const text=(it.brand?`<div class="st-brand">${esc(it.brand)}</div>`:'')+`<div class="st-model" style="font-size:${size.toFixed(2)}pt">${esc(model)}</div>`+(it.text?`<div class="st-detail st-detail3" style="font-size:${p.detail}pt">${esc(it.text)}</div>`:'');
-    return`<div class="st-label st-side" style="width:${p.dieW}mm;height:${p.dieH}mm;padding:0 ${p.padX}mm"><div class="st-in" style="top:${p.shift}mm"><div class="st-bcs" style="width:${p.bcW}mm">${useEan(it.code)?ean13(it.code,p):barcode(it.code,p)+`<div class="st-digits" style="font-size:${p.digits}pt">${esc(it.code)}</div>`}</div><div class="st-txt">${text}</div></div></div>`;
-   }
    const maxPx=Math.min(p.dieW-p.padX*2,p.bcW-1)*PX,title=[it.brand,it.model].filter(Boolean).join(' '),f=fit(title,maxPx,p.nameBase,p.nameMin);
-   const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail" style="font-size:${p.detail}pt">${esc(it.text)}</div>`:'');
+   const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail" style="font-size:${p.detail}pt;-webkit-line-clamp:${p.detailLines||2};max-height:${(p.detailLines||2)*1.15}em">${esc(it.text)}</div>`:'');
    return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${lines}<div class="st-bc">${useEan(it.code)?ean13(it.code,p):barcode(it.code,p)+`<div class="st-digits" style="font-size:${p.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
   }
   // rows of 3; after each model the row is finished with blanks and one empty row is left (switch)
