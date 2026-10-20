@@ -9,7 +9,10 @@
 (()=>{
  'use strict';
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const P={dieW:32.3,dieH:20,cols:3,pageW:100,sheetLeft:1.5,padX:.8,bcW:28.5,bcH:5.6,nameBase:7.4,nameMin:5};
+ // Label sizes. dot = printer dots per barcode module at 203 dpi (2 = 0.25 mm, 3 = 0.375 mm).
+ const SIZES={
+  s3:{label:'3 ดวง/แถว · 32.3 × 20 มม. (ม้วนเดียวกับ AIS)',dieW:32.3,dieH:20,cols:3,pageW:100,sheetLeft:1.5,padX:.8,bcW:28.5,bcH:5.6,dot:2,nameBase:7.4,nameMin:5,detail:5.4,digits:7.6},
+  s2:{label:'2 ดวง/แถว · 50 × 20 มม.',dieW:50,dieH:20,cols:2,pageW:100,sheetLeft:0,padX:1.5,bcW:44,bcH:4.6,dot:3,nameBase:9,nameMin:6.5,detail:6,digits:8}};
  const AIS={pitch:'gv-ais-productPitch',shift:'gv-ais-productShift',shiftX:'gv-ais-productShiftX'};
  const read=k=>{try{return localStorage.getItem(k)}catch{return null}};
  const write=(k,v)=>{try{localStorage.setItem(k,v)}catch{}};
@@ -68,26 +71,28 @@
   d.reverse().forEach((v,i)=>{sum+=v*(i%2===0?3:1)});
   return (10-sum%10)%10===last;
  }
- function ean13(code){
+ function ean13(code,p){
   const d=[...code].map(Number),par=EAN.P[d[0]];
   let bits='101';for(let i=1;i<=6;i++)bits+=EAN[par[i-1]][d[i]];
   bits+='01010';for(let i=7;i<=12;i++)bits+=EAN.R[d[i]];bits+='101';
-  const Q=11,W=Q+95+7,BAR=24,GUARD=28,H=34,guard=i=>i<3||(i>=45&&i<50)||i>=92;
+  // heights in modules: data bars p.bcH mm, guard bars 0.9 mm longer, digits sized like the Code 128 digits
+  const m=mod(p),FS=p.digits*.3528/m,Q=11,W=Q+95+7,BAR=Math.round(p.bcH/m),GUARD=BAR+Math.round(.9/m),H=Math.ceil(GUARD+FS*.75),guard=i=>i<3||(i>=45&&i<50)||i>=92;
   let rects='';
   for(let i=0;i<95;){if(bits[i]!=='1'){i++;continue}let j=i;while(j<95&&bits[j]==='1'&&guard(j)===guard(i))j++;rects+=`<rect x="${Q+i}" y="0" width="${j-i}" height="${guard(i)?GUARD:BAR}"/>`;i=j}
   const t=(x,s)=>`<text x="${x}" y="${H-.6}" text-anchor="middle">${s}</text>`;
   let text=t(Q-5,d[0]);
   for(let i=0;i<6;i++)text+=t(Q+3+7*i+3.5,d[i+1]);
   for(let i=0;i<6;i++)text+=t(Q+50+7*i+3.5,d[i+7]);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${(W*.25).toFixed(2)}mm;height:${(H*.25).toFixed(2)}mm" role="img" aria-label="EAN-13 ${code}"><g fill="#000">${rects}</g><g font-family="Arial,Helvetica,sans-serif" font-size="8.6" font-weight="700" fill="#000">${text}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="display:block;margin:0 auto;width:${(W*mod(p)).toFixed(2)}mm;height:${(H*mod(p)).toFixed(2)}mm" role="img" aria-label="EAN-13 ${code}"><g fill="#000">${rects}</g><g font-family="Arial,Helvetica,sans-serif" font-size="${FS.toFixed(2)}" font-weight="700" fill="#000">${text}</g></svg>`;
  }
- function barcode(code){
+ const mod=p=>p.dot*25.4/203; // one barcode module in mm
+ function barcode(code,p){
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   JsBarcode(svg,code,{format:'CODE128',width:1,height:100,displayValue:false,margin:0,marginLeft:10,marginRight:10});
   const modules=Number(svg.getAttribute('width'));
   svg.setAttribute('viewBox',`0 0 ${modules} 100`);svg.setAttribute('preserveAspectRatio','none');
-  // two printer dots per module at 203 dpi, never wider than the label allows
-  svg.setAttribute('style',`display:block;margin:0 auto;width:${Math.min(P.bcW,modules*2*25.4/203).toFixed(2)}mm;height:${P.bcH}mm`);
+  // whole printer dots per module at 203 dpi, never wider than the label allows
+  svg.setAttribute('style',`display:block;margin:0 auto;width:${Math.min(p.bcW,modules*mod(p)).toFixed(2)}mm;height:${p.bcH}mm`);
   return svg.outerHTML;
  }
 
@@ -95,11 +100,11 @@
   if(!document.getElementById('gvStickerCss')){const s=document.createElement('style');s.id='gvStickerCss';s.textContent=CSS;document.head.append(s)}
   const KEY=`gv-${String(shop).toLowerCase().replace(/[^a-z0-9]+/g,'')}-sticker-`;
   host.classList.add('gv-st');
-  host.innerHTML=`<div class="st-head"><h2>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h2><span class="st-note">สติกเกอร์ 32.3 × 20 มม. · 3 ดวงต่อแถว · บาร์โค้ดตามไฟล์ของ ${esc(shop)}</span></div>
+  host.innerHTML=`<div class="st-head"><h2>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h2><span class="st-note">บาร์โค้ดตามไฟล์ของ ${esc(shop)}</span></div>
    <p class="st-note">ติ๊กรุ่นที่จะพิมพ์ (รุ่นที่ต้องเปลี่ยนบาร์โค้ดติ๊กไว้ให้แล้ว) · จำนวนดวงเริ่มจากยอดรวมในไฟล์ที่เปิดอยู่ แก้ได้${note?' · '+esc(note):''}</p>
    <div class="st-actions"><button type="button" class="secondary" data-act="pick-change">เลือกเฉพาะรุ่นที่ต้องเปลี่ยนบาร์โค้ด</button><span class="st-note" data-el="summary"></span></div>
    <div class="st-wrap"><table data-el="table"></table></div>
-   <div class="st-actions"><label class="st-type">ชนิดบาร์โค้ด <select data-set="type"><option value="auto">อัตโนมัติ (EAN-13 ถ้าเลขถูก ไม่งั้น Code 128)</option><option value="ean">EAN-13</option><option value="c128">Code 128</option></select></label></div>
+   <div class="st-actions"><label class="st-type">ขนาดสติกเกอร์ <select data-set="size">${Object.entries(SIZES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select></label><label class="st-type">ชนิดบาร์โค้ด <select data-set="type"><option value="auto">อัตโนมัติ (EAN-13 ถ้าเลขถูก ไม่งั้น Code 128)</option><option value="ean">EAN-13</option><option value="c128">Code 128</option></select></label></div>
    <div class="st-actions"><button type="button" data-act="print">พิมพ์สติกเกอร์ที่เลือก</button><button type="button" class="secondary" data-act="test">พิมพ์ทดสอบ 2 แถว</button></div>
    <details><summary>ตั้งค่าเครื่องพิมพ์ (ปรับเมื่อพิมพ์ไม่ตรง · จำไว้ในเครื่องนี้)</summary>
     <div class="st-grid">
@@ -108,7 +113,7 @@
      <label>เลื่อนซ้าย–ขวา (มม.)<input data-set="shiftX" type="number" min="-4" max="6" step="0.5" value="0"></label>
      <label class="st-check"><input data-set="sep" type="checkbox" checked> เว้น 1 แถวว่างหลังจบแต่ละรุ่น</label>
     </div>
-    <p class="st-note">ตั้งไดรเวอร์เป็นกระดาษ 100 × 20 มม. และ Scale 100% · ถ้าเครื่องนี้เคยปรับค่าใน AIS ไว้ ระบบใช้ค่านั้นเป็นค่าเริ่มต้น</p>
+    <p class="st-note">ตั้งไดรเวอร์เป็นกระดาษกว้าง 100 มม. สูง 20 มม. และ Scale 100% · ถ้าเครื่องนี้เคยปรับค่าใน AIS ไว้ ระบบใช้ค่านั้นเป็นค่าเริ่มต้น</p>
    </details>
    <div class="st-preview" data-el="preview"></div>`;
   const q=s=>host.querySelector(s),setting=k=>q(`[data-set="${k}"]`);
@@ -117,6 +122,7 @@
   for(const k of ['pitch','shift','shiftX']){const v=read(KEY+k)??read(AIS[k]);if(v!==null&&v!=='')setting(k).value=v}
   {const v=read(KEY+'sep');if(v!==null)setting('sep').checked=v==='1'}
   {const v=read(KEY+'type');if(['auto','ean','c128'].includes(v))setting('type').value=v}
+  {const v=read(KEY+'size');if(SIZES[v])setting('size').value=v}
   // EAN-13 only for a 13-digit code with a valid check digit; anything else stays Code 128 whatever is chosen
   const useEan=code=>setting('type').value!=='c128'&&eanOk(code);
 
@@ -161,11 +167,11 @@
    keep(it);if(f==='pick')syncAll();sum();
   }
   const num=(k,lo,hi)=>{const v=Number(setting(k).value);return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):0};
-  const profile=()=>({...P,rowPitch:20+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))});
+  const profile=()=>{const P=SIZES[setting('size').value]||SIZES.s3;return{...P,rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
   function label(it,p){
    const maxPx=Math.min(p.dieW-p.padX*2,p.bcW-1)*PX,title=[it.brand,it.model].filter(Boolean).join(' '),f=fit(title,maxPx,p.nameBase,p.nameMin);
-   const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail">${esc(it.text)}</div>`:'');
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${lines}<div class="st-bc">${useEan(it.code)?ean13(it.code):barcode(it.code)+`<div class="st-digits">${esc(it.code)}</div>`}</div></div></div>`;
+   const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail" style="font-size:${p.detail}pt">${esc(it.text)}</div>`:'');
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm">${lines}<div class="st-bc">${useEan(it.code)?ean13(it.code,p):barcode(it.code,p)+`<div class="st-digits" style="font-size:${p.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
   }
   // rows of 3; after each model the row is finished with blanks and one empty row is left (switch)
   function rows(test){
@@ -205,7 +211,7 @@
    window.addEventListener('afterprint',clean);
    requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
   }
-  const save=()=>{for(const k of ['pitch','shift','shiftX','type'])write(KEY+k,setting(k).value);write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
+  const save=()=>{for(const k of ['pitch','shift','shiftX','type','size'])write(KEY+k,setting(k).value);write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
 
   host.addEventListener('change',e=>{if(e.target.dataset.set)save();else onEdit(e)});
   host.addEventListener('input',e=>{const f=e.target.dataset.f;if(f==='text'||f==='qty')onEdit(e)});
