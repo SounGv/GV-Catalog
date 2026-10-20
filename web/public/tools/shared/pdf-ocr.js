@@ -12,7 +12,7 @@
 (()=>{
  'use strict';
  const BASE=(()=>{try{return new URL('.',document.currentScript.src).href}catch{return'/tools/shared/'}})();
- const HEADER=['DOC_PO','DEST_CODE','DEST_NAME','DOC_DATE','ITEM_NO','BARCODE','DESCRIPTION','QTY','UNIT_COST','AMOUNT'];
+ const HEADER=['DOC_PO','DEST_CODE','DEST_NAME','DOC_DATE','ITEM_NO','BARCODE','DESCRIPTION','QTY','UNIT_COST','AMOUNT','DEST_ADDRESS'];
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const loadScript=src=>new Promise((ok,bad)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>bad(Error('โหลดไฟล์ OCR ไม่สำเร็จ: '+src));document.head.append(s)});
 
@@ -99,8 +99,19 @@
    // OCR puts a space between Thai letters: close them up
    shipTo=right.replace(/^.*?[:：]\s*/,'').replace(/[|_]+/g,' ').replace(/\s+/g,' ').trim().replace(/(?<=[฀-๿])\s+(?=[฀-๿])/g,'');
   }
+  // ship-to address: the right-hand lines under the "Vendor:" line, up to the CARRIER / ATTENTION block
+  let shipAddr='';
+  if(vendor){
+   const parts=[];
+   for(const l of lines.slice(lines.indexOf(vendor)+1,lines.indexOf(vendor)+8)){
+    if(/carrier|attention|order\s*date|fob|terms|delivery/i.test(lineText(l)))break;
+    const t=l.words.filter(w=>(w.x0+w.x1)/2>pageW*0.55).map(w=>w.text).join(' ').replace(/[|_]+/g,' ').replace(/\s+/g,' ').trim().replace(/(?<=[฀-๿])\s+(?=[฀-๿])/g,'');
+    if(t)parts.push(t);
+   }
+   shipAddr=parts.join(' ');
+  }
   const total=(()=>{const l=lines.find(l=>/มูลค่า.*สุทธิ|net|grand/i.test(lineText(l)));const nums=l?.words.map(w=>money(w.text)).filter(n=>n>0)||[];return nums.length?nums[nums.length-1]:NaN})();
-  return {po,date,page:page?Number(page[1]):0,pages:page?Number(page[2]):0,shipTo,total};
+  return {po,date,page:page?Number(page[1]):0,pages:page?Number(page[2]):0,shipTo,shipAddr,total};
  }
 
  // ---- destination from the file name: "...(ส่งคลังสำโรง-StockOnline).pdf" ----
@@ -222,9 +233,10 @@
    if(!pg.scanned)for(const r of table.rows)r.printed=r.barcode;
    // a continuation page repeats the PO number ("Page 2 of 2"); one with no number belongs to the PO before it
    const sameAsCurrent=current&&(!head.po||head.po===current.po);
-   if(!sameAsCurrent){current={po:head.po,date:head.date,shipTo:head.shipTo,rows:[],subtotal:NaN,total:NaN,pageNos:[]};docs.push(current)}
+   if(!sameAsCurrent){current={po:head.po,date:head.date,shipTo:head.shipTo,shipAddr:head.shipAddr,rows:[],subtotal:NaN,total:NaN,pageNos:[]};docs.push(current)}
    current.pageNos.push(i+1);
    if(!current.shipTo&&head.shipTo)current.shipTo=head.shipTo;
+   if(!current.shipAddr&&head.shipAddr)current.shipAddr=head.shipAddr;
    if(!current.date&&head.date)current.date=head.date;
    current.rows.push(...table.rows);
    if(!Number.isNaN(table.subtotal))current.subtotal=table.subtotal;
@@ -269,9 +281,11 @@
    if(docsWithRows.length===1&&hint){d.destCode=hint.code;d.destName=hint.name}
    else{
     const text=(d.shipTo||'').trim();
-    const code=(text.match(/\bW[A-Z0-9]{3,5}\b/i)||[''])[0].toUpperCase()||text.toUpperCase().replace(/[^A-Z0-9]+/g,'').slice(0,12)||('PO'+d.po.slice(-6));
+    // no branch code (W…) on the page: the ship-to name itself identifies the branch
+    const code=(text.match(/\bW[A-Z0-9]{3,5}\b/i)||[''])[0].toUpperCase()||text.replace(/\s+/g,'').slice(0,30)||('PO'+d.po.slice(-6));
     d.destCode=code;d.destName=text||code;
    }
+   d.destAddr=(d.shipAddr||'').trim();
    if(!d.po)d.po=file.name.replace(/\.pdf$/i,'');
   }
   return {docs:docsWithRows,warnings};
@@ -320,7 +334,7 @@
     box.innerHTML=`<h3>ตรวจข้อมูลที่อ่านจากไฟล์ PDF</h3><p class="sub">${esc(fileName)} · ${docs.length} PO · แก้ตัวเลขที่อ่านผิดให้ตรงกับใบจริง แถวสีแดงคือยังไม่ผ่านการตรวจ</p>${docs.map((d,di)=>{
      const flags=analyse(d.rows),sum=d.rows.reduce((a,r)=>a+(money(r.amount)||0),0),target=Number.isFinite(d.subtotal)?d.subtotal:NaN;
      const sumOk=Number.isFinite(target)?Math.abs(sum-target)<0.06:null;
-     return `<section class="po" data-d="${di}"><div class="meta"><label>เลข PO<input data-f="po" value="${esc(d.po)}"></label><label>วันที่ PO<input data-f="date" value="${esc(d.date)}"></label><label>รหัสปลายทาง<input data-f="destCode" value="${esc(d.destCode)}"></label><label>ชื่อปลายทาง<input data-f="destName" value="${esc(d.destName)}"></label></div>
+     return `<section class="po" data-d="${di}"><div class="meta"><label>เลข PO<input data-f="po" value="${esc(d.po)}"></label><label>วันที่ PO<input data-f="date" value="${esc(d.date)}"></label><label>รหัสปลายทาง<input data-f="destCode" value="${esc(d.destCode)}"></label><label>ชื่อปลายทาง<input data-f="destName" value="${esc(d.destName)}"></label><label style="grid-column:1/-1">ที่อยู่ปลายทาง (ใช้ในไฟล์ส่งขนส่ง)<input data-f="destAddr" value="${esc(d.destAddr)}"></label></div>
       <div class="scroll"><table><thead><tr><th>#</th><th>รหัสสินค้า</th><th>บาร์โค้ด</th><th>รายการสินค้า</th><th>จำนวน</th><th>ราคา/หน่วย</th><th>ยอดเงิน</th><th></th></tr></thead><tbody>${d.rows.map((r,ri)=>{const f=flags[ri],cls=f.some(x=>x[0]==='bad')?'bad':f.length?'warn':'';return `<tr class="${cls}" data-r="${ri}"><td>${ri+1}</td><td><input data-f="item" value="${esc(r.item)}" style="min-width:110px"></td><td><input data-f="barcode" value="${esc(r.barcode)}" inputmode="numeric" style="min-width:140px"></td><td><input data-f="desc" value="${esc(r.desc)}" style="min-width:260px"></td><td><input data-f="qty" value="${esc(r.qty)}" inputmode="numeric" style="width:70px"></td><td><input data-f="unit" value="${esc(r.unit)}" inputmode="decimal" style="width:90px"></td><td><input data-f="amount" value="${esc(r.amount)}" inputmode="decimal" style="width:100px"></td><td>${f.map(x=>`<span class="flag ${x[0]}">${esc(x[1])}</span>`).join('')}<button type="button" data-del="${ri}" style="min-height:36px;border:1px solid #e0aca8;background:#fff;color:#a3140b;border-radius:8px;cursor:pointer">ลบแถว</button></td></tr>`}).join('')}</tbody></table></div>
       <p class="sum ${sumOk===null?'':sumOk?'ok':'bad'}">${d.rows.length} รายการ · ${d.rows.reduce((a,r)=>a+(Number(String(r.qty).replace(/,/g,''))||0),0)} ชิ้น · ยอดรวมที่คำนวณ ${sum.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}${sumOk===null?' · ไม่พบยอดรวมท้ายใบให้เทียบ':sumOk?' · ✓ ตรงกับยอดท้ายใบ':` · ✗ ไม่ตรงกับยอดท้ายใบ ${target.toLocaleString(undefined,{minimumFractionDigits:2})}`}</p></section>`}).join('')}
      <p class="err" role="alert"></p><div class="btns"><button type="button" data-c>ยกเลิก</button><button type="button" data-recheck>ตรวจใหม่</button><button type="button" class="go" data-ok>ใช้ข้อมูลนี้</button></div>`;
@@ -364,7 +378,7 @@
   onProgress('รอตรวจข้อมูลที่อ่านได้…');
   const confirmed=await review(docs,file.name);
   const rows=[HEADER];
-  for(const d of confirmed)for(const r of d.rows)rows.push([d.po.trim(),d.destCode.trim().toUpperCase(),d.destName.trim(),d.date.trim(),String(r.item).trim(),digitsOf(r.barcode),String(r.desc).trim(),Number(String(r.qty).replace(/,/g,'')),money(r.unit),money(r.amount)]);
+  for(const d of confirmed)for(const r of d.rows)rows.push([d.po.trim(),d.destCode.trim().toUpperCase(),d.destName.trim(),d.date.trim(),String(r.item).trim(),digitsOf(r.barcode),String(r.desc).trim(),Number(String(r.qty).replace(/,/g,'')),money(r.unit),money(r.amount),String(d.destAddr||'').trim()]);
   for(const t of confirmed.unverified||[])warnings.push(`${file.name}: ยังไม่ผ่านการตรวจ ${t} — ตรวจเทียบใบจริงก่อนแพ็ค`);
   return {sheets:[{name:'PO',rows}],warnings};
  }

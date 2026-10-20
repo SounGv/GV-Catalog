@@ -68,7 +68,7 @@ function parseOrder(sheets,file){
       const r=s.rows[i],part=text(r[dh.index('ITEM_NO')]);if(!part)continue;
       const n=qty(r[dh.index('QTY')],`${file} / ${s.name} / แถว ${i+1}`);if(!n)continue;
       const branch=key(r[dh.index('DEST_CODE')]);if(!branch)throw Error(`ไม่มีรหัสปลายทาง: ${file} แถว ${i+1}`);
-      docLines.push({branch,branchName:text(r[dh.index('DEST_NAME')])||branch,part,description:text(r[dh.index('DESCRIPTION')]),qty:n,trb:'',po:text(r[dh.index('DOC_PO')]),date:text(r[dh.index('DOC_DATE')]),file,sourceRow:i+1,sheet:s.name,customerBarcode:text(r[dh.index('BARCODE')]),refLabel:'',refValue:''});
+      docLines.push({branch,branchName:text(r[dh.index('DEST_NAME')])||branch,address:dh.index('DEST_ADDRESS')>=0?text(r[dh.index('DEST_ADDRESS')]):'',part,description:text(r[dh.index('DESCRIPTION')]),qty:n,trb:'',po:text(r[dh.index('DOC_PO')]),date:text(r[dh.index('DOC_DATE')]),file,sourceRow:i+1,sheet:s.name,customerBarcode:text(r[dh.index('BARCODE')]),refLabel:'',refValue:''});
     }
     const ph=header(s.rows,['PO_NO','Item_Code','PO_Qty']);
     if(ph)for(let i=ph.row+1;i<s.rows.length;i++){

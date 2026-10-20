@@ -60,10 +60,24 @@
   return hits.length===1?hits[0].code:'';
  }
 
+ // The PO's own ship-to (scanned IT City POB): name + address, split into sub-district / district / province / zip.
+ function poAddress(name,address){
+  let a=String(address||'').replace(/\s+/g,' ').trim();if(!a)return null;
+  a=a.replace(/\sด\s*\.\s*/g,' ต.').replace(/([ตอจ])\s*\.\s*/g,'$1.').replace(/(ต\.|ตำบล|แขวง|อ\.|อำเภอ|เขต|จ\.|จังหวัด)/g,' $1').replace(/\s+/g,' ').trim();
+  const clean=v=>v.replace(/(กรุงเทพ\S*|กทม\.?)$/,'').trim();
+  const pick=re=>{const m=a.match(re);return m?clean(m[1]):''};
+  const bkk=/กรุงเทพ|กทม/.test(a);
+  return{name:String(name||'').trim(),address:a,
+   sub:pick(/(?:ต\.|ตำบล|แขวง)\s*([^\s\d.]+)/),
+   district:pick(/(?:อ\.|อำเภอ|เขต)\s*([^\s\d.]+)/),
+   province:bkk?'กรุงเทพมหานคร':pick(/(?:จ\.|จังหวัด)\s*([^\s\d.]+)/),
+   zip:pick(/(\d{5})(?!.*\d{5})/)};
+ }
+
  // ---- branches of the open order ----
  function update(lines){
   const seen=new Map();
-  for(const r of lines)if(!seen.has(r.branch))seen.set(r.branch,{id:r.branch,name:r.branchName||r.branch,kind:r.trb?'Pickpack':'ส่งตรงสาขา'});
+  for(const r of lines)if(!seen.has(r.branch))seen.set(r.branch,{id:r.branch,name:r.branchName||r.branch,kind:r.trb?'Pickpack':'ส่งตรงสาขา',po:poAddress(r.branchName,r.address)});
   branches=[...seen.values()].map(b=>{const remembered=map[b.id],auto=remembered?'':suggest(b.name);return{...b,code:remembered||auto||'',auto:!remembered&&!!auto,box:boxes.get(b.id)??1,on:!offs.has(b.id)}});
   draw();
  }
@@ -76,7 +90,7 @@
   // the same columns as the carrier's ORDER sheet, plus the PO branch it comes from
   const cell=v=>`<td>${esc(v??'')}</td>`;
   host.innerHTML=`<div class="table-scroll"><table class="carrier-table"><thead><tr><th>ส่ง</th><th>สาขาใน PO</th><th>ไอดีสาขา (รหัสร้าน)</th><th>ที่อยู่</th><th>ถนน*แขวง</th><th>เขต</th><th>จังหวัด</th><th>รหัสไปรษณีย์</th><th>Zone</th><th>ชื่อผู้ติดต่อ</th><th>เบอร์โทร1</th><th>เบอร์โทร2 / Fax</th><th class="num">BOX</th></tr></thead><tbody>${branches.map((b,i)=>{
-   const r=codes.get(b.code)||{},tag=!b.code?'<span class="pill review">ไม่มี · เว้นว่าง</span>':b.auto?'<span class="pill unchecked">ระบบเดา ตรวจก่อน</span>':'';
+   const r=codes.get(b.code)||(b.code?{}:b.po||{}),tag=!b.code?(b.po?'<span class="pill unchecked">ไม่มี · ใช้ที่อยู่จาก PO</span>':'<span class="pill review">ไม่มี · เว้นว่าง</span>'):b.auto?'<span class="pill unchecked">ระบบเดา ตรวจก่อน</span>':'';
    return`<tr class="${b.code?'':'need-code'}${b.on?'':' off'}"><td><input type="checkbox" data-i="${i}" data-f="on" ${b.on?'checked':''} aria-label="ส่ง ${esc(b.id)}"></td><td><b>${esc(b.id)}</b><br><small>${esc(b.name)}</small></td><td><select data-i="${i}" data-f="code"><option value="">— เลือก —</option>${opts}</select>${tag}</td>${cell([r.name,r.address].filter(Boolean).join(' '))}${cell(r.sub)}${cell(r.district)}${cell(r.province)}${cell(r.zip)}${cell('')}${cell(r.contact)}${cell(r.phone1)}${cell(r.phone2||(b.code?'0':''))}<td class="num"><input type="number" min="0" max="999" step="1" data-i="${i}" data-f="box" value="${b.box}"></td></tr>`}).join('')}</tbody></table></div>`;
   host.querySelectorAll('select[data-f=code]').forEach(s=>{s.value=branches[Number(s.dataset.i)].code});
   const on=branches.filter(b=>b.on),missing=on.filter(b=>!b.code).length;
@@ -85,7 +99,7 @@
  }
  function onEdit(e){
   const t=e.target,b=branches[Number(t.dataset.i)];if(!b)return;
-  if(t.dataset.f==='code'){b.code=t.value;b.auto=false;if(t.value)map[b.id]=t.value;else delete map[b.id];write(KEY_MAP,map)}
+  if(t.dataset.f==='code'){b.code=t.value;b.auto=false;if(t.value)map[b.id]=t.value;else delete map[b.id];write(KEY_MAP,map);changed()}
   else if(t.dataset.f==='box'){b.box=Math.max(0,Math.floor(Number(t.value)||0));boxes.set(b.id,b.box)}
   else if(t.dataset.f==='on'){b.on=t.checked;if(t.checked)offs.delete(b.id);else offs.add(b.id)}
   if(t.dataset.f!=='box')draw();else{const on=branches.filter(x=>x.on);$('carrierSummary').textContent=`${on.length} สาขา · ${on.reduce((a,x)=>a+(Number(x.box)||0),0)} กล่อง`}
@@ -94,7 +108,7 @@
   const f=e.target.files[0];if(!f)return;
   try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});const rows=parseData(wb);data={file:f.name,savedAt:new Date().toLocaleString('th-TH'),rows};write(KEY_DATA,data);
    for(const b of branches)if(!map[b.id]&&!b.code){const s=suggest(b.name);if(s){b.code=s;b.auto=true}}
-   draw()}
+   draw();changed()}
   catch(err){alert('อ่านไฟล์ที่อยู่ไม่ได้: '+(err.message||err))}
   e.target.value='';
  }
@@ -103,7 +117,7 @@
   // a branch with no branch ID is kept with the ID left blank (and its PO name in the address so it can be found)
   const on=branches.filter(b=>b.on);
   const codes=byCode(),head=['','ที่อยู่','ถนน*แขวง','เขต','จังหวัด','รหัสไปรษณีย์','Zone','ชื่อผู้ติดต่อ','เบอร์โทร1','เบอร์โทร2 / Fax','BOX','น้ำหนัก','Client code','Order No.'];
-  const rows=on.map(b=>{if(!b.code)return['',`${b.name} (${b.id})`,'','','','','','','','',Number(b.box)||0,'','',''];const r=codes.get(b.code)||{};const zip=/^\d+$/.test(r.zip||'')?Number(r.zip):(r.zip||'');return[b.code,[r.name,r.address].filter(Boolean).join(' '),r.sub||'',r.district||'',r.province||'',zip,'',r.contact||'',r.phone1||'',r.phone2||0,Number(b.box)||0,'','','']});
+  const rows=on.map(b=>{if(!b.code){const p=b.po||{};return['',p.address?[p.name,p.address].filter(Boolean).join(' '):`${b.name} (${b.id})`,p.sub||'',p.district||'',p.province||'',/^\d+$/.test(p.zip||'')?Number(p.zip):'','','','','',Number(b.box)||0,'','','']}const r=codes.get(b.code)||{};const zip=/^\d+$/.test(r.zip||'')?Number(r.zip):(r.zip||'');return[b.code,[r.name,r.address].filter(Boolean).join(' '),r.sub||'',r.district||'',r.province||'',zip,'',r.contact||'',r.phone1||'',r.phone2||0,Number(b.box)||0,'','','']});
   const ws=XLSX.utils.aoa_to_sheet([head,...rows]);
   ws['!cols']=[10,90,14,14,14,12,8,18,16,16,8,10,12,12].map(w=>({wch:w}));
   ws['!autofilter']={ref:`A1:N${rows.length+1}`};
@@ -124,6 +138,13 @@
   $('carrierDownload').addEventListener('click',()=>$('exportButton')?.click());
   draw();
  }
- window.ITCityCarrier={update,build};
+ function addressOf(id){
+  const b=branches.find(x=>x.id===id);if(!b)return null;
+  const r=b.code?byCode().get(b.code):null;
+  if(r)return{code:b.code,name:r.name,address:r.address,contact:r.contact,phone:r.phone1};
+  return b.po?{code:'',name:b.po.name,address:b.po.address,contact:'',phone:''}:null;
+ }
+ const changed=()=>window.dispatchEvent(new CustomEvent('itcity-carrier-change'));
+ window.ITCityCarrier={update,build,addressOf};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
