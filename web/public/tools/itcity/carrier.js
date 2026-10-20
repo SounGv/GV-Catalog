@@ -110,22 +110,18 @@
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'ORDER');
   return{wb,rows:[head,...rows]};
  }
- function download(){
-  const out=build();if(out.error){alert(out.error);return}
-  const wb=out.wb,d=new Date(),dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'),yy=String((d.getFullYear()+543)%100).padStart(2,'0');
-  XLSX.writeFile(wb,`ORDER_IT_CITY_${dd}_${mm}_${yy}.xlsx`);
- }
  function init(){
   const host=$('panelCarrier');if(!host)return;
   host.innerHTML=`<div class="view-heading"><h2>สรุปส่งขนส่ง</h2><span id="carrierSummary"></span></div>
-   <p class="muted">ไฟล์ Excel ตามแบบฟอร์มขนส่ง (ชีต ORDER) · เลือกไอดีสาขา (IT0xx จากไฟล์หลัก DATA) ให้สาขาใน PO ครั้งแรกครั้งเดียว ระบบจำไว้ในเครื่องนี้ · กรอกจำนวนกล่องแล้วดาวน์โหลด</p>
+   <p class="muted">ชีต ORDER ตามแบบฟอร์มขนส่ง · เลือกไอดีสาขา (IT0xx จากไฟล์หลัก DATA) ให้สาขาใน PO ครั้งแรกครั้งเดียว ระบบจำไว้ในเครื่องนี้ · กรอกจำนวนกล่องแล้วดาวน์โหลด</p>
    <div class="carrier-file"><label class="field">ไฟล์ที่อยู่ขนส่ง (DATA ORDER … .xlsx)<input id="carrierFile" type="file" accept=".xlsx,.xls"></label><p id="carrierData" class="muted"></p></div>
    <div id="carrierBody"></div>
-   <div class="carrier-go"><button id="carrierDownload" type="button">ดาวน์โหลด Excel สรุปส่งขนส่ง</button></div>`;
+   <div class="carrier-go"><button id="carrierDownload" type="button">ดาวน์โหลด Excel</button><span class="muted">ไฟล์เดียว: ชีต ORDER (ส่งขนส่ง) · Order Matrix · ตรวจบาร์โค้ด · สรุปรายสาขา</span></div>`;
   $('carrierFile').addEventListener('change',onFile);
   $('carrierBody').addEventListener('change',onEdit);
   $('carrierBody').addEventListener('input',e=>{if(e.target.dataset.f==='box')onEdit(e)});
-  $('carrierDownload').addEventListener('click',download);
+  // one download: the page's export puts the ORDER sheet first, then the order-check sheets
+  $('carrierDownload').addEventListener('click',()=>$('exportButton')?.click());
   draw();
  }
  window.ITCityCarrier={update,build};

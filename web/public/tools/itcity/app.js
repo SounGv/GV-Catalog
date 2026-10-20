@@ -126,11 +126,14 @@ async function print(){
 }
 function exportWorkbook(){
   const lines=state.lines,m=matrixData(lines),wb=XLSX.utils.book_new();
+  // one file: the carrier ORDER sheet first, then the order-check sheets
+  const carrier=window.ITCityCarrier?.build();
+  if(carrier?.wb)XLSX.utils.book_append_sheet(wb,carrier.wb.Sheets.ORDER,'ORDER');
   const sheet=(name,rows,widths)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=widths.map(wch=>({wch}));ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length-1,c:rows[0].length-1}})};XLSX.utils.book_append_sheet(wb,ws,name)};
   sheet('Order Matrix',[['รหัสสินค้า IT CITY','รายการสินค้า','SKU ระบบ',...m.branches,'รวมชิ้น'],...m.rows.map(r=>[r.part,r.description,r.sku,...m.branches.map(b=>r.qty.get(b)||0),r.total])],[20,70,22,...m.branches.map(()=>12),14]);
   sheet('ตรวจบาร์โค้ด',[['สาขา','ชื่อสาขา','PO','TRB','รหัสลูกค้า','รายการสินค้า','จำนวน','SKU ระบบ','GTIN ระบบ','บาร์ลูกค้า','สถานะ','หมายเหตุ','ไฟล์ต้นทาง','ชีต','แถวต้นทาง'],...lines.map(r=>[r.branch,r.branchName,r.po,r.trb,r.part,r.description,r.qty,r.check.sku,r.check.systemBarcode,r.customerBarcode,statusLabel[r.check.status],r.check.reason+(r.check.status==='relabel'?' · ยืนยันบาร์ลูกค้าก่อนเปลี่ยน':''),r.file,r.sheet,r.sourceRows.join(', ')])],[12,40,25,28,20,70,10,22,22,40,24,65,70,20,16]);
   const docs=C.documents(lines);sheet('สรุปรายสาขา',[['สาขา','ชื่อสาขา','ประเภทการส่ง','PO','TRB','รายการ','ชิ้น','ต้องเปลี่ยนบาร์','ต้องตรวจสอบ'],...docs.map(d=>[d.branch,d.name,kindLabel[d.trb?'pickpack':'direct'],d.po,d.trb,d.items.length,C.sum(d.items),d.items.filter(r=>r.check.status==='relabel').length,d.items.filter(r=>r.check.status==='review').length])],[12,40,16,25,28,12,12,20,20]);
-  const bytes=XLSX.write(wb,{bookType:'xlsx',type:'array'}),url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),a=document.createElement('a');a.href=url;a.download='IT-CITY_Order-Matrix.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);window.dispatchEvent(new CustomEvent('itcity-excel-downloaded'));
+  const bytes=XLSX.write(wb,{bookType:'xlsx',type:'array'}),url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),a=document.createElement('a');a.href=url;a.download=(()=>{const d=new Date();return`ORDER_IT_CITY_${String(d.getDate()).padStart(2,'0')}_${String(d.getMonth()+1).padStart(2,'0')}_${String((d.getFullYear()+543)%100).padStart(2,'0')}.xlsx`})();a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);window.dispatchEvent(new CustomEvent('itcity-excel-downloaded'));
 }
 // Hands the whole parsed file (not the current filter) to the scan-to-pack page.
 // The server answers a DryRun first; nothing is written until the user confirms.
