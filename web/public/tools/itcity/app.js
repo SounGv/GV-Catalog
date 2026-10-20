@@ -30,6 +30,7 @@ async function readWorkbook(file){
     const loading=$('loading');
     const out=await GVPdfOcr.read(file,{onProgress:t=>{if(loading){loading.hidden=false;loading.textContent=t}}});
     if(loading)loading.hidden=true;
+    out.sheets.extraWarnings=out.warnings||[];
     return out.sheets;
   }
   const buf=await file.arrayBuffer();
@@ -43,7 +44,7 @@ async function readWorkbook(file){
 }
 async function loadOrders(files){
   if(!files.length)return;const ticket=++task;busy(true);error('');
-  try{const orders=[];for(const file of files){orders.push(C.parseOrder(await readWorkbook(file),file.name))}await document.fonts.ready;if(ticket===task)setOrders(orders)}
+  try{const orders=[];for(const file of files){const sheets=await readWorkbook(file),o=C.parseOrder(sheets,file.name);if(sheets.extraWarnings?.length)o.warnings=[...(o.warnings||[]),...sheets.extraWarnings];orders.push(o)}await document.fonts.ready;if(ticket===task)setOrders(orders)}
   catch(e){if(ticket===task){state.orders=[];state.lines=[];$('fileNames').textContent='อ่านไฟล์ไม่สำเร็จ';fillKinds();fillBranches();render();error(e.message)}}
   finally{if(ticket===task)busy(false)}
 }
@@ -104,7 +105,9 @@ function render(){
   $('masterName').textContent=`${state.masterName} · ${state.master.length.toLocaleString()} SKU`;
   $('branchCount').textContent=new Set(state.lines.map(r=>r.branch)).size;$('lineCount').textContent=state.lines.length;$('qtyCount').textContent=C.sum(state.lines).toLocaleString();
   $('issueCount').textContent=state.lines.filter(r=>r.check.status==='relabel').length+' / '+state.lines.filter(r=>r.check.status==='review').length;
-  $('warnings').innerHTML=state.orders.flatMap(o=>o.warnings).map(w=>`<div class="alert">${esc(w)}</div>`).join('');
+  // models whose barcode must change: straight to the sticker print
+  const relabel=new Set(state.lines.filter(r=>r.check.status==='relabel').map(r=>r.check.target||r.customerBarcode)).size;
+  $('warnings').innerHTML=(relabel?`<div class="alert relabel-cta"><b>มี ${relabel} รุ่นที่ต้องเปลี่ยนบาร์โค้ด</b> <button type="button" data-open-sticker>พิมพ์สติกเกอร์บาร์โค้ดรุ่นที่ต้องเปลี่ยน</button></div>`:'')+state.orders.flatMap(o=>o.warnings).map(w=>`<div class="alert">${esc(w)}</div>`).join('');
   $('printScope').textContent=scopeText();
   $('printButton').disabled=$('exportButton').disabled=state.busy;
   renderTables();renderDelivery();switchView(state.view);
@@ -178,3 +181,5 @@ $('printButton').addEventListener('click',print);$('exportButton').addEventListe
 window.addEventListener('beforeprint',()=>{const container=$('printPages');try{container.classList.add('measure');makePages(C.documents(selectedLines()),container,copyCount())}catch(e){container.replaceChildren();error(e.message)}finally{container.classList.remove('measure')}});
 fillKinds();fillBranches();render();
 })();
+
+$('warnings').addEventListener('click',e=>{if(!e.target.closest('[data-open-sticker]'))return;const tile=document.querySelector('#stepWork .tile[data-panel="sticker"]'),panel=document.getElementById('panelSticker');if(panel?.hidden)tile?.click();else panel?.scrollIntoView({behavior:'smooth',block:'start'})});

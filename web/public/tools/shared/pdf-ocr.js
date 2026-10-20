@@ -118,24 +118,32 @@
  // ---- PDF -> words per page ----
  let pdfjsPromise;
  const pdfjs=()=>pdfjsPromise||(pdfjsPromise=import(BASE+'pdf.mjs').then(m=>{m.GlobalWorkerOptions.workerSrc=BASE+'pdf.worker.mjs';return m}));
+ // Several page readers work side by side (a 47-page scan was read one page at a time before).
+ const POOL=Math.max(1,Math.min(3,(navigator.hardwareConcurrency||4)-1));
  let ocr=null;
  async function ocrWorkers(onProgress){
   if(ocr)return ocr;
   if(typeof Tesseract==='undefined')await loadScript(BASE+'ocr/tesseract.min.js');
   const common={workerPath:BASE+'ocr/worker.min.js',corePath:BASE+'ocr/',langPath:BASE+'ocr/',gzip:true,workerBlobURL:false};
   onProgress('กำลังเตรียมระบบอ่านตัวอักษร (ครั้งแรกใช้เวลาสักครู่)…');
-  const text=await Tesseract.createWorker(['eng','tha'],1,common);
-  await text.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
+  const make=async()=>{const w=await Tesseract.createWorker(['eng','tha'],1,common);await w.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});return w};
+  const texts=await Promise.all(Array.from({length:POOL},make));
   const digits=await Tesseract.createWorker('eng',1,common);
   await digits.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789.,'});
-  ocr={text,digits};return ocr;
+  ocr={texts,digits};return ocr;
  }
  const toWords=data=>(data.words||[]).filter(w=>w.text&&w.text.trim()).map(w=>({text:w.text.trim(),x0:w.bbox.x0,x1:w.bbox.x1,y0:w.bbox.y0,y1:w.bbox.y1,conf:w.confidence}));
 
  // Second look at each numeric cell with a digits-only reader (much more reliable than the full-page pass).
+ // only rows that fail a check are read again (bad check digit, bad quantity, quantity x cost != amount)
+ function needsSecondLook(r){
+  const qty=Number(String(r.qty).replace(/,/g,'')),unit=money(r.unit),amount=money(r.amount);
+  return !checkDigitOk(digitsOf(r.barcode))||!(Number.isInteger(qty)&&qty>0)||(Number.isFinite(unit)&&Number.isFinite(amount)&&Math.abs(qty*unit-amount)>0.06);
+ }
  async function refineDigits(canvas,rows,workers){
   const crop=(x0,x1,y0,y1)=>{const pad=4,c=document.createElement('canvas');c.width=Math.max(1,x1-x0+2*pad);c.height=Math.max(1,y1-y0+2*pad);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(canvas,x0,y0,x1-x0,y1-y0,pad,pad,x1-x0,y1-y0);return c};
   for(const r of rows){
+   if(!needsSecondLook(r))continue;
    const {cuts,y0,y1}=r.box,Y0=Math.max(0,Math.floor(y0-2)),Y1=Math.min(canvas.height,Math.ceil(y1+2));
    const edges=[0,...cuts,canvas.width];
    const cell=i=>[Math.floor(edges[i]),Math.floor(edges[i+1])];
@@ -155,7 +163,7 @@
  }
 
  async function readPages(file,onProgress){
-  const lib=await pdfjs(),doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,pages=[];
+  const lib=await pdfjs(),doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,pages=new Array(doc.numPages),scans=[];
   for(let p=1;p<=doc.numPages;p++){
    const page=await doc.getPage(p),vp1=page.getViewport({scale:1});
    const content=await page.getTextContent();
@@ -163,17 +171,43 @@
    if(textWords.length>20){
     // digital PDF: use the text layer directly (exact numbers)
     const words=textWords.map(i=>{const x=i.transform[4],y=vp1.height-i.transform[5],h=Math.abs(i.height||i.transform[3])||8;return {text:i.str.trim(),x0:x,x1:x+i.width,y0:y-h,y1:y,conf:100}});
-    pages.push({words,width:vp1.width,canvas:null,scanned:false});
+    pages[p-1]={words,width:vp1.width,scanned:false};
     onProgress(`อ่านหน้า ${p} / ${doc.numPages}`);continue;
    }
-   onProgress(`กำลังอ่านหน้า ${p} / ${doc.numPages} จากรูปสแกน…`);
-   const scale=2.6,vp=page.getViewport({scale}),canvas=document.createElement('canvas');
-   canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
-   await page.render({canvasContext:canvas.getContext('2d',{alpha:false}),viewport:vp}).promise;
-   const workers=await ocrWorkers(onProgress),res=await workers.text.recognize(canvas);
-   pages.push({words:toWords(res.data),width:canvas.width,canvas,scanned:true,workers});
+   scans.push(p);
+  }
+  if(scans.length){
+   const workers=await ocrWorkers(onProgress);let done=0,next=0;
+   const one=async(text,p)=>{
+    const page=await doc.getPage(p),scale=2.6,vp=page.getViewport({scale}),canvas=document.createElement('canvas');
+    canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);
+    await page.render({canvasContext:canvas.getContext('2d',{alpha:false}),viewport:vp}).promise;
+    const res=await text.recognize(canvas),words=toWords(res.data),table=parseTable(words,canvas.width);
+    if(table.rows.length)await refineDigits(canvas,table.rows,workers);
+    canvas.width=canvas.height=0; // free the page image straight away
+    pages[p-1]={words,width:vp.width,scanned:true,table};
+    onProgress(`อ่านจากรูปสแกนแล้ว ${++done} / ${scans.length} หน้า…`);
+   };
+   onProgress(`กำลังอ่านจากรูปสแกน ${scans.length} หน้า (อ่านพร้อมกัน ${workers.texts.length} หน้า)…`);
+   await Promise.all(workers.texts.map(async text=>{while(next<scans.length)await one(text,scans[next++])}));
   }
   return pages;
+ }
+
+ // ---- Catalog barcodes: a scan misread of one digit is put right when exactly one Catalog barcode is that close ----
+ let catalogCodes=null;
+ async function loadCatalogCodes(){
+  if(catalogCodes)return catalogCodes;
+  try{const d=await fetch('/api/catalog/barcodes',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject());
+   catalogCodes=new Set();
+   for(const p of d.rows){for(const g of String(p.gtin||'').split(/[\s,;|/]+/))if(/^\d{8,14}$/.test(g))catalogCodes.add(g);for(const v of Object.values(p.retailerBarcodes||{}))for(const g of String(v||'').split(/[\s,;|/]+/))if(/^\d{8,14}$/.test(g))catalogCodes.add(g)}
+  }catch{catalogCodes=new Set()}
+  return catalogCodes;
+ }
+ function nearCatalog(code,codes){
+  let hit=null;
+  for(const c of codes){if(c.length!==code.length)continue;let diff=0;for(let i=0;i<c.length&&diff<2;i++)if(c[i]!==code[i])diff++;if(diff===1){if(hit)return null;hit=c}}
+  return hit;
  }
 
  // ---- build documents (grouped by PO number) ----
@@ -181,10 +215,9 @@
   const pages=await readPages(file,onProgress),docs=[],warnings=[];
   let current=null;
   for(let i=0;i<pages.length;i++){
-   const pg=pages[i],head=parseHeader(pg.words,pg.width),table=parseTable(pg.words,pg.width);
-   if(pg.scanned&&table.rows.length){onProgress(`ตรวจตัวเลขหน้า ${i+1} / ${pages.length}…`);await refineDigits(pg.canvas,table.rows,pg.workers)}
+   const pg=pages[i],head=parseHeader(pg.words,pg.width),table=pg.table||parseTable(pg.words,pg.width);
    // a text-layer barcode is exactly what the PO says, even when its check digit is wrong (some brands print such codes)
-   else for(const r of table.rows)r.printed=r.barcode;
+   if(!pg.scanned)for(const r of table.rows)r.printed=r.barcode;
    // a continuation page repeats the PO number ("Page 2 of 2"); one with no number belongs to the PO before it
    const sameAsCurrent=current&&(!head.po||head.po===current.po);
    if(!sameAsCurrent){current={po:head.po,date:head.date,shipTo:head.shipTo,rows:[],subtotal:NaN,total:NaN,pageNos:[]};docs.push(current)}
@@ -196,6 +229,37 @@
    if(!Number.isNaN(head.total))current.total=head.total;
   }
   const docsWithRows=docs.filter(d=>d.rows.length);
+  const codes=await loadCatalogCodes();
+  for(const d of docsWithRows)for(const r of d.rows){
+   const code=digitsOf(r.barcode);
+   if(codes.has(code)){r.inCatalog=true;continue}
+   if(r.printed||checkDigitOk(code))continue;
+   const near=nearCatalog(code,codes);
+   if(near){r.fixedFrom=code;r.barcode=near;r.inCatalog=true;continue}
+   // a lost first digit: exactly one Catalog barcode is this one with a digit in front
+   const longer=[...codes].filter(c=>c.length===code.length+1&&c.endsWith(code));
+   if(longer.length===1){r.fixedFrom=code;r.barcode=longer[0];r.inCatalog=true}
+  }
+  // The same item code is on many POs of one file: when most of them read the same barcode, a row that reads
+  // differently is a misread, and a barcode read the same way on several POs is what the shop really uses
+  // (even if its check digit is wrong).
+  const byItem=new Map();
+  for(const d of docsWithRows)for(const r of d.rows){const k=String(r.item||'').replace(/\s+/g,'').toUpperCase();if(k){if(!byItem.has(k))byItem.set(k,[]);byItem.get(k).push(r)}}
+  for(const rows of byItem.values()){
+   if(rows.length<2)continue;
+   // a lost first digit ("957303874445" where other POs read "6957303874445")
+   const full=[...new Set(rows.map(r=>digitsOf(r.barcode)))];
+   for(const r of rows){const c=digitsOf(r.barcode);if(checkDigitOk(c)&&r.inCatalog)continue;const longer=full.filter(x=>x.length===c.length+1&&x.endsWith(c));if(longer.length===1){r.fixedFrom=r.fixedFrom||c;r.barcode=longer[0];r.byMajority=true}}
+   const count=new Map();for(const r of rows){const c=digitsOf(r.barcode);count.set(c,(count.get(c)||0)+1)}
+   const [best,n]=[...count.entries()].sort((a,b)=>b[1]-a[1])[0];
+   if(n<2||n*2<=rows.length)continue;
+   for(const r of rows){
+    const c=digitsOf(r.barcode);
+    if(c===best){r.agreed=n;continue}
+    if(r.printed||r.inCatalog&&checkDigitOk(c))continue;
+    r.fixedFrom=r.fixedFrom||c;r.barcode=best;r.agreed=n;r.byMajority=true;
+   }
+  }
   if(!docsWithRows.length)throw Error(`${file.name}: ไม่พบตารางรายการสินค้าของ PO (ไม่ใช่รูปแบบ Purchase Order ของ IT City หรืออ่านไม่ออก)`);
   const hint=nameHint(file.name);
   for(const d of docsWithRows){
@@ -228,12 +292,17 @@
  #ocrReview .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
  #ocrReview .btns button{min-height:44px;padding:8px 18px;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;border:1px solid #c8d5d0;background:#fff;color:#28443a}
  #ocrReview .btns .go{background:#185c45;color:#fff;border-color:#123b2c}
- #ocrReview .err{color:#a3140b;font-weight:700;margin:8px 0 0}`;
+ #ocrReview .err{color:#a3140b;font-weight:700;margin:8px 0 0}
+ #ocrReview .err .force{margin-top:8px;min-height:44px;padding:8px 18px;border-radius:8px;font:inherit;font-weight:700;cursor:pointer;border:1px solid #a3140b;background:#fff;color:#a3140b}`;
  function analyse(rows){
   return rows.map(r=>{
    const flags=[],qty=Number(String(r.qty).replace(/,/g,'')),unit=money(r.unit),amount=money(r.amount);
    const code=digitsOf(r.barcode);
-   if(!checkDigitOk(code))flags.push(r.printed&&digitsOf(r.printed)===code?['warn','เลขท้ายบาร์โค้ดไม่ผ่านสูตรตรวจ แต่ตรงกับที่พิมพ์ใน PO (ไม่ต้องแก้)']:['bad','เลขบาร์โค้ดไม่ผ่านการตรวจเลขท้าย ตรวจเทียบกับใบจริง']);
+   if(r.fixedFrom&&r.byMajority&&digitsOf(r.barcode)===code)flags.push(['warn',`อ่านได้ ${r.fixedFrom} · แก้ตาม PO ใบอื่นที่รหัสสินค้าเดียวกัน (${r.agreed} ใบ)`]);
+   else if(r.fixedFrom&&digitsOf(r.barcode)===code)flags.push(['warn',`อ่านได้ ${r.fixedFrom} · แก้เป็นบาร์โค้ดใน Catalog ที่ต่างกัน 1 หลัก ตรวจเทียบใบจริง`]);
+   else if(!checkDigitOk(code)&&r.agreed>=2)flags.push(['warn',`เลขท้ายไม่ผ่านสูตรตรวจ แต่อ่านได้ตรงกัน ${r.agreed} ใบ น่าจะเป็นเลขที่ร้านใช้จริง`]);
+   else if(!checkDigitOk(code)&&r.inCatalog&&catalogCodes?.has(code))flags.push(['warn','เลขท้ายไม่ผ่านสูตรตรวจ แต่ตรงกับบาร์โค้ดใน Catalog']);
+   else if(!checkDigitOk(code))flags.push(r.printed&&digitsOf(r.printed)===code?['warn','เลขท้ายบาร์โค้ดไม่ผ่านสูตรตรวจ แต่ตรงกับที่พิมพ์ใน PO (ไม่ต้องแก้)']:['bad','เลขบาร์โค้ดไม่ผ่านการตรวจเลขท้าย ตรวจเทียบกับใบจริง']);
    if(!(Number.isInteger(qty)&&qty>0))flags.push(['bad','จำนวนไม่ถูกต้อง']);
    else if(Number.isFinite(unit)&&Number.isFinite(amount)&&Math.abs(qty*unit-amount)>0.06)flags.push(['bad',`จำนวน × ราคา ≠ ยอดเงิน (${(qty*unit).toLocaleString(undefined,{maximumFractionDigits:2})})`]);
    if(!String(r.item).trim())flags.push(['warn','ไม่มีรหัสสินค้า']);
@@ -275,7 +344,14 @@
       if(!d.rows.length)problems.push(`PO ${d.po}: ไม่มีรายการสินค้า`);
       analyse(d.rows).forEach((f,i)=>{if(f.some(x=>x[0]==='bad'))problems.push(`PO ${d.po} แถว ${i+1}: ${f.find(x=>x[0]==='bad')[1]}`)});
      }
-     if(problems.length){box.querySelector('.err').textContent='ยังใช้ไม่ได้: '+problems.slice(0,4).join(' · ')+(problems.length>4?` · และอีก ${problems.length-4} จุด`:'');return}
+     const noPo=problems.filter(t=>/เลข PO|รหัสปลายทาง|ไม่มีรายการ/.test(t));
+     if(noPo.length){box.querySelector('.err').textContent='ยังใช้ไม่ได้: '+noPo.slice(0,4).join(' · ');return}
+     // red rows left: say what they are; a second press uses the data anyway and the rows stay listed as warnings
+     if(problems.length&&!e.target.closest('[data-force]')){
+      box.querySelector('.err').innerHTML=esc('ยังมี '+problems.length+' จุดไม่ผ่าน: '+problems.slice(0,3).join(' · ')+(problems.length>3?` · และอีก ${problems.length-3} จุด`:''))+'<br><button type="button" class="force" data-ok data-force>ใช้ข้อมูลนี้ต่อ (จุดที่ไม่ผ่านจะขึ้นเตือนในหน้าหลัก)</button>';
+      return;
+     }
+     docs.unverified=problems;
      back.remove();resolve(docs);
     }
    });
@@ -290,6 +366,7 @@
   const confirmed=await review(docs,file.name);
   const rows=[HEADER];
   for(const d of confirmed)for(const r of d.rows)rows.push([d.po.trim(),d.destCode.trim().toUpperCase(),d.destName.trim(),d.date.trim(),String(r.item).trim(),digitsOf(r.barcode),String(r.desc).trim(),Number(String(r.qty).replace(/,/g,'')),money(r.unit),money(r.amount)]);
+  for(const t of confirmed.unverified||[])warnings.push(`${file.name}: ยังไม่ผ่านการตรวจ ${t} — ตรวจเทียบใบจริงก่อนแพ็ค`);
   return {sheets:[{name:'PO',rows}],warnings};
  }
  window.GVPdfOcr={read,_test:{buildDocs,parseTable,parseHeader,nameHint,checkDigitOk,digitsOf,HEADER}};

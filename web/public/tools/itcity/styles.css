@@ -45,3 +45,5 @@ input[type=number]{width:100%;padding:9px;border:1px solid #bdccc5;background:wh
 @media print{.steps{display:none!important}}
 .toast{position:fixed;right:21px;bottom:21px;max-width:400px;padding:12px 15px;border-radius:12px;color:#fff;background:#a94840;box-shadow:0 8px 24px #0003;opacity:0;transform:translateY(12px);pointer-events:none;transition:.24s;font-size:13px;line-height:1.5;z-index:1200}.toast.show{opacity:1;transform:none}@media print{.toast{display:none!important}}
 .admin-row input[type=file]{min-height:44px;padding-top:8px}
+
+.relabel-cta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#fdeceb;border-color:#f2b3ae;color:#9b2a22}.relabel-cta button{margin:0}
