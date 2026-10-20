@@ -113,6 +113,7 @@ function render(){
   $('printScope').textContent=scopeText();
   $('printButton').disabled=$('exportButton').disabled=state.busy;
   renderTables();renderDelivery();switchView(state.view);
+  window.ITCityCarrier?.update(state.lines);
   // stickers carry IT City's barcode: lines without one (direct-to-branch) have nothing to print
   stickers.update(state.lines.map(r=>({code:r.check.target||C.bars(r.customerBarcode)[0]||'',model:r.check.sku,desc:r.description,qty:r.qty,status:r.check.status==='relabel'?'change':r.check.status==='match'?'same':'unknown'})));
   window.dispatchEvent(new CustomEvent('itcity-render',{detail:{branches:[...new Set(state.lines.map(r=>r.branch))],kinds:Object.fromEntries([...branchKinds()].map(([id,b])=>[id,b.kind])),isSample:!!state.isSample,hasLines:state.lines.length>0}}));
