@@ -537,11 +537,16 @@ function createPackingPrint(app) {
     }
     return map;
   }
+  /** Prints `count` label pages of one model's single-model cartons (not-yet-printed cartons first). */
+  function printModelPages(item, count) {
+    const id = key(item), rows = models().rows.filter(r => r.kind === 'single' && key(r.record.item) === id), todo = rows.filter(r => !r.printed);
+    printPageCount(todo.length ? todo : rows, Math.min(count, (todo.length ? todo : rows).length * 2));
+  }
   /** Prints the picked models' full cartons and the picked mixed cartons (every label in them), in print order. */
   function printSelection(items, cartonIds) {
     const ids = new Set(items.map(key)), cartons = new Set(cartonIds);
     printRows(models().rows.filter(r => (r.kind === 'single' && ids.has(key(r.record.item))) || cartons.has(r.groupId)));
   }
 
-  return { queue, labels, plan, render, printable, print, reset, modelStatusMap, printModels, mixedCartonId, cartonStatusMap, printSelection };
+  return { queue, labels, plan, render, printable, print, reset, modelStatusMap, printModels, printModelPages, mixedCartonId, cartonStatusMap, printSelection };
 }
