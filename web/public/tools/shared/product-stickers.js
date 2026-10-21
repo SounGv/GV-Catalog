@@ -240,9 +240,21 @@
    // free height for the name = label - top padding - first line - bottom padding - barcode block; bars shrink (to 60%) only when the name would not get two lines at its smallest size
    const svgH=h=>h+.9+F.digits*.3528*.75,roomFor=h=>p.dieH-F.pad-down-lineH-svgH(h)-1.3-.9;
    let barH=F.barH;while(barH>F.barH*.6&&roomFor(barH)<2*minFont*1.2*.3528)barH-=.25;
-   const room=roomFor(barH);
-   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX*.9,F.line,4.5),q={...p,eanBarH:barH,bcH:barH,digits:F.digits};
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${upMove}mm;padding:${F.pad+down}mm ${F.pad}mm 0"><div class="st-tx" style="transform:translate(${p.txX||0}mm,${p.txY||0}mm);flex:none"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?(()=>{const d=fitText(it.text,(p.dieW-F.pad*2)*PX*.94,Math.max(2.4,room),F.detail,minFont);return`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor(Math.max(2.4,room)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`})():''}</div><div class="st-bc" style="transform:translate(${p.bcX||0}mm,${p.bcY||0}mm)">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
+   const rawTX=p.txX||0,rawTY=p.txY||0,rawBX=p.bcX||0,rawBY=p.bcY||0,margin=.4;
+   // Auto fit to the sticker: the name is fitted to the width that is left after the nudge, and every nudge (barcode, text) is
+   // clamped so nothing leaves the label; the person at the printer can move things only as far as the label allows.
+   const txMax=((p.dieW-2*margin)-.7*(p.dieW-F.pad*2))/2,clampedTX=Math.max(-txMax,Math.min(txMax,rawTX));
+   const effW=Math.max(6,Math.min(p.dieW-F.pad*2,p.dieW-margin*2-2*Math.abs(clampedTX)));
+   const downMax=Math.max(0,roomFor(barH)-(it.text?2*minFont*1.2*.3528:0)),txY=Math.max(-(F.pad+down-margin),Math.min(downMax,rawTY)),room=Math.max(0,roomFor(barH)-Math.max(0,txY));
+   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,effW*PX*.9,F.line,4.5),q={...p,eanBarH:barH,bcH:barH,digits:F.digits};
+   const barSvg=useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`;
+   const svgW=Number((barSvg.match(/width:([\d.]+)mm/)||[])[1])||p.dieW*.8;
+   const d=it.text?fitText(it.text,effW*PX*.94,Math.max(2.4,room),F.detail,minFont):null;
+   const detailH=d?d.lines*d.size*1.2*.3528+(big?.8:.5)+(big?0:.7):0,barTop=p.dieH-1.3-svgH(barH),textBottom=F.pad+down+lineH+detailH+Math.max(0,txY);
+   const gapAbove=Math.max(0,barTop-(F.pad+down+lineH+detailH)-.2),bcSpace=Math.max(0,(p.dieW-svgW)/2-margin);
+   const txX=Math.max(-(p.dieW-effW)/2+margin,Math.min((p.dieW-effW)/2-margin,clampedTX));
+   const bcX=Math.max(-bcSpace,Math.min(bcSpace,rawBX)),bcY=Math.max(-gapAbove,Math.min(1.3-margin,rawBY));
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${upMove}mm;padding:${F.pad+down}mm ${F.pad}mm 0"><div class="st-tx" data-ex="${txX}" data-ey="${txY}" style="transform:translate(${txX}mm,${txY}mm);flex:none;width:${effW}mm;margin:0 auto"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${d?`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor(Math.max(2.4,room)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`:''}</div><div class="st-bc" data-ex="${bcX}" data-ey="${bcY}" style="transform:translate(${bcX}mm,${bcY}mm)">${barSvg}</div></div></div>`;
   }
   function label(it,p){
    if(design==='factory')return labelFactory(it,p);

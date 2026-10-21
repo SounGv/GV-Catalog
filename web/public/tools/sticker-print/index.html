@@ -47,6 +47,7 @@ button{font:inherit}
 .szbar{display:flex;gap:8px;justify-content:center;margin-top:10px}.szbar[hidden]{display:none}.szbar button{min-width:110px;font-weight:700;border-radius:12px;min-height:48px}
 .readout{display:flex;justify-content:center;gap:16px;margin-top:10px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem;flex-wrap:wrap}.readout b{color:var(--ink)}
 .prow2{display:flex;gap:8px;margin-top:10px}.prow2 .test{margin-top:0}
+.edge{margin:6px 0 0;text-align:center;color:#6f5200;background:#fff6dc;border-radius:8px;padding:4px 10px;font-size:.9rem}.edge[hidden]{display:none}
 .hl{outline:2px solid #cdeb03;outline-offset:1px}
 .grp{margin:14px 0 6px;font-size:.9rem;color:var(--accent)}.note{color:var(--muted);font-size:.85rem;margin:8px 0 0}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -82,7 +83,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
    <div class="pad"><span></span><button type="button" data-d="up" aria-label="ขึ้น">↑</button><span></span><button type="button" data-d="left" aria-label="ซ้าย">←</button><div class="mid">ขยับ<br>ทีละขั้น</div><button type="button" data-d="right" aria-label="ขวา">→</button><span></span><button type="button" data-d="down" aria-label="ลง">↓</button><span></span></div>
    <div class="stepbar"><span>ขยับทีละ</span><button type="button" data-st="0.25">0.25</button><button type="button" data-st="0.5" class="on">0.5</button><button type="button" data-st="1">1</button><button type="button" data-st="2">2 มม.</button></div>
    <div class="szbar" id="szbar" hidden><button type="button" data-z="-5">เล็กลง −</button><button type="button" data-z="5">ใหญ่ขึ้น +</button></div>
-   <div class="readout" id="readout"></div>
+   <div class="readout" id="readout"></div><p class="edge" id="edge" hidden>ถึงขอบสติกเกอร์แล้ว ขยับต่อไม่ได้</p>
    <p class="note" style="text-align:center">กด "พิมพ์ทดสอบ" แล้วกดลูกศรตามที่เห็นบนสติกเกอร์จริง · ค่าจำไว้ในเครื่องนี้ แยกตามขนาด</p>
    <div class="prow2"><button type="button" class="test" id="testBtn2">พิมพ์ทดสอบ 2 แถว</button><button type="button" class="test" id="resetBtn2">ล้างค่า</button></div></div>
   <details class="set"><summary>ตั้งค่าอื่นๆ (พิมพ์ตัวเลขเอง · ช่องว่างระหว่างดวง/แถว)</summary>
@@ -176,12 +177,14 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   for(const el of row.querySelectorAll(tgt==='bc'?'.st-bc':tgt==='tx'?'.st-tx':'.st-in'))el.classList.add('hl');
   readout();
  }
+ // a nudge past the sticker edge is stopped by the engine: keep the typed values at what is really applied
+ function limit(){const m=MAP[tgt];if(tgt==='all')return false;const el=document.querySelector('#scale '+(tgt==='bc'?'.st-bc':'.st-tx'));if(!el)return false;let hit=false;for(const [k,a] of [[m.x,'ex'],[m.y,'ey']]){const eff=Number(el.dataset[a]);if(Number.isFinite(eff)&&Math.abs(eff-val(k))>0.01){$(k).value=eff;setEngine(k,eff);hit=true}}if(hit)refresh();return hit}
  // nudge pad: each target moves a pair of the settings below (shown/typed in "ตั้งค่าอื่นๆ"), + for the text also its size
  const MAP={all:{x:'shiftX',y:'shift'},bc:{x:'bcX',y:'bcY'},tx:{x:'txX',y:'txY'}};
  let tgt='all',stepV=0.5;
  const val=k=>Number($(k).value)||0,fmt=v=>(v>0?'+':'')+(Math.round(v*100)/100);
  function readout(){const m=MAP[tgt];$('readout').innerHTML=`<span>ซ้าย–ขวา <b>${fmt(val(m.x))}</b> มม.</span><span>ขึ้น–ลง <b>${fmt(val(m.y))}</b> มม.</span>`+(tgt==='tx'?`<span>ขนาด <b>${val('txS')||100}</b>%</span>`:'');$('szbar').hidden=tgt!=='tx'}
- function nudge(k,delta,lo,hi){const v=Math.max(lo,Math.min(hi,Math.round((val(k)+delta)*100)/100));$(k).value=v;setEngine(k,v);refresh()}
+ function nudge(k,delta,lo,hi){const v=Math.max(lo,Math.min(hi,Math.round((val(k)+delta)*100)/100));$(k).value=v;setEngine(k,v);refresh();const hit=limit();$('edge').hidden=!hit}
  function syncSeg(){for(const b of $('seg').children)b.classList.toggle('on',b.dataset.s===engSet('size').value)}
  function setEngine(k,v){const el=engSet(k);if(!el)return;el.value=v;el.dispatchEvent(new Event('change',{bubbles:true}))}
  function search(text){
