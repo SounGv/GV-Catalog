@@ -7,7 +7,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans
 .back{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;color:#d6dde1;text-decoration:none;background:#131516;width:100%}
 .app-header{display:flex;align-items:center;gap:12px;background:#131516;color:#fff;padding:10px 16px 14px}
 .app-header img{height:38px;border-radius:6px}.app-header h1{margin:0;font-size:1.25rem}.app-header span{color:#b9c4ca;font-size:.9rem}
-main{max-width:1100px;margin:0 auto;padding:16px}
+main{max-width:1100px;margin:0 auto;padding:16px;overflow-x:clip}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:0 0 14px}
 .card h2{margin:0 0 4px;font-size:1.1rem}.hint{margin:0 0 10px;color:var(--muted);font-size:.9rem}
 .add{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
@@ -22,6 +22,15 @@ main{max-width:1100px;margin:0 auto;padding:16px}
 .chip b{font-family:ui-monospace,Consolas,monospace}.chip button{border:0;background:#d7dfe3;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:14px;line-height:1}
 .empty{color:var(--muted);text-align:center;padding:26px 8px}
 .link{background:none;border:0;color:var(--olive);text-decoration:underline;cursor:pointer;font:inherit;padding:0 4px}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #4e5c00;outline-offset:2px}
+.chip button{position:relative}.chip button::after{content:"";position:absolute;inset:-9px}
+.chip b,#msg{font-variant-numeric:tabular-nums}
+.link{min-height:44px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+#stickerHost .st-actions button{min-height:44px;padding:0 16px;font:inherit;font-weight:700;border-radius:10px;border:1px solid #131516;background:#131516;color:#fff;cursor:pointer}
+#stickerHost .st-actions button.secondary{background:#fff;color:#131516}
+#stickerHost .st-type{flex-direction:column;align-items:stretch;gap:4px;flex:1 1 260px}#stickerHost .st-type select{width:100%;min-height:44px}
+#stickerHost .st-note{font-size:14px}#stickerHost summary{min-height:44px;display:flex;align-items:center}
 @media(max-width:600px){main{padding:10px}.card{padding:12px}}
 </style>
 <script defer src="../shared/JsBarcode.code128.min.js"></script><script defer src="../shared/product-stickers.js"></script></head>
