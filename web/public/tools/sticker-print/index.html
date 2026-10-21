@@ -56,6 +56,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
  const norm=v=>String(v||'').trim().toUpperCase();
  // the product name as the sticker reads it: from the brand onward ("Ugreen CM297 .. 70444 Type C to HDMI …")
  const descOf=name=>{const n=String(name||'').replace(/^[^|]*\|\s*/,'').trim(),m=n.match(BRANDS);return m?n.slice(m.index):n};
+ // the maker's model code is written in the Catalog name: "Ugreen L509...35501 Uno USB-C…", "Ugreen US176 # 20857 …"
+ const modelCode=name=>{const m=String(name||'').replace(/^[^|]*\|\s*/,'').match(/\b(?:ugreen|fantech|orsen|eloop)\s+([A-Z]{1,4}\d{2,4}[A-Z]?)(?=\s*(?:\.{2,}|#|\s|$))/i);return m?m[1].toUpperCase():''};
  const gtinsOf=p=>String(p.gtin||'').split(/[\s,;|/]+/).filter(g=>/^\d{8,14}$/.test(g));
  function msg(t,cls){$('msg').textContent=t;$('msg').className=cls||''}
 
@@ -84,14 +86,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
   return added.map(p=>{
    const mains=gtinsOf(p),main=mains[0]||'',own=src?(p.retailerBarcodes||{})[src]:'';
    const code=own||main;if(!code)return null;
-   return{code,model:p.sku,desc:descOf(p.name),qty:1,status:own&&mains.length&&!mains.includes(own)?'change':'same',pick:true};
+   return{code,model:p.sku,mc:modelCode(p.name),desc:descOf(p.name),qty:1,status:own&&mains.length&&!mains.includes(own)?'change':'same',pick:true};
   }).filter(Boolean);
  }
  function refresh(){
   const L=lines();
   $('chips').innerHTML=added.map(p=>`<span class="chip"><b>${p.sku}</b>${gtinsOf(p).length||(p.retailerBarcodes&&Object.keys(p.retailerBarcodes).length)?'':' · ไม่มีบาร์โค้ด'}<button type="button" data-rm="${p.sku}" aria-label="เอา ${p.sku} ออก">✕</button></span>`).join('')+(added.length?'<button class="link" type="button" id="clearAll">ล้างทั้งหมด</button>':'');
   $('emptyNote').hidden=added.length>0;$('stickerHost').hidden=!added.length;
-  if(!st)st=GVProductStickers.mount($('stickerHost'),{shop:'Catalog'});
+  if(!st)st=GVProductStickers.mount($('stickerHost'),{shop:'Catalog',design:'factory'});
   st.update(L);
  }
  function add(text){

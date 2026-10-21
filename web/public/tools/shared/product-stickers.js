@@ -117,7 +117,7 @@
   return svg.outerHTML;
  }
 
- function mount(host,{shop='',note=''}={}){
+ function mount(host,{shop='',note='',design=''}={}){
   if(!document.getElementById('gvStickerCss')){const s=document.createElement('style');s.id='gvStickerCss';s.textContent=CSS;document.head.append(s)}
   const KEY=`gv-${String(shop).toLowerCase().replace(/[^a-z0-9]+/g,'')}-sticker-`;
   host.classList.add('gv-st');
@@ -154,7 +154,7 @@
    const by=new Map();
    for(const r of lines){
     const code=String(r.code||'').trim();if(!code)continue;
-    const g=by.get(code)||{code,model:r.model||'',desc:r.desc||'',qty:0,status:r.status||'unknown',pick:!!r.pick};
+    const g=by.get(code)||{code,model:r.model||'',desc:r.desc||'',qty:0,status:r.status||'unknown',pick:!!r.pick,mc:r.mc||''};
     g.qty+=Number(r.qty)||0;if(rank[r.status]>rank[g.status])g.status=r.status;if(!g.model&&r.model)g.model=r.model;
     by.set(code,g);
    }
@@ -163,6 +163,8 @@
     it.brand=brandOf(it.desc);
     const k=kept.get(it.code)||{};
     it.pick=k.pick??it.pick??false; /* nothing ticked until staff choose; red rows show what must change */ it.qty=k.qty??it.qty;it.text=k.text??(catalogDetail(it.model)||detailOf(it.desc,it.brand,it.model));
+    // factory design: the product line starts with the brand, as on the maker's own label
+    if(design==='factory'&&k.text===undefined&&it.text&&it.brand&&!new RegExp('^'+it.brand,'i').test(it.text))it.text=it.brand+' '+it.text;
    }
    draw();
    return items.length;
@@ -197,7 +199,15 @@
    if(P.jaymart){const gap=jm('labelGap',0),left=jm('labelLeft',3),right=jm('labelRight',3);
     return{...P,gapX:gap,pageW:100+gap+left+right,rowPitch:jm('labelPitch',30)+num('pitch',0,6),shift:jm('labelY',0)+num('shift',-6,8),sheetLeft:Math.max(0,left+num('shiftX',-4,6))}}
    return{...P,rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
+  // The maker's own label look (UGREEN box label): bold 'Model: X | P/N: SKU', the product name in regular weight on two
+  // lines, a wide tall barcode and large digits. Used by the stand-alone sticker page (design:'factory').
+  function labelFactory(it,p){
+   const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:8.2,barH:10.5,digits:10.5}:{pad:1,line:6.2,detail:5.4,barH:4.7,digits:7.2};
+   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX,F.line,4.5),q={...p,eanBarH:F.barH,bcH:F.barH,digits:F.digits};
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm;padding:${F.pad}mm ${F.pad}mm 0"><div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?`<div class="st-detail" style="font-weight:400;font-size:${F.detail}pt;line-height:1.2;padding:0;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:2;max-height:2.4em">${esc(it.text)}</div>`:''}<div class="st-bc">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
+  }
   function label(it,p){
+   if(design==='factory')return labelFactory(it,p);
    const maxPx=Math.min(p.dieW-p.padX*2,p.bcW-1)*PX,title=[it.brand,it.model].filter(Boolean).join(' '),f=fit(title,maxPx,p.nameBase,p.nameMin);
    const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail" style="font-size:${p.detail}pt;-webkit-line-clamp:${p.detailLines||2};max-height:${(p.detailLines||2)*1.15}em">${esc(it.text)}</div>`:'');
    return`<div class="st-label${p.center?' st-center':''}" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm${p.center?`;padding-left:${p.padX}mm;padding-right:${p.padX}mm`:''}">${lines}<div class="st-bc">${useEan(it.code)?ean13(it.code,p):barcode(it.code,p)+`<div class="st-digits" style="font-size:${p.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
