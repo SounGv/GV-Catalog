@@ -11,7 +11,7 @@
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  // Label sizes. dot = printer dots per barcode module at 203 dpi (2 = 0.25 mm, 3 = 0.375 mm).
  const SIZES={
-  s3:{label:'3 ดวง/แถว · 32.3 × 20 มม. (ม้วนเดียวกับ AIS)',dieW:32.3,dieH:20,cols:3,pageW:100,sheetLeft:1.5,padX:.8,bcW:28.5,bcH:5.6,dot:2,nameBase:7.4,nameMin:5,detail:5.4,digits:7.6},
+  s3:{label:'3 ดวง/แถว · 32.3 × 20 มม. (ม้วนเดียวกับ AIS)',dieW:32.3,dieH:20,cols:3,pageW:100,sheetLeft:1.5,padX:.8,bcW:28.5,bcH:5.6,eanBarH:4.4,dot:2,nameBase:7.4,nameMin:5,detail:5,digits:7.2},
   // the Jaymart roll: 50 x 30 mm, 2 across, same look and spacing as the Jaymart sticker; page size, row height and
   // offsets start from what this computer saved in the Jaymart tool (gv-jm-label-*)
   s2:{label:'2 ดวง/แถว · 50 × 30 มม. (ม้วนเดียวกับ Jaymart)',jaymart:true,dieW:50,dieH:30,cols:2,pageW:106,sheetLeft:3,gapX:0,padX:4,bcW:40,bcH:9.5,dot:2,eanDot:3,eanBarH:8,nameBase:10,nameMin:7,detail:7.5,digits:9.5,detailLines:2,center:true}};
