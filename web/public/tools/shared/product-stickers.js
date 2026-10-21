@@ -154,7 +154,7 @@
    const by=new Map();
    for(const r of lines){
     const code=String(r.code||'').trim();if(!code)continue;
-    const g=by.get(code)||{code,model:r.model||'',desc:r.desc||'',qty:0,status:r.status||'unknown'};
+    const g=by.get(code)||{code,model:r.model||'',desc:r.desc||'',qty:0,status:r.status||'unknown',pick:!!r.pick};
     g.qty+=Number(r.qty)||0;if(rank[r.status]>rank[g.status])g.status=r.status;if(!g.model&&r.model)g.model=r.model;
     by.set(code,g);
    }
@@ -162,7 +162,7 @@
    for(const it of items){
     it.brand=brandOf(it.desc);
     const k=kept.get(it.code)||{};
-    it.pick=k.pick??false; /* nothing ticked until staff choose; red rows show what must change */ it.qty=k.qty??it.qty;it.text=k.text??(catalogDetail(it.model)||detailOf(it.desc,it.brand,it.model));
+    it.pick=k.pick??it.pick??false; /* nothing ticked until staff choose; red rows show what must change */ it.qty=k.qty??it.qty;it.text=k.text??(catalogDetail(it.model)||detailOf(it.desc,it.brand,it.model));
    }
    draw();
    return items.length;

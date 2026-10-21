@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</title>
+<style>
+:root{--bg:#f4f6f5;--surface:#fff;--ink:#131516;--muted:#5b6572;--line:#d3ded8;--lime:#cdeb03;--olive:#4e5c00;--ok:#0f5a3c;--bad:#9b2a22}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif}
+.back{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;color:#d6dde1;text-decoration:none;background:#131516;width:100%}
+.app-header{display:flex;align-items:center;gap:12px;background:#131516;color:#fff;padding:10px 16px 14px}
+.app-header img{height:38px;border-radius:6px}.app-header h1{margin:0;font-size:1.25rem}.app-header span{color:#b9c4ca;font-size:.9rem}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:0 0 14px}
+.card h2{margin:0 0 4px;font-size:1.1rem}.hint{margin:0 0 10px;color:var(--muted);font-size:.9rem}
+.add{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.add input{flex:1 1 260px;min-height:48px;border:2px solid #131516;border-radius:10px;padding:6px 14px;font:inherit;font-size:1.1rem}
+.add button,.btn{min-height:48px;padding:0 22px;border:0;border-radius:10px;background:#131516;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.add button:hover{background:#2a2f31}
+.opts{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;align-items:center}
+.opts label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:700}
+.opts select{min-height:44px;border:1px solid #c8d5d0;border-radius:8px;padding:4px 10px;font:inherit;font-weight:400;min-width:240px}
+#msg{margin:10px 0 0;font-size:.92rem}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.chip{display:inline-flex;align-items:center;gap:6px;background:#eef3f5;border:1px solid var(--line);border-radius:99px;padding:4px 6px 4px 12px;font-size:.9rem}
+.chip b{font-family:ui-monospace,Consolas,monospace}.chip button{border:0;background:#d7dfe3;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:14px;line-height:1}
+.empty{color:var(--muted);text-align:center;padding:26px 8px}
+.link{background:none;border:0;color:var(--olive);text-decoration:underline;cursor:pointer;font:inherit;padding:0 4px}
+@media(max-width:600px){main{padding:10px}.card{padding:12px}}
+</style>
+<script defer src="../shared/JsBarcode.code128.min.js"></script><script defer src="../shared/product-stickers.js"></script></head>
+<body>
+<a class="back" href="/">&lsaquo; กลับหน้าหลัก</a>
+<header class="app-header"><img src="logo.jpeg" alt="Gadget Villa"><div><h1>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h1><span>พิมพ์เลขรุ่น แล้วบาร์โค้ดกับชื่อสินค้าขึ้นให้เอง</span></div></header>
+<main>
+ <section class="card"><h2>1 · ใส่รุ่นที่ต้องการพิมพ์</h2>
+  <p class="hint">พิมพ์เลข SKU 4–5 หลัก (เช่น 70444) กด Enter · ใส่หลายรุ่นพร้อมกันได้ คั่นด้วยเว้นวรรคหรือขึ้นบรรทัดใหม่ · ยิงบาร์โค้ดสินค้าลงช่องนี้ก็ได้</p>
+  <form class="add" id="addForm"><input id="skuInput" inputmode="text" autocomplete="off" placeholder="เลข SKU เช่น 70444  หรือ  60131-BOX" aria-label="เลข SKU" autofocus><button type="submit">เพิ่มรุ่น</button></form>
+  <div class="opts"><label>บาร์โค้ดที่จะพิมพ์<select id="source"></select></label></div>
+  <p id="msg" role="status"></p>
+  <div class="chips" id="chips"></div>
+ </section>
+ <section class="card" id="stickerCard"><p class="empty" id="emptyNote">ยังไม่ได้เลือกรุ่น · พิมพ์เลข SKU ด้านบน แล้วตัวอย่างสติกเกอร์จะขึ้นที่นี่</p><div id="stickerHost" hidden></div></section>
+</main>
+<script>
+(()=>{
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const BRANDS=/\b(ugreen|fantech|orsen|eloop)\b/i;
+ let catalog=new Map(),byGtin=new Map(),retailers=[],added=[],st=null;
+ const norm=v=>String(v||'').trim().toUpperCase();
+ // the product name as the sticker reads it: from the brand onward ("Ugreen CM297 .. 70444 Type C to HDMI …")
+ const descOf=name=>{const n=String(name||'').replace(/^[^|]*\|\s*/,'').trim(),m=n.match(BRANDS);return m?n.slice(m.index):n};
+ const gtinsOf=p=>String(p.gtin||'').split(/[\s,;|/]+/).filter(g=>/^\d{8,14}$/.test(g));
+ function msg(t,cls){$('msg').textContent=t;$('msg').className=cls||''}
+
+ async function load(){
+  try{
+   const d=await fetch('/api/catalog/barcodes',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject());
+   for(const p of d.rows){catalog.set(norm(p.sku),p);for(const g of gtinsOf(p))byGtin.set(g,p)}
+   const set=new Set();for(const p of d.rows)for(const r of Object.keys(p.retailerBarcodes||{}))set.add(r);
+   retailers=[...set].sort();
+  }catch{msg('เปิดข้อมูลสินค้าจาก Catalog ไม่ได้ (ต่ออินเทอร์เน็ตไม่ติด) · ลองรีเฟรชหน้านี้','bad')}
+  $('source').innerHTML='<option value="">บาร์โค้ดหลักของเรา (Catalog)</option>'+retailers.map(r=>`<option value="${r}">บาร์โค้ดที่ ${r} ใช้ (ถ้ามี · ไม่มีใช้บาร์หลัก)</option>`).join('');
+  try{const v=localStorage.getItem('gv-stickerprint-source');if(v&&retailers.includes(v))$('source').value=v}catch{}
+ }
+
+ // typed text -> products: exact SKU, else the SKU with a -BOX variant, else a main barcode
+ function find(token){
+  const t=norm(token);if(!t)return[];
+  if(catalog.has(t))return[catalog.get(t)];
+  const base=[...catalog.entries()].filter(([k])=>k===t+'-BOX'||k.replace(/-BOX$/,'')===t).map(([,p])=>p);
+  if(base.length)return base;
+  if(byGtin.has(token.trim()))return[byGtin.get(token.trim())];
+  return[];
+ }
+ function lines(){
+  const src=$('source').value;
+  return added.map(p=>{
+   const mains=gtinsOf(p),main=mains[0]||'',own=src?(p.retailerBarcodes||{})[src]:'';
+   const code=own||main;if(!code)return null;
+   return{code,model:p.sku,desc:descOf(p.name),qty:1,status:own&&mains.length&&!mains.includes(own)?'change':'same',pick:true};
+  }).filter(Boolean);
+ }
+ function refresh(){
+  const L=lines();
+  $('chips').innerHTML=added.map(p=>`<span class="chip"><b>${p.sku}</b>${gtinsOf(p).length||(p.retailerBarcodes&&Object.keys(p.retailerBarcodes).length)?'':' · ไม่มีบาร์โค้ด'}<button type="button" data-rm="${p.sku}" aria-label="เอา ${p.sku} ออก">✕</button></span>`).join('')+(added.length?'<button class="link" type="button" id="clearAll">ล้างทั้งหมด</button>':'');
+  $('emptyNote').hidden=added.length>0;$('stickerHost').hidden=!added.length;
+  if(!st)st=GVProductStickers.mount($('stickerHost'),{shop:'Catalog'});
+  st.update(L);
+ }
+ function add(text){
+  const tokens=String(text).split(/[\s,;]+/).filter(Boolean),ok=[],miss=[],noBc=[];
+  for(const tk of tokens){
+   const hits=find(tk);
+   if(!hits.length){miss.push(tk);continue}
+   for(const p of hits){
+    if(!added.some(x=>x.sku===p.sku))added.push(p);
+    if(!gtinsOf(p).length&&!Object.keys(p.retailerBarcodes||{}).length)noBc.push(p.sku);
+    ok.push(p.sku);
+   }
+  }
+  refresh();
+  const parts=[];
+  if(ok.length)parts.push(`เพิ่มแล้ว ${[...new Set(ok)].join(', ')}`);
+  if(miss.length)parts.push(`ไม่พบในแคตตาล็อก: ${miss.join(', ')}`);
+  if(noBc.length)parts.push(`${noBc.join(', ')} ยังไม่มีบาร์โค้ดใน Catalog จึงพิมพ์ไม่ได้`);
+  msg(parts.join(' · '),miss.length||noBc.length?'bad':'ok');
+ }
+ $('addForm').addEventListener('submit',e=>{e.preventDefault();const v=$('skuInput').value;if(!v.trim())return;add(v);$('skuInput').value='';$('skuInput').focus()});
+ $('skuInput').addEventListener('paste',e=>{const t=(e.clipboardData||window.clipboardData).getData('text');if(/[\s,;]/.test(t.trim())){e.preventDefault();add(t)}});
+ $('source').addEventListener('change',()=>{try{localStorage.setItem('gv-stickerprint-source',$('source').value)}catch{}refresh()});
+ $('chips').addEventListener('click',e=>{
+  const rm=e.target.closest('[data-rm]');
+  if(rm){added=added.filter(p=>p.sku!==rm.dataset.rm);refresh()}
+  if(e.target.id==='clearAll'){added=[];msg('');refresh()}
+ });
+ window.addEventListener('DOMContentLoaded',()=>load().then(()=>{refresh()}));
+})();
+</script>
+</body></html>
