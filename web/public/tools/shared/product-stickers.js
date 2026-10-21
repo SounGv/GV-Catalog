@@ -230,8 +230,15 @@
   }
   function labelFactory(it,p){
    const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:9.5,barH:8,digits:9.5}:{pad:1,line:6.2,detail:6,barH:4.2,digits:7};
-   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX*.9,F.line,4.5),q={...p,eanBarH:F.barH,bcH:F.barH,digits:F.digits};
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm;padding:${F.pad}mm ${F.pad}mm 0"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?(()=>{const d=fitText(it.text,(p.dieW-F.pad*2)*PX*.94,big?9.0:6.2,F.detail,big?6:3.8);return`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor((big?9.0:6.2)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`})():''}<div class="st-bc">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
+   // "Move down" (shift > 0) must not push the bottom of the label out of the printed page: the content block is
+   // made shorter instead (bars and name give up the room), so nothing is cut off at the bottom
+   const down=Math.max(0,p.shift),upMove=Math.min(0,p.shift),minFont=big?6:3.8,lineH=F.line*1.1*.3528+(big?.8:.5);
+   // free height for the name = label - top padding - first line - bottom padding - barcode block; bars shrink (to 60%) only when the name would not get two lines at its smallest size
+   const svgH=h=>h+.9+F.digits*.3528*.75,roomFor=h=>p.dieH-F.pad-down-lineH-svgH(h)-1.3-.9;
+   let barH=F.barH;while(barH>F.barH*.6&&roomFor(barH)<2*minFont*1.2*.3528)barH-=.25;
+   const room=roomFor(barH);
+   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX*.9,F.line,4.5),q={...p,eanBarH:barH,bcH:barH,digits:F.digits};
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${upMove}mm;padding:${F.pad+down}mm ${F.pad}mm 0"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?(()=>{const d=fitText(it.text,(p.dieW-F.pad*2)*PX*.94,Math.max(2.4,room),F.detail,big?6:3.8);return`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor(Math.max(2.4,room)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`})():''}<div class="st-bc">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
   }
   function label(it,p){
    if(design==='factory')return labelFactory(it,p);
