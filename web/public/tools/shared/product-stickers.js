@@ -72,9 +72,14 @@
   return n.replace(/^[.#\s]+/,'').trim();
  }
 
+ let fitProbe=null;
  function fit(text,maxPx,base,min){
   const s=String(text||'');if(!s)return{size:base,scale:1};
-  const ctx=document.createElement('canvas').getContext('2d'),w=size=>{ctx.font=`700 ${size}pt Arial,sans-serif`;return ctx.measureText(s).width};
+  // measured on a real (off-screen) element, not a canvas: small text is laid out with hinted glyph widths, wider than the linear canvas measure
+  const probe=fitProbe||(fitProbe=Object.assign(document.createElement('span'),{}));
+  if(!probe.isConnected){probe.style.cssText='position:fixed;left:-9999px;top:0;visibility:hidden;white-space:nowrap;font-family:Arial,sans-serif;font-weight:800';document.body.append(probe)}
+  probe.textContent=s;
+  const w=size=>{probe.style.fontSize=size+'pt';return probe.getBoundingClientRect().width};
   let lo=min,hi=base;if(w(hi)<=maxPx)return{size:hi,scale:1};
   for(let i=0;i<16;i++){const m=(lo+hi)/2;if(w(m)<=maxPx)lo=m;else hi=m}
   return{size:lo,scale:Math.min(1,maxPx/Math.max(w(lo),1))};
@@ -212,11 +217,16 @@
   // Largest font (down to `min`) at which the whole text wraps into the space left for it (`avail` mm high); if even the
   // smallest size does not fit, it is cut with an ellipsis. Regular weight, greedy word wrap, measured on a canvas.
   function fitText(text,maxPx,avail,start,min){
-   const ctx=document.createElement('canvas').getContext('2d'),words=String(text).split(/\s+/).filter(Boolean);
-   const count=size=>{ctx.font=`400 ${size}pt Arial,sans-serif`;let n=1,w=0;const sp=ctx.measureText(' ').width;
-    for(const x of words){const l=ctx.measureText(x).width;if(w&&w+sp+l>maxPx){n++;w=l}else w+=(w?sp:0)+l}return n};
-   for(let size=start;size>=min-1e-9;size-=.2){const n=count(size);if(n*size*1.2*.3528<=avail)return{size,lines:n}}
-   return{size:min,lines:Math.max(1,Math.floor(avail/(min*1.2*.3528)))};
+   const words=String(text).split(/\s+/).filter(Boolean);
+   // measured on a real off-screen element (hinted widths), like fit()
+   const probe=document.createElement('span');probe.style.cssText='position:fixed;left:-9999px;top:0;visibility:hidden;white-space:pre;font-family:Arial,sans-serif;font-weight:400';document.body.append(probe);
+   const width=(t,size)=>{probe.style.fontSize=size+'pt';probe.textContent=t;return probe.getBoundingClientRect().width};
+   const count=size=>{let n=1,w=0;const sp=width('a a',size)-width('aa',size);
+    for(const x of words){const l=width(x,size);if(w&&w+sp+l>maxPx){n++;w=l}else w+=(w?sp:0)+l}return n};
+   let result=null;
+   for(let size=start;size>=min-1e-9;size-=.2){const n=count(size);if(n*size*1.2*.3528<=avail){result={size,lines:n};break}}
+   result=result||{size:min,lines:Math.max(1,Math.floor(avail/(min*1.2*.3528)))};
+   probe.remove();return result;
   }
   function labelFactory(it,p){
    const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:8.2,barH:10.5,digits:10.5}:{pad:1,line:6.2,detail:5.4,barH:5.4,digits:7.2};
