@@ -1,65 +1,100 @@
 <!doctype html>
 <html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f4f6f5;--surface:#fff;--ink:#131516;--muted:#5b6572;--line:#d3ded8;--lime:#cdeb03;--olive:#4e5c00;--ok:#0f5a3c;--bad:#9b2a22}
+:root{--bg:#f7f8fa;--surface:#fff;--ink:#18232b;--muted:#64748b;--line:#e5e9ed;--accent:#185c45;--soft:#e8f2ed;--lime:#cdeb03;--navy:#18364c;--warn-bg:#fff6dc;--warn:#6f5200;--bad:#9b2a22}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif}
-.back{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;color:#d6dde1;text-decoration:none;background:#131516;width:100%}
-.app-header{display:flex;align-items:center;gap:12px;background:#131516;color:#fff;padding:10px 16px 14px}
-.app-header img{height:38px;border-radius:6px}.app-header h1{margin:0;font-size:1.25rem}.app-header span{color:#b9c4ca;font-size:.9rem}
-main{max-width:1100px;margin:0 auto;padding:16px;overflow-x:clip}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:0 0 14px}
-.card h2{margin:0 0 4px;font-size:1.1rem}.hint{margin:0 0 10px;color:var(--muted);font-size:.9rem}
-.add{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
-.add input{flex:1 1 260px;min-height:48px;border:2px solid #131516;border-radius:10px;padding:6px 14px;font:inherit;font-size:1.1rem}
-.add button,.btn{min-height:48px;padding:0 22px;border:0;border-radius:10px;background:#131516;color:#fff;font:inherit;font-weight:700;cursor:pointer}
-.add button:hover{background:#2a2f31}
-.opts{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;align-items:center}
-.opts label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:700}
-.opts select{min-height:44px;border:1px solid #c8d5d0;border-radius:8px;padding:4px 10px;font:inherit;font-weight:400;min-width:240px}
-#msg{margin:10px 0 0;font-size:.92rem}.ok{color:var(--ok)}.bad{color:var(--bad)}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.chip{display:inline-flex;align-items:center;gap:6px;background:#eef3f5;border:1px solid var(--line);border-radius:99px;padding:4px 6px 4px 12px;font-size:.9rem}
-.chip b{font-family:ui-monospace,Consolas,monospace}.chip button{border:0;background:#d7dfe3;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:14px;line-height:1}
-.empty{color:var(--muted);text-align:center;padding:26px 8px}
-.link{background:none;border:0;color:var(--olive);text-decoration:underline;cursor:pointer;font:inherit;padding:0 4px}
-button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #4e5c00;outline-offset:2px}
-.chip button{position:relative}.chip button::after{content:"";position:absolute;inset:-9px}
-.chip b,#msg{font-variant-numeric:tabular-nums}
-.link{min-height:44px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Sarabun,"Segoe UI",sans-serif}
+.one{max-width:720px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(21,32,24,.06)}
+.steps{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:.9rem}
+.steps b{background:var(--accent);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:.85rem}
+.hint{margin:8px 0 0;color:var(--muted);font-size:.9rem}
+.add{display:flex;gap:8px;margin-top:8px}
+.add input{flex:1;min-width:0;min-height:52px;border:2px solid var(--accent);border-radius:10px;padding:6px 14px;font:inherit;font-size:1.15rem}
+button{font:inherit}
+.btn{min-height:52px;padding:0 22px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+.btn:hover{background:#134a38}
+.msg{margin:10px 0 0;font-size:.95rem}.msg.bad{color:var(--bad)}.msg.warn{color:var(--warn)}
+.pick{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.pick button{min-height:44px;padding:0 16px;border:1px solid var(--accent);border-radius:99px;background:#fff;color:var(--accent);font-weight:700;cursor:pointer}
+.fhead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px}
+.sku{font-family:ui-monospace,Consolas,monospace;font-weight:800;font-size:1.5rem;font-variant-numeric:tabular-nums}
+.badge{display:inline-flex;align-items:center;background:var(--soft);color:var(--accent);border-radius:99px;padding:0 10px;font-size:.82rem;font-weight:700}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.bc{font-family:ui-monospace,Consolas,monospace;color:var(--muted);font-size:.92rem;margin-top:4px;font-variant-numeric:tabular-nums}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:700;margin-top:10px}
+.fld input,.fld select{min-height:48px;width:100%;border:1px solid #cfd8de;border-radius:10px;padding:6px 12px;font:inherit;font-weight:400;font-size:1rem;background:#fff}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}@media(max-width:560px){.row2{grid-template-columns:1fr}}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--soft);border-radius:12px;padding:4px;gap:4px}
+.seg button{min-height:52px;border:0;border-radius:9px;background:transparent;font-weight:700;color:var(--muted);cursor:pointer}.seg button.on{background:var(--accent);color:#fff}
+.seg small{display:block;font-weight:400;font-size:.78rem}
+.qbox{display:flex;align-items:center;gap:8px}
+.qbox .s{width:48px;height:48px;border:1px solid #cfd8de;border-radius:10px;background:#fff;font-size:1.4rem;font-weight:700;cursor:pointer}
+.qbox input{width:92px;height:48px;border:1px solid #cfd8de;border-radius:10px;text-align:center;font:inherit;font-size:1.3rem;font-weight:800}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chips button{min-height:44px;padding:0 16px;border:1px solid #cfd8de;border-radius:99px;background:#fff;cursor:pointer}
+.prev{background:var(--soft);border-radius:12px;padding:14px;margin-top:14px;overflow:hidden}
+.prev .scale{transform-origin:top left;background:#fff}
+.cap{margin:8px 0 0;font-size:.88rem;color:var(--muted);text-align:center}
+.go{width:100%;min-height:58px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:800;font-size:1.15rem;cursor:pointer}
+.go[disabled]{background:#9db5ab;cursor:not-allowed}
+.test{margin-top:8px;width:100%;min-height:48px;border:1px solid var(--accent);border-radius:12px;background:#fff;color:var(--accent);font-weight:700;cursor:pointer}.test[disabled]{opacity:.5;cursor:not-allowed}
+.set{margin-top:12px;font-size:.92rem}.set summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700;color:var(--accent)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid label{display:flex;flex-direction:column;font-size:.82rem;font-weight:700;gap:3px}.grid input{min-height:44px;border:1px solid #cfd8de;border-radius:8px;padding:4px 10px;font:inherit;font-weight:400}
+.note{color:var(--muted);font-size:.85rem;margin:8px 0 0}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-#stickerHost .st-actions button{min-height:44px;padding:0 16px;font:inherit;font-weight:700;border-radius:10px;border:1px solid #131516;background:#131516;color:#fff;cursor:pointer}
-#stickerHost .st-actions button.secondary{background:#fff;color:#131516}
-#stickerHost .st-type{flex-direction:column;align-items:stretch;gap:4px;flex:1 1 260px}#stickerHost .st-type select{width:100%;min-height:44px}
-#stickerHost .st-note{font-size:14px}#stickerHost summary{min-height:44px;display:flex;align-items:center}
-@media(max-width:600px){main{padding:10px}.card{padding:12px}}
+a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-header img{height:34px;width:auto}.app-header h1{margin:0;font-size:1.25rem}.app-header span{font-size:.9rem}
 </style>
-<script defer src="../shared/JsBarcode.code128.min.js"></script><script defer src="../shared/product-stickers.js"></script></head>
+<script defer src="../shared/JsBarcode.code128.min.js"></script><script defer src="../shared/product-stickers.js"></script>
+<link rel="stylesheet" href="../shared/gv-header.css"></head>
 <body>
 <a class="back" href="/">&lsaquo; กลับหน้าหลัก</a>
-<header class="app-header"><img src="logo.jpeg" alt="Gadget Villa"><div><h1>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h1><span>พิมพ์เลขรุ่น แล้วบาร์โค้ดกับชื่อสินค้าขึ้นให้เอง</span></div></header>
-<main>
- <section class="card"><h2>1 · ใส่รุ่นที่ต้องการพิมพ์</h2>
-  <p class="hint">พิมพ์เลข SKU 4–5 หลัก (เช่น 70444) กด Enter · ใส่หลายรุ่นพร้อมกันได้ คั่นด้วยเว้นวรรคหรือขึ้นบรรทัดใหม่ · ยิงบาร์โค้ดสินค้าลงช่องนี้ก็ได้</p>
-  <form class="add" id="addForm"><input id="skuInput" inputmode="text" autocomplete="off" placeholder="เลข SKU เช่น 70444  หรือ  60131-BOX" aria-label="เลข SKU" autofocus><button type="submit">เพิ่มรุ่น</button></form>
-  <div class="opts"><label>บาร์โค้ดที่จะพิมพ์<select id="source"></select></label></div>
-  <p id="msg" role="status"></p>
-  <div class="chips" id="chips"></div>
+<header class="app-header"><img src="logo.jpeg" alt="Gadget Villa"><div><h1>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h1><span>พิมพ์ทีละรุ่น · ระบบเติมชื่อกับบาร์โค้ดจาก Catalog ให้</span></div></header>
+<main class="one">
+ <section class="card"><div class="steps"><b>1</b> พิมพ์เลข SKU</div>
+  <form class="add" id="addForm"><input id="skuInput" autocomplete="off" inputmode="text" placeholder="เลข SKU 4–5 หลัก เช่น 35501" aria-label="เลข SKU" autofocus><button class="btn" type="submit">ค้นหา</button></form>
+  <p class="hint">หรือยิงบาร์โค้ดสินค้าลงช่องนี้ก็ได้ · รุ่นกล่องใช้ -BOX เช่น 60131-BOX</p>
+  <p class="msg" id="msg" role="status"></p><div class="pick" id="pick"></div>
  </section>
- <section class="card" id="stickerCard"><p class="empty" id="emptyNote">ยังไม่ได้เลือกรุ่น · พิมพ์เลข SKU ด้านบน แล้วตัวอย่างสติกเกอร์จะขึ้นที่นี่</p><div id="stickerHost" hidden></div></section>
+ <section class="card" id="foundCard" hidden><div class="steps"><b>2</b> ตรวจข้อมูลสินค้า</div>
+  <div class="fhead"><span class="sku" id="fSku"></span><span class="badge">✓ พบใน Catalog</span><span class="badge" id="fType"></span></div>
+  <div class="bc" id="fInfo"></div>
+  <label class="fld">ชื่อใต้บาร์โค้ด (แก้ได้)<input id="nameInput" autocomplete="off"></label>
+ </section>
+ <section class="card" id="printCard" hidden><div class="steps"><b>3</b> เลือกขนาดและจำนวน</div>
+  <div class="row2">
+   <div class="seg" id="seg"><button type="button" data-s="s3">3 ดวง/แถว<small>32.3 × 20 มม.</small></button><button type="button" data-s="s2">2 ดวง/แถว<small>50 × 30 มม.</small></button></div>
+   <div><div class="qbox"><button class="s" type="button" id="qMinus" aria-label="ลดจำนวน">−</button><input id="qty" type="number" inputmode="numeric" min="1" max="20000" value="30" aria-label="จำนวนดวง"><button class="s" type="button" id="qPlus" aria-label="เพิ่มจำนวน">+</button><span class="bc" style="margin:0">ดวง</span></div>
+    <div class="chips" id="qChips"><button type="button" data-q="10">10</button><button type="button" data-q="30">30</button><button type="button" data-q="50">50</button><button type="button" data-q="100">100</button></div></div>
+  </div>
+  <div class="prev" id="prevBox"><div class="scale" id="scale"></div></div>
+  <p class="cap" id="cap"></p>
+  <details class="set"><summary>ตั้งค่าเครื่องพิมพ์</summary>
+   <div class="grid"><label>ช่องว่างระหว่างดวง (มม.)<input id="gapX" type="number" min="0" max="6" step="0.1"></label><label>เลื่อนซ้าย–ขวา (มม.)<input id="shiftX" type="number" min="-4" max="6" step="0.5"></label><label>เลื่อนขึ้น–ลง (มม.)<input id="shift" type="number" min="-6" max="8" step="0.5"></label><label>ช่องว่างระหว่างแถว (มม.)<input id="pitch" type="number" min="0" max="6" step="0.5"></label></div>
+   <label class="fld">บาร์โค้ดที่จะพิมพ์<select id="source"></select></label>
+   <p class="note">ตั้งไดรเวอร์: 3 ดวง/แถว = กระดาษ 100 × 20 มม. · 2 ดวง/แถว = ขนาดเดียวกับสติกเกอร์ Jaymart · Scale 100% · ค่าที่ปรับจำไว้ในเครื่องนี้</p>
+  </details>
+ </section>
+ <section id="goBox" hidden><button class="go" id="goBtn" type="button">พิมพ์สติกเกอร์ <b id="goN">0</b> ดวง</button><button class="test" id="testBtn" type="button">พิมพ์ทดสอบ 2 แถวก่อน</button></section>
 </main>
+<!-- the shared sticker engine (layout, barcode drawing, printing); its own form stays hidden and this page drives it -->
+<div id="engine" hidden></div>
 <script>
 (()=>{
  'use strict';
  const $=id=>document.getElementById(id);
  const BRANDS=/\b(ugreen|fantech|orsen|eloop)\b/i;
- let catalog=new Map(),byGtin=new Map(),retailers=[],added=[],st=null;
+ let catalog=new Map(),byGtin=new Map(),retailers=[],current=null,engine=null,ready=false,pending='';
  const norm=v=>String(v||'').trim().toUpperCase();
- // the product name as the sticker reads it: from the brand onward ("Ugreen CM297 .. 70444 Type C to HDMI …")
  const descOf=name=>{const n=String(name||'').replace(/^[^|]*\|\s*/,'').trim(),m=n.match(BRANDS);return m?n.slice(m.index):n};
  // the maker's model code is written in the Catalog name: "Ugreen L509...35501 Uno USB-C…", "Ugreen US176 # 20857 …"
  const modelCode=name=>{const m=String(name||'').replace(/^[^|]*\|\s*/,'').match(/\b(?:ugreen|fantech|orsen|eloop)\s+([A-Z]{1,4}\d{2,4}[A-Z]?)(?=\s*(?:\.{2,}|#|\s|$))/i);return m?m[1].toUpperCase():''};
  const gtinsOf=p=>String(p.gtin||'').split(/[\s,;|/]+/).filter(g=>/^\d{8,14}$/.test(g));
- function msg(t,cls){$('msg').textContent=t;$('msg').className=cls||''}
+ const eanOk=c=>{if(!/^\d{13}$/.test(c))return false;let s=0;for(let i=0;i<12;i++)s+=Number(c[i])*(i%2?3:1);return(10-s%10)%10===Number(c[12])};
+ const msg=(t,cls)=>{$('msg').textContent=t||'';$('msg').className='msg'+(cls?' '+cls:'')};
+ const qtyNow=()=>Math.max(1,Math.min(20000,Math.floor(Number($('qty').value)||0)));
+ const eng=s=>$('engine').querySelector(s);
+ const engSet=k=>$('engine').querySelector(`[data-set="${k}"]`);
 
  async function load(){
   try{
@@ -67,62 +102,91 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
    for(const p of d.rows){catalog.set(norm(p.sku),p);for(const g of gtinsOf(p))byGtin.set(g,p)}
    const set=new Set();for(const p of d.rows)for(const r of Object.keys(p.retailerBarcodes||{}))set.add(r);
    retailers=[...set].sort();
-  }catch{msg('เปิดข้อมูลสินค้าจาก Catalog ไม่ได้ (ต่ออินเทอร์เน็ตไม่ติด) · ลองรีเฟรชหน้านี้','bad')}
-  $('source').innerHTML='<option value="">บาร์โค้ดหลักของเรา (Catalog)</option>'+retailers.map(r=>`<option value="${r}">บาร์โค้ดที่ ${r} ใช้ (ถ้ามี · ไม่มีใช้บาร์หลัก)</option>`).join('');
+  }catch{msg('เปิดข้อมูลสินค้าจาก Catalog ไม่ได้ (ต่ออินเทอร์เน็ตไม่ติด) · รีเฟรชหน้านี้แล้วลองใหม่','bad')}
+  $('source').innerHTML='<option value="">บาร์โค้ดหลักของเรา (Catalog)</option>'+retailers.map(r=>`<option value="${r}">บาร์โค้ดที่ ${r} ใช้ (ไม่มีใช้บาร์หลัก)</option>`).join('');
   try{const v=localStorage.getItem('gv-stickerprint-source');if(v&&retailers.includes(v))$('source').value=v}catch{}
  }
-
- // typed text -> products: exact SKU, else the SKU with a -BOX variant, else a main barcode
  function find(token){
   const t=norm(token);if(!t)return[];
   if(catalog.has(t))return[catalog.get(t)];
-  const base=[...catalog.entries()].filter(([k])=>k===t+'-BOX'||k.replace(/-BOX$/,'')===t).map(([,p])=>p);
+  const base=[...catalog.entries()].filter(([k])=>k.replace(/-BOX$/,'')===t).map(([,p])=>p);
   if(base.length)return base;
-  if(byGtin.has(token.trim()))return[byGtin.get(token.trim())];
-  return[];
+  const g=byGtin.get(String(token).trim());return g?[g]:[];
  }
- function lines(){
-  const src=$('source').value;
-  return added.map(p=>{
-   const mains=gtinsOf(p),main=mains[0]||'',own=src?(p.retailerBarcodes||{})[src]:'';
-   const code=own||main;if(!code)return null;
-   return{code,model:p.sku,mc:modelCode(p.name),desc:descOf(p.name),qty:1,status:own&&mains.length&&!mains.includes(own)?'change':'same',pick:true};
-  }).filter(Boolean);
+ function barcodeOf(p){const src=$('source').value,mains=gtinsOf(p),own=src?(p.retailerBarcodes||{})[src]:'';return{code:own||mains[0]||'',fromShop:!!own}}
+
+ function pushToEngine(keepText){
+  if(!current)return;
+  const b=barcodeOf(current);
+  if(!b.code){engine.update([]);return}
+  const text=$('nameInput').value;
+  engine.update([{code:b.code,model:current.sku,mc:modelCode(current.name),desc:descOf(current.name),qty:qtyNow(),status:'same',pick:true}]);
+  const row=eng('tbody tr');if(!row)return;
+  const t=row.querySelector('[data-f=text]'),q=row.querySelector('[data-f=qty]'),p=row.querySelector('[data-f=pick]');
+  if(keepText&&text!==''&&t&&t.value!==text){t.value=text;t.dispatchEvent(new Event('input',{bubbles:true}))}
+  if(q){q.value=qtyNow();q.dispatchEvent(new Event('input',{bubbles:true}))}
+  if(p&&!p.checked){p.checked=true;p.dispatchEvent(new Event('change',{bubbles:true}))}
  }
- function refresh(){
-  const L=lines();
-  $('chips').innerHTML=added.map(p=>`<span class="chip"><b>${p.sku}</b>${gtinsOf(p).length||(p.retailerBarcodes&&Object.keys(p.retailerBarcodes).length)?'':' · ไม่มีบาร์โค้ด'}<button type="button" data-rm="${p.sku}" aria-label="เอา ${p.sku} ออก">✕</button></span>`).join('')+(added.length?'<button class="link" type="button" id="clearAll">ล้างทั้งหมด</button>':'');
-  $('emptyNote').hidden=added.length>0;$('stickerHost').hidden=!added.length;
-  if(!st)st=GVProductStickers.mount($('stickerHost'),{shop:'Catalog',design:'factory'});
-  st.update(L);
- }
- function add(text){
-  const tokens=String(text).split(/[\s,;]+/).filter(Boolean),ok=[],miss=[],noBc=[];
-  for(const tk of tokens){
-   const hits=find(tk);
-   if(!hits.length){miss.push(tk);continue}
-   for(const p of hits){
-    if(!added.some(x=>x.sku===p.sku))added.push(p);
-    if(!gtinsOf(p).length&&!Object.keys(p.retailerBarcodes||{}).length)noBc.push(p.sku);
-    ok.push(p.sku);
-   }
+ function show(p){
+  current=p;
+  const b=barcodeOf(p),mc=modelCode(p.name);
+  $('fSku').textContent=p.sku;$('foundCard').hidden=false;
+  if(!b.code){
+   $('fType').textContent='ยังไม่มีบาร์โค้ด';$('fType').className='badge warn';
+   $('fInfo').textContent='รุ่นนี้ยังไม่มีบาร์โค้ดใน Catalog จึงพิมพ์ไม่ได้ · เติมบาร์โค้ดที่หน้าจัดการสินค้าก่อน';
+   $('printCard').hidden=true;$('goBox').hidden=true;engine.update([]);return;
   }
+  $('fType').textContent=(eanOk(b.code)?'EAN-13':'Code 128')+' · อัตโนมัติ';$('fType').className='badge';
+  $('fInfo').textContent=`บาร์โค้ด ${b.code}${b.fromShop?' (ตามที่ร้านใช้)':''}${mc?' · รหัสรุ่น '+mc:''}`;
+  $('printCard').hidden=false;$('goBox').hidden=false;
+  pushToEngine(false);
+  const t=eng('tbody [data-f=text]');$('nameInput').value=t?t.value:'';
   refresh();
-  const parts=[];
-  if(ok.length)parts.push(`เพิ่มแล้ว ${[...new Set(ok)].join(', ')}`);
-  if(miss.length)parts.push(`ไม่พบในแคตตาล็อก: ${miss.join(', ')}`);
-  if(noBc.length)parts.push(`${noBc.join(', ')} ยังไม่มีบาร์โค้ดใน Catalog จึงพิมพ์ไม่ได้`);
-  msg(parts.join(' · '),miss.length||noBc.length?'bad':'ok');
  }
- $('addForm').addEventListener('submit',e=>{e.preventDefault();const v=$('skuInput').value;if(!v.trim())return;add(v);$('skuInput').value='';$('skuInput').focus()});
- $('skuInput').addEventListener('paste',e=>{const t=(e.clipboardData||window.clipboardData).getData('text');if(/[\s,;]/.test(t.trim())){e.preventDefault();add(t)}});
- $('source').addEventListener('change',()=>{try{localStorage.setItem('gv-stickerprint-source',$('source').value)}catch{}refresh()});
- $('chips').addEventListener('click',e=>{
-  const rm=e.target.closest('[data-rm]');
-  if(rm){added=added.filter(p=>p.sku!==rm.dataset.rm);refresh()}
-  if(e.target.id==='clearAll'){added=[];msg('');refresh()}
- });
- window.addEventListener('DOMContentLoaded',()=>load().then(()=>{refresh()}));
+ // preview: the first row of the engine's preview, scaled to the card width
+ const sizeCols=()=>engSet('size').value==='s2'?2:3;
+ function refresh(){
+  const prevRow=eng('[data-el=preview] .st-row'),host=$('scale'),n=qtyNow(),rows=Math.ceil(n/sizeCols());
+  $('goN').textContent=n;$('goBtn').disabled=$('testBtn').disabled=!current||!eng('tbody tr');
+  if(!prevRow){host.innerHTML='';$('cap').textContent='';return}
+  host.innerHTML='';host.style.transform='none';host.style.width='auto';const row=prevRow.cloneNode(true);host.append(row);
+  const box=$('prevBox'),avail=box.clientWidth-28,w=row.getBoundingClientRect().width||1,h=row.getBoundingClientRect().height,k=Math.min(2.2,avail/w);
+  host.style.transform=`scale(${k})`;host.style.width=w+'px';box.style.height=(h*k+28)+'px';
+  $('cap').textContent=`ตัวอย่างสติกเกอร์ 1 แถว · พิมพ์ ${n} ดวง = ${rows} แถว`;
+ }
+ function syncSeg(){for(const b of $('seg').children)b.classList.toggle('on',b.dataset.s===engSet('size').value)}
+ function setEngine(k,v){const el=engSet(k);if(!el)return;el.value=v;el.dispatchEvent(new Event('change',{bubbles:true}))}
+ function search(text){
+  const token=String(text).trim().split(/[\s,;]+/)[0];$('pick').innerHTML='';
+  if(!token)return;
+  if(!ready){pending=token;msg('กำลังโหลดข้อมูลสินค้า…');return}
+  const hits=find(token);
+  if(!hits.length){current=null;$('foundCard').hidden=$('printCard').hidden=$('goBox').hidden=true;engine.update([]);msg(`ไม่พบรุ่น ${token} ใน Catalog · ตรวจเลข SKU อีกครั้ง`,'bad');return}
+  if(hits.length>1){msg(`พบ ${hits.length} รุ่น · เลือกรุ่นที่ต้องการ`,'warn');
+   $('pick').innerHTML=hits.map(p=>`<button type="button" data-sku="${p.sku}">${p.sku}</button>`).join('');return}
+  msg('');show(hits[0]);
+ }
+ function init(){
+  engine=GVProductStickers.mount($('engine'),{shop:'Catalog',design:'factory'});
+  // this page's controls start from what the engine holds (saved on this computer, or the factory defaults)
+  for(const k of ['gapX','shiftX','shift','pitch'])$(k).value=engSet(k).value;
+  if(!['s2','s3'].includes(engSet('size').value))setEngine('size','s3');
+  syncSeg();Promise.all([load(),GVProductStickers.ready()]).then(()=>{ready=true;if(pending){const t=pending;pending='';search(t)}});
+ }
+ $('addForm').addEventListener('submit',e=>{e.preventDefault();search($('skuInput').value);$('skuInput').select()});
+ $('pick').addEventListener('click',e=>{const b=e.target.closest('[data-sku]');if(b){msg('');$('pick').innerHTML='';show(catalog.get(norm(b.dataset.sku)))}});
+ $('nameInput').addEventListener('input',()=>{pushToEngine(true);refresh()});
+ $('qty').addEventListener('input',()=>{pushToEngine(true);refresh()});
+ $('qMinus').addEventListener('click',()=>{$('qty').value=Math.max(1,qtyNow()-1);pushToEngine(true);refresh()});
+ $('qPlus').addEventListener('click',()=>{$('qty').value=Math.min(20000,qtyNow()+1);pushToEngine(true);refresh()});
+ $('qChips').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(b){$('qty').value=b.dataset.q;pushToEngine(true);refresh()}});
+ $('seg').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){setEngine('size',b.dataset.s);syncSeg();refresh()}});
+ for(const k of ['gapX','shiftX','shift','pitch'])$(k).addEventListener('change',()=>{setEngine(k,$(k).value);refresh()});
+ $('source').addEventListener('change',()=>{try{localStorage.setItem('gv-stickerprint-source',$('source').value)}catch{}if(current)show(current)});
+ $('goBtn').addEventListener('click',()=>{pushToEngine(true);eng('[data-act=print]')?.click()});
+ $('testBtn').addEventListener('click',()=>{pushToEngine(true);eng('[data-act=test]')?.click()});
+ addEventListener('resize',refresh);
+ window.addEventListener('DOMContentLoaded',init);
 })();
 </script>
 </body></html>

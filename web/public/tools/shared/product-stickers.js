@@ -274,5 +274,5 @@
   });
   return{update};
  }
- window.GVProductStickers={mount};
+ window.GVProductStickers={mount,ready:()=>loadCatalogNames()};
 })();
