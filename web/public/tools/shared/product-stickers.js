@@ -214,9 +214,9 @@
    return{size:min,lines:Math.max(1,Math.floor(avail/(min*1.2*.3528)))};
   }
   function labelFactory(it,p){
-   const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:8.2,barH:10.5,digits:10.5}:{pad:1,line:6.2,detail:5.4,barH:4.7,digits:7.2};
-   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX*.95,F.line,4.5),q={...p,eanBarH:F.barH,bcH:F.barH,digits:F.digits};
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm;padding:${F.pad}mm ${F.pad}mm 0"><div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?(()=>{const d=fitText(it.text,(p.dieW-F.pad*2)*PX*.94,big?7.0:5.1,F.detail,big?6:3.8);return`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor((big?7.0:5.1)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`})():''}<div class="st-bc">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
+   const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:8.2,barH:10.5,digits:10.5}:{pad:1,line:6.2,detail:5.4,barH:5.4,digits:7.2};
+   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX*.9,F.line,4.5),q={...p,eanBarH:F.barH,bcH:F.barH,digits:F.digits};
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm;padding:${F.pad}mm ${F.pad}mm 0"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?(()=>{const d=fitText(it.text,(p.dieW-F.pad*2)*PX*.94,big?7.0:5.1,F.detail,big?6:3.8);return`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor((big?7.0:5.1)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`})():''}<div class="st-bc">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
   }
   function label(it,p){
    if(design==='factory')return labelFactory(it,p);
