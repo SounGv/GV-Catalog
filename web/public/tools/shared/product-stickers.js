@@ -201,10 +201,19 @@
    return{...P,rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
   // The maker's own label look (UGREEN box label): bold 'Model: X | P/N: SKU', the product name in regular weight on two
   // lines, a wide tall barcode and large digits. Used by the stand-alone sticker page (design:'factory').
+  // Largest font (down to `min`) at which the whole text wraps into the space left for it (`avail` mm high); if even the
+  // smallest size does not fit, it is cut with an ellipsis. Regular weight, greedy word wrap, measured on a canvas.
+  function fitText(text,maxPx,avail,start,min){
+   const ctx=document.createElement('canvas').getContext('2d'),words=String(text).split(/\s+/).filter(Boolean);
+   const count=size=>{ctx.font=`400 ${size}pt Arial,sans-serif`;let n=1,w=0;const sp=ctx.measureText(' ').width;
+    for(const x of words){const l=ctx.measureText(x).width;if(w&&w+sp+l>maxPx){n++;w=l}else w+=(w?sp:0)+l}return n};
+   for(let size=start;size>=min-1e-9;size-=.2){const n=count(size);if(n*size*1.2*.3528<=avail)return{size,lines:n}}
+   return{size:min,lines:Math.max(1,Math.floor(avail/(min*1.2*.3528)))};
+  }
   function labelFactory(it,p){
    const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:8.2,barH:10.5,digits:10.5}:{pad:1,line:6.2,detail:5.4,barH:4.7,digits:7.2};
    const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX,F.line,4.5),q={...p,eanBarH:F.barH,bcH:F.barH,digits:F.digits};
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm;padding:${F.pad}mm ${F.pad}mm 0"><div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?`<div class="st-detail" style="font-weight:400;font-size:${F.detail}pt;line-height:1.2;padding:0;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:2;max-height:2.4em">${esc(it.text)}</div>`:''}<div class="st-bc">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm;padding:${F.pad}mm ${F.pad}mm 0"><div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?(()=>{const d=fitText(it.text,(p.dieW-F.pad*2)*PX*.94,big?7.0:5.1,F.detail,big?6:3.8);return`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor((big?7.0:5.1)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`})():''}<div class="st-bc">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
   }
   function label(it,p){
    if(design==='factory')return labelFactory(it,p);
