@@ -132,6 +132,7 @@
      <label>ช่องว่างระหว่างแถว (มม.)<input data-set="pitch" type="number" min="0" max="6" step="0.5" value="0"></label>
      <label>เลื่อนขึ้น–ลง (มม.)<input data-set="shift" type="number" min="-6" max="8" step="0.5" value="0"></label>
      <label>เลื่อนซ้าย–ขวา (มม.)<input data-set="shiftX" type="number" min="-4" max="6" step="0.5" value="0"></label>
+     <label>ช่องว่างระหว่างดวง (มม.)<input data-set="gapX" type="number" min="0" max="6" step="0.1" value="0"></label>
      <label class="st-check"><input data-set="sep" type="checkbox" checked> เว้น 1 แถวว่างหลังจบแต่ละรุ่น</label>
     </div>
     <p class="st-note">ตั้งไดรเวอร์: 3 ดวง/แถว = กระดาษ 100 × 20 มม. · 2 ดวง/แถว = ใช้ขนาดกระดาษเดียวกับสติกเกอร์ Jaymart (ระบบใช้ค่าระยะที่ตั้งไว้ใน Jaymart) · Scale 100% · ถ้าเครื่องนี้เคยปรับค่าใน AIS ไว้ ระบบใช้ค่านั้นเป็นค่าเริ่มต้น</p>
@@ -140,7 +141,9 @@
   const q=s=>host.querySelector(s),setting=k=>q(`[data-set="${k}"]`);
   let items=[];const kept=new Map(); // code -> what the user changed {pick, qty, text}
 
-  for(const k of ['pitch','shift','shiftX']){const v=read(KEY+k)??read(AIS[k]);if(v!==null&&v!=='')setting(k).value=v}
+  for(const k of ['pitch','shift','shiftX','gapX']){const v=read(KEY+k)??(design==='factory'?null:read(AIS[k]));if(v!==null&&v!=='')setting(k).value=v}
+  // factory design = a new page with no old printer calibration: start from the roll's real 1.5 mm gap between stickers
+  if(design==='factory'){if(read(KEY+'gapX')===null)setting('gapX').value='1.5';if(read(KEY+'shiftX')===null)setting('shiftX').value='-1.5'}
   {const v=read(KEY+'sep');if(v!==null)setting('sep').checked=v==='1'}
   {const v=read(KEY+'type');if(['auto','ean','c128'].includes(v))setting('type').value=v}
   {const v=read(KEY+'size');if(SIZES[v])setting('size').value=v}
@@ -198,7 +201,7 @@
    const P=SIZES[setting('size').value]||SIZES.s3;
    if(P.jaymart){const gap=jm('labelGap',0),left=jm('labelLeft',3),right=jm('labelRight',3);
     return{...P,gapX:gap,pageW:100+gap+left+right,rowPitch:jm('labelPitch',30)+num('pitch',0,6),shift:jm('labelY',0)+num('shift',-6,8),sheetLeft:Math.max(0,left+num('shiftX',-4,6))}}
-   return{...P,rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
+   return{...P,gapX:num('gapX',0,6),rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
   // The maker's own label look (UGREEN box label): bold 'Model: X | P/N: SKU', the product name in regular weight on two
   // lines, a wide tall barcode and large digits. Used by the stand-alone sticker page (design:'factory').
   // Largest font (down to `min`) at which the whole text wraps into the space left for it (`avail` mm high); if even the
@@ -212,7 +215,7 @@
   }
   function labelFactory(it,p){
    const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:8.2,barH:10.5,digits:10.5}:{pad:1,line:6.2,detail:5.4,barH:4.7,digits:7.2};
-   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX,F.line,4.5),q={...p,eanBarH:F.barH,bcH:F.barH,digits:F.digits};
+   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX*.95,F.line,4.5),q={...p,eanBarH:F.barH,bcH:F.barH,digits:F.digits};
    return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${p.shift}mm;padding:${F.pad}mm ${F.pad}mm 0"><div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?(()=>{const d=fitText(it.text,(p.dieW-F.pad*2)*PX*.94,big?7.0:5.1,F.detail,big?6:3.8);return`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor((big?7.0:5.1)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`})():''}<div class="st-bc">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
   }
   function label(it,p){
@@ -259,7 +262,7 @@
    window.addEventListener('afterprint',clean);
    requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
   }
-  const save=()=>{for(const k of ['pitch','shift','shiftX','type','size'])write(KEY+k,setting(k).value);write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
+  const save=()=>{for(const k of ['pitch','shift','shiftX','gapX','type','size'])write(KEY+k,setting(k).value);write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
 
   host.addEventListener('change',e=>{if(e.target.dataset.set)save();else onEdit(e)});
   host.addEventListener('input',e=>{const f=e.target.dataset.f;if(f==='text'||f==='qty')onEdit(e)});
