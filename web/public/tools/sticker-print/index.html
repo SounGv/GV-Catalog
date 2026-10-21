@@ -49,7 +49,8 @@ button{font:inherit}
 .prow2{display:flex;gap:8px;margin-top:10px}.prow2 .test{margin-top:0}
 .edge{margin:6px 0 0;text-align:center;color:#6f5200;background:#fff6dc;border-radius:8px;padding:4px 10px;font-size:.9rem}.edge[hidden]{display:none}
 .hl{outline:2px solid #cdeb03;outline-offset:1px}
-.grp{margin:14px 0 6px;font-size:.9rem;color:var(--accent)}.note{color:var(--muted);font-size:.85rem;margin:8px 0 0}
+.grp{margin:14px 0 6px;font-size:.9rem;color:var(--accent)}.mono{font-family:ui-monospace,Consolas,monospace;letter-spacing:.5px;font-variant-numeric:tabular-nums}.link{background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;min-height:44px;padding:0}
+.note{color:var(--muted);font-size:.85rem;margin:8px 0 0}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-header img{height:34px;width:auto}.app-header h1{margin:0;font-size:1.25rem}.app-header span{font-size:.9rem}
@@ -68,6 +69,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  <section class="card" id="foundCard" hidden><div class="steps"><b>2</b> ตรวจข้อมูลสินค้า</div>
   <div class="fhead"><span class="sku" id="fSku"></span><span class="badge">✓ พบใน Catalog</span><span class="badge" id="fType"></span></div>
   <div class="bc" id="fInfo"></div>
+  <label class="fld">เลขบาร์โค้ด (แก้ได้)<input id="codeInput" class="mono" autocomplete="off" inputmode="text" aria-label="เลขบาร์โค้ดที่จะพิมพ์"></label><p class="note" id="codeNote"></p><button type="button" class="link" id="codeReset" hidden>ใช้เลขบาร์โค้ดจาก Catalog</button>
   <label class="fld">ชื่อใต้บาร์โค้ด (แก้ได้)<input id="nameInput" autocomplete="off"></label>
  </section>
  <section class="card" id="printCard" hidden><div class="steps"><b>3</b> เลือกขนาดและจำนวน</div>
@@ -119,7 +121,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
 
  async function load(){
   try{
-   const d=await fetch('/api/catalog/barcodes',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject());
+   const d=await fetch('/api/catalog/barcodes?all=1',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject());
    for(const p of d.rows){catalog.set(norm(p.sku),p);for(const g of gtinsOf(p))byGtin.set(g,p)}
    const set=new Set();for(const p of d.rows)for(const r of Object.keys(p.retailerBarcodes||{}))set.add(r);
    retailers=[...set].sort();
@@ -134,14 +136,17 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   if(base.length)return base;
   const g=byGtin.get(String(token).trim());return g?[g]:[];
  }
+ let codeOverride='';
+ function printedCode(p){const b=barcodeOf(p);return codeOverride||b.code}
+ function codeNote(){const c=codeOverride||(current?barcodeOf(current).code:'');const ean=eanOk(c);$('fType').textContent=(c?(ean?'EAN-13':'Code 128'):'ไม่มีเลขบาร์โค้ด')+' · อัตโนมัติ';$('fType').className='badge'+(c?'':' warn');$('codeNote').textContent=!c?'ใส่เลขบาร์โค้ดก่อนจึงพิมพ์ได้':/^\d{13}$/.test(c)&&!ean?'เลข 13 หลักนี้ตรวจเลขท้ายไม่ผ่าน จึงพิมพ์เป็น Code 128 (ไม่ใช่ EAN-13) ตรวจเลขอีกครั้ง':ean?'เลข 13 หลักถูกต้อง พิมพ์เป็น EAN-13':'พิมพ์เป็น Code 128 (ตัวเลข/ตัวอักษรได้)';$('codeReset').hidden=!(current&&codeOverride&&codeOverride!==barcodeOf(current).code);$('goBtn').disabled=$('testBtn').disabled=!c}
  function barcodeOf(p){const src=$('source').value,mains=gtinsOf(p),own=src?(p.retailerBarcodes||{})[src]:'';return{code:own||mains[0]||'',fromShop:!!own}}
 
  function pushToEngine(keepText){
   if(!current)return;
-  const b=barcodeOf(current);
-  if(!b.code){engine.update([]);return}
+  const code=printedCode(current);
+  if(!code){engine.update([]);return}
   const text=$('nameInput').value;
-  engine.update([{code:b.code,model:current.sku,mc:modelCode(current.name),desc:descOf(current.name),qty:qtyNow(),status:'same',pick:true}]);
+  engine.update([{code,model:current.sku,mc:modelCode(current.name),desc:descOf(current.name),qty:qtyNow(),status:'same',pick:true}]);
   const row=eng('tbody tr');if(!row)return;
   const t=row.querySelector('[data-f=text]'),q=row.querySelector('[data-f=qty]'),p=row.querySelector('[data-f=pick]');
   if(keepText&&text!==''&&t&&t.value!==text){t.value=text;t.dispatchEvent(new Event('input',{bubbles:true}))}
@@ -152,16 +157,11 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   current=p;
   const b=barcodeOf(p),mc=modelCode(p.name);
   $('fSku').textContent=p.sku;$('foundCard').hidden=false;
-  if(!b.code){
-   $('fType').textContent='ยังไม่มีบาร์โค้ด';$('fType').className='badge warn';
-   $('fInfo').textContent='รุ่นนี้ยังไม่มีบาร์โค้ดใน Catalog จึงพิมพ์ไม่ได้ · เติมบาร์โค้ดที่หน้าจัดการสินค้าก่อน';
-   $('printCard').hidden=true;$('goBox').hidden=true;engine.update([]);return;
-  }
-  $('fType').textContent=(eanOk(b.code)?'EAN-13':'Code 128')+' · อัตโนมัติ';$('fType').className='badge';
-  $('fInfo').textContent=`บาร์โค้ด ${b.code}${b.fromShop?' (ตามที่ร้านใช้)':''}${mc?' · รหัสรุ่น '+mc:''}`;
-  $('printCard').hidden=false;$('goBox').hidden=false;
-  pushToEngine(false);
-  const t=eng('tbody [data-f=text]');$('nameInput').value=t?t.value:'';
+  codeOverride='';$('codeInput').value=b.code;
+  $('fInfo').textContent=`${b.code?(b.fromShop?'บาร์โค้ดตามที่ร้านใช้':'บาร์โค้ดจาก Catalog'):'รุ่นนี้ยังไม่มีบาร์โค้ดใน Catalog · พิมพ์เลขบาร์โค้ดเองด้านล่างได้'}${mc?' · รหัสรุ่น '+mc:''}`;
+  const has=!!b.code;$('printCard').hidden=!has;$('goBox').hidden=!has;
+  if(has){pushToEngine(false);const t=eng('tbody [data-f=text]');$('nameInput').value=t?t.value:''}else{engine.update([]);$('nameInput').value=descOf(current.name)}
+  codeNote();
   refresh();
  }
  // preview: the first row of the engine's preview, scaled to the card width
@@ -206,6 +206,8 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  }
  $('addForm').addEventListener('submit',e=>{e.preventDefault();search($('skuInput').value);$('skuInput').select()});
  $('pick').addEventListener('click',e=>{const b=e.target.closest('[data-sku]');if(b){msg('');$('pick').innerHTML='';show(catalog.get(norm(b.dataset.sku)))}});
+ $('codeInput').addEventListener('input',()=>{codeOverride=$('codeInput').value.trim();if(!current)return;const has=!!(codeOverride||barcodeOf(current).code);const wasHidden=$('printCard').hidden;$('printCard').hidden=!has;$('goBox').hidden=!has;pushToEngine(true);if(has&&wasHidden){const t=eng('tbody [data-f=text]');if(t&&!$('nameInput').value)$('nameInput').value=t.value}codeNote();refresh()});
+ $('codeReset').addEventListener('click',()=>{codeOverride='';$('codeInput').value=barcodeOf(current).code;pushToEngine(true);codeNote();refresh()});
  $('nameInput').addEventListener('input',()=>{pushToEngine(true);refresh()});
  $('qty').addEventListener('input',()=>{pushToEngine(true);refresh()});
  $('qMinus').addEventListener('click',()=>{$('qty').value=Math.max(1,qtyNow()-1);pushToEngine(true);refresh()});
