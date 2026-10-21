@@ -154,7 +154,7 @@
   // factory design = a new page with no old printer calibration, and each size has its own gap / left-right shift:
   // 3-up starts at the roll's real 1.5 mm gap, 2-up at the Jaymart roll's saved values (no extra)
   const perSize=design==='factory';let curSize=setting('size').value;
-  const PS=['gapX','shiftX','bcX','bcY','bcS','txX','txY','txS'],PS_DEF=(k,sz)=>k==='bcS'||k==='txS'?'100':sz==='s3'&&k==='gapX'?'1.5':sz==='s3'&&k==='shiftX'?'-1.5':'0';
+  const PS=['gapX','shiftX','shift','pitch','bcX','bcY','bcS','txX','txY','txS'],PS_DEF=(k,sz)=>k==='bcS'||k==='txS'?'100':sz==='s3'&&k==='gapX'?'1.5':sz==='s3'&&k==='shiftX'?'-1.5':'0';
   const sizeVals=()=>{for(const k of PS){const el=setting(k);if(!el)continue;const v=read(KEY+k+'_'+curSize);el.value=v??PS_DEF(k,curSize)}};
   if(perSize)sizeVals();
   // EAN-13 only for a 13-digit code with a valid check digit; anything else stays Code 128 whatever is chosen
@@ -288,7 +288,7 @@
    window.addEventListener('afterprint',clean);
    requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
   }
-  const save=()=>{for(const k of perSize?['pitch','shift','type','size']:['pitch','shift','shiftX','gapX','type','size'])write(KEY+k,setting(k).value);if(perSize)for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+curSize,el.value)}write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
+  const save=()=>{for(const k of perSize?['type','size']:['pitch','shift','shiftX','gapX','type','size'])write(KEY+k,setting(k).value);if(perSize)for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+curSize,el.value)}write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
 
   host.addEventListener('change',e=>{
    if(e.target.dataset.set==='size'&&perSize&&e.target.value!==curSize){for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+curSize,el.value)}curSize=e.target.value;sizeVals()}
