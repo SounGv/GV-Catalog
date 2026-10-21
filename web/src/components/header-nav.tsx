@@ -36,6 +36,7 @@ const STATIC_TOOLS = [
   { href: "/tools/officemate/GV-OfficeMate-PDF-to-Excel.html", label: "แปลงไฟล์ PO OfficeMate" },
   { href: "/tools/com-7/index.html", label: "ตรวจบาร์โค้ด PO Com7" },
   { href: "/tools/box-label/label_print_edit.html", label: "พิมพ์ใบแปะกล่อง" },
+  { href: "/tools/sticker-print/index.html", label: "พิมพ์สติกเกอร์บาร์โค้ดสินค้า" },
 ];
 
 /** Receiving department (ฝ่ายรับเข้า) tools — its own menu, separate from the PO converters. */

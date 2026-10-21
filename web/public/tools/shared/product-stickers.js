@@ -121,8 +121,8 @@
   if(!document.getElementById('gvStickerCss')){const s=document.createElement('style');s.id='gvStickerCss';s.textContent=CSS;document.head.append(s)}
   const KEY=`gv-${String(shop).toLowerCase().replace(/[^a-z0-9]+/g,'')}-sticker-`;
   host.classList.add('gv-st');
-  host.innerHTML=`<div class="st-head"><h2>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h2><span class="st-note">บาร์โค้ดตามไฟล์ของ ${esc(shop)}</span></div>
-   <p class="st-note">ติ๊กรุ่นที่จะพิมพ์ · แถวสีแดง = บาร์โค้ดในไฟล์ร้านไม่ตรงกับ Catalog ต้องเปลี่ยนบาร์โค้ด · จำนวนดวงเริ่มจากยอดรวมในไฟล์ที่เปิดอยู่ แก้ได้${note?' · '+esc(note):''}</p>
+  host.innerHTML=`<div class="st-head"><h2>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h2><span class="st-note">${shop==='Catalog'?'บาร์โค้ดและชื่อจาก GV Catalog':'บาร์โค้ดตามไฟล์ของ '+esc(shop)}</span></div>
+   <p class="st-note">${shop==='Catalog'?'ติ๊กรุ่นที่จะพิมพ์ · ใส่จำนวนดวงของแต่ละรุ่น · แก้ข้อความใต้บาร์โค้ดได้ · แถวสีแดง = บาร์โค้ดที่ร้านใช้ต่างจากบาร์หลัก':'ติ๊กรุ่นที่จะพิมพ์ · แถวสีแดง = บาร์โค้ดในไฟล์ร้านไม่ตรงกับ Catalog ต้องเปลี่ยนบาร์โค้ด · จำนวนดวงเริ่มจากยอดรวมในไฟล์ที่เปิดอยู่ แก้ได้'}${note?' · '+esc(note):''}</p>
    <div class="st-actions"><button type="button" class="secondary" data-act="pick-change">เลือกเฉพาะรุ่นที่ต้องเปลี่ยนบาร์โค้ด</button><span class="st-note" data-el="summary"></span></div>
    <div class="st-wrap"><table data-el="table"></table></div>
    <div class="st-actions"><label class="st-type">ขนาดสติกเกอร์ <select data-set="size">${Object.entries(SIZES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}</select></label><label class="st-type">ชนิดบาร์โค้ด <select data-set="type"><option value="auto">อัตโนมัติ (EAN-13 ถ้าเลขถูก ไม่งั้น Code 128)</option><option value="ean">EAN-13</option><option value="c128">Code 128</option></select></label></div>
