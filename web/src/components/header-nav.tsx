@@ -29,6 +29,9 @@ const REPORT_LINKS = [
   { href: "/docs/system-summary.html", label: "สรุประบบแปลงไฟล์ PO" },
 ];
 
+/** Product barcode sticker printing: its own menu item (not under the PO converters). Static page, opens in a new tab like the other tools. */
+const STICKER_PRINT = { href: "/tools/sticker-print/index.html", label: "พิมพ์สติกเกอร์สินค้า" };
+
 const STATIC_TOOLS = [
   { href: "/tools/jaymart/branch-order-validator.html", label: "แปลงไฟล์ PO Jaymart" },
   { href: "/tools/ais/gv-po-label-system.html", label: "แปลงไฟล์ PO AIS" },
@@ -36,7 +39,6 @@ const STATIC_TOOLS = [
   { href: "/tools/officemate/GV-OfficeMate-PDF-to-Excel.html", label: "แปลงไฟล์ PO OfficeMate" },
   { href: "/tools/com-7/index.html", label: "ตรวจบาร์โค้ด PO Com7" },
   { href: "/tools/box-label/label_print_edit.html", label: "พิมพ์ใบแปะกล่อง" },
-  { href: "/tools/sticker-print/index.html", label: "พิมพ์สติกเกอร์บาร์โค้ดสินค้า" },
 ];
 
 /** Receiving department (ฝ่ายรับเข้า) tools — its own menu, separate from the PO converters. */
@@ -112,6 +114,14 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
             {reportsBadge(item.href)}
           </Link>
         ))}
+        <a
+          href={STICKER_PRINT.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent py-1 text-base text-[#d6e3ec] hover:text-white"
+        >
+          {STICKER_PRINT.label}
+        </a>
         <div ref={menuRef} className="flex items-center gap-6">
           <div className="relative">
             <button
@@ -210,6 +220,9 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
               {reportsBadge(item.href)}
             </Link>
           ))}
+          <a href={STICKER_PRINT.href} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)} className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent">
+            {STICKER_PRINT.label}
+          </a>
           <p className="px-3 pt-2 text-sm text-muted">รายงาน</p>
           {REPORT_LINKS.map((link) => (
             <a key={link.href} href={link.href} onClick={() => setMobileOpen(false)} className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent">
