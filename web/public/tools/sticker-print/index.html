@@ -40,7 +40,7 @@ button{font:inherit}
 .test{margin-top:8px;width:100%;min-height:48px;border:1px solid var(--accent);border-radius:12px;background:#fff;color:var(--accent);font-weight:700;cursor:pointer}.test[disabled]{opacity:.5;cursor:not-allowed}
 .set{margin-top:12px;font-size:.92rem}.set summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700;color:var(--accent)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid label{display:flex;flex-direction:column;font-size:.82rem;font-weight:700;gap:3px}.grid input{min-height:44px;border:1px solid #cfd8de;border-radius:8px;padding:4px 10px;font:inherit;font-weight:400}
-.note{color:var(--muted);font-size:.85rem;margin:8px 0 0}
+.grp{margin:14px 0 6px;font-size:.9rem;color:var(--accent)}.note{color:var(--muted);font-size:.85rem;margin:8px 0 0}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-header img{height:34px;width:auto}.app-header h1{margin:0;font-size:1.25rem}.app-header span{font-size:.9rem}
@@ -71,6 +71,9 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   <p class="cap" id="cap"></p>
   <details class="set"><summary>ตั้งค่าเครื่องพิมพ์</summary>
    <div class="grid"><label>ช่องว่างระหว่างดวง (มม.)<input id="gapX" type="number" min="0" max="6" step="0.1"></label><label>เลื่อนซ้าย–ขวา (มม.)<input id="shiftX" type="number" min="-4" max="6" step="0.5"></label><label>เลื่อนขึ้น–ลง (มม.)<input id="shift" type="number" min="-6" max="8" step="0.5"></label><label>ช่องว่างระหว่างแถว (มม.)<input id="pitch" type="number" min="0" max="6" step="0.5"></label></div>
+   <h4 class="grp">เส้นบาร์โค้ด</h4><div class="grid"><label>ซ้าย–ขวา (มม.) · ค่าบวก = ไปทางขวา<input id="bcX" type="number" min="-8" max="8" step="0.5"></label><label>ขึ้น–ลง (มม.) · ค่าบวก = ลงล่าง<input id="bcY" type="number" min="-8" max="8" step="0.5"></label><label>ความสูงเส้น (%)<input id="bcS" type="number" min="50" max="150" step="5"></label></div>
+   <h4 class="grp">ข้อความ (ชื่อสินค้าและบรรทัด Model)</h4><div class="grid"><label>ซ้าย–ขวา (มม.) · ค่าบวก = ไปทางขวา<input id="txX" type="number" min="-8" max="8" step="0.5"></label><label>ขึ้น–ลง (มม.) · ค่าบวก = ลงล่าง<input id="txY" type="number" min="-8" max="8" step="0.5"></label><label>ขนาดตัวอักษร (%)<input id="txS" type="number" min="60" max="150" step="5"></label></div>
+   <button type="button" class="test" id="resetAdj" style="margin-top:10px">ล้างค่าที่ปรับของขนาดนี้ (กลับเป็นค่าเริ่มต้น)</button>
    <label class="fld">บาร์โค้ดที่จะพิมพ์<select id="source"></select></label>
    <p class="note">ตั้งไดรเวอร์: 3 ดวง/แถว = กระดาษ 100 × 20 มม. · 2 ดวง/แถว = ขนาดเดียวกับสติกเกอร์ Jaymart · Scale 100% · ค่าที่ปรับจำไว้ในเครื่องนี้</p>
   </details>
@@ -84,6 +87,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  'use strict';
  const $=id=>document.getElementById(id);
  const BRANDS=/\b(ugreen|fantech|orsen|eloop)\b/i;
+ const KEYS=['gapX','shiftX','shift','pitch','bcX','bcY','bcS','txX','txY','txS'];
  let catalog=new Map(),byGtin=new Map(),retailers=[],current=null,engine=null,ready=false,pending='';
  const norm=v=>String(v||'').trim().toUpperCase();
  const descOf=name=>{const n=String(name||'').replace(/^[^|]*\|\s*/,'').trim(),m=n.match(BRANDS);return m?n.slice(m.index):n};
@@ -169,7 +173,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  function init(){
   engine=GVProductStickers.mount($('engine'),{shop:'Catalog',design:'factory'});
   // this page's controls start from what the engine holds (saved on this computer, or the factory defaults)
-  for(const k of ['gapX','shiftX','shift','pitch'])$(k).value=engSet(k).value;
+  for(const k of KEYS)$(k).value=engSet(k).value;
   if(!['s2','s3'].includes(engSet('size').value))setEngine('size','s3');
   syncSeg();Promise.all([load(),GVProductStickers.ready()]).then(()=>{ready=true;if(pending){const t=pending;pending='';search(t)}});
  }
@@ -180,11 +184,12 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  $('qMinus').addEventListener('click',()=>{$('qty').value=Math.max(1,qtyNow()-1);pushToEngine(true);refresh()});
  $('qPlus').addEventListener('click',()=>{$('qty').value=Math.min(20000,qtyNow()+1);pushToEngine(true);refresh()});
  $('qChips').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(b){$('qty').value=b.dataset.q;pushToEngine(true);refresh()}});
- $('seg').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){setEngine('size',b.dataset.s);for(const k of ['gapX','shiftX'])$(k).value=engSet(k).value;syncSeg();refresh()}});
- for(const k of ['gapX','shiftX','shift','pitch'])$(k).addEventListener('change',()=>{setEngine(k,$(k).value);refresh()});
+ $('seg').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){setEngine('size',b.dataset.s);for(const k of KEYS)$(k).value=engSet(k).value;syncSeg();refresh()}});
+ for(const k of KEYS)$(k).addEventListener('change',()=>{setEngine(k,$(k).value);refresh()});
  $('source').addEventListener('change',()=>{try{localStorage.setItem('gv-stickerprint-source',$('source').value)}catch{}if(current)show(current)});
  $('goBtn').addEventListener('click',()=>{pushToEngine(true);eng('[data-act=print]')?.click()});
  $('testBtn').addEventListener('click',()=>{pushToEngine(true);eng('[data-act=test]')?.click()});
+ $('resetAdj').addEventListener('click',()=>{const s3=engSet('size').value==='s3';const def={gapX:s3?'1.5':'0',shiftX:s3?'-1.5':'0',shift:'0',pitch:'0',bcX:'0',bcY:'0',bcS:'100',txX:'0',txY:'0',txS:'100'};for(const k of KEYS){$(k).value=def[k];setEngine(k,def[k])}refresh()});
  addEventListener('resize',refresh);
  window.addEventListener('DOMContentLoaded',init);
 })();

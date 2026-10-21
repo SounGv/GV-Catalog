@@ -137,7 +137,7 @@
      <label>ช่องว่างระหว่างแถว (มม.)<input data-set="pitch" type="number" min="0" max="6" step="0.5" value="0"></label>
      <label>เลื่อนขึ้น–ลง (มม.)<input data-set="shift" type="number" min="-6" max="8" step="0.5" value="0"></label>
      <label>เลื่อนซ้าย–ขวา (มม.)<input data-set="shiftX" type="number" min="-4" max="6" step="0.5" value="0"></label>
-     <label>ช่องว่างระหว่างดวง (มม.)<input data-set="gapX" type="number" min="0" max="6" step="0.1" value="0"></label>
+     <label>ช่องว่างระหว่างดวง (มม.)<input data-set="gapX" type="number" min="0" max="6" step="0.1" value="0"></label>${design==='factory'?`<label>เส้นบาร์: ซ้าย–ขวา (มม.)<input data-set="bcX" type="number" min="-8" max="8" step="0.5" value="0"></label><label>เส้นบาร์: ขึ้น–ลง (มม.)<input data-set="bcY" type="number" min="-8" max="8" step="0.5" value="0"></label><label>เส้นบาร์: ความสูง (%)<input data-set="bcS" type="number" min="50" max="150" step="5" value="100"></label><label>ข้อความ: ซ้าย–ขวา (มม.)<input data-set="txX" type="number" min="-8" max="8" step="0.5" value="0"></label><label>ข้อความ: ขึ้น–ลง (มม.)<input data-set="txY" type="number" min="-8" max="8" step="0.5" value="0"></label><label>ข้อความ: ขนาด (%)<input data-set="txS" type="number" min="60" max="150" step="5" value="100"></label>`:''}
      <label class="st-check"><input data-set="sep" type="checkbox" checked> เว้น 1 แถวว่างหลังจบแต่ละรุ่น</label>
     </div>
     <p class="st-note">ตั้งไดรเวอร์: 3 ดวง/แถว = กระดาษ 100 × 20 มม. · 2 ดวง/แถว = ใช้ขนาดกระดาษเดียวกับสติกเกอร์ Jaymart (ระบบใช้ค่าระยะที่ตั้งไว้ใน Jaymart) · Scale 100% · ถ้าเครื่องนี้เคยปรับค่าใน AIS ไว้ ระบบใช้ค่านั้นเป็นค่าเริ่มต้น</p>
@@ -154,7 +154,8 @@
   // factory design = a new page with no old printer calibration, and each size has its own gap / left-right shift:
   // 3-up starts at the roll's real 1.5 mm gap, 2-up at the Jaymart roll's saved values (no extra)
   const perSize=design==='factory';let curSize=setting('size').value;
-  const sizeVals=()=>{for(const k of ['gapX','shiftX']){const v=read(KEY+k+'_'+curSize);setting(k).value=v??(curSize==='s3'?{gapX:'1.5',shiftX:'-1.5'}[k]:'0')}};
+  const PS=['gapX','shiftX','bcX','bcY','bcS','txX','txY','txS'],PS_DEF=(k,sz)=>k==='bcS'||k==='txS'?'100':sz==='s3'&&k==='gapX'?'1.5':sz==='s3'&&k==='shiftX'?'-1.5':'0';
+  const sizeVals=()=>{for(const k of PS){const el=setting(k);if(!el)continue;const v=read(KEY+k+'_'+curSize);el.value=v??PS_DEF(k,curSize)}};
   if(perSize)sizeVals();
   // EAN-13 only for a 13-digit code with a valid check digit; anything else stays Code 128 whatever is chosen
   const useEan=code=>setting('type').value!=='c128'&&eanOk(code);
@@ -206,12 +207,14 @@
   }
   const num=(k,lo,hi)=>{const v=Number(setting(k).value);return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):0};
   const jm=(id,def)=>{const v=Number(read('gv-jm-label-'+id));return read('gv-jm-label-'+id)!==null&&Number.isFinite(v)?v:def};
+  const numD=(k,lo,hi,def)=>{const el=setting(k);const v=el?Number(el.value):NaN;return el&&el.value!==''&&Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def};
+  const adj=()=>design==='factory'?{bcX:num('bcX',-8,8),bcY:num('bcY',-8,8),bcS:numD('bcS',50,150,100),txX:num('txX',-8,8),txY:num('txY',-8,8),txS:numD('txS',60,150,100)}:{};
   const profile=()=>{
    const P=SIZES[setting('size').value]||SIZES.s3;
    if(P.jaymart){const gap=jm('labelGap',0),left=jm('labelLeft',3),right=jm('labelRight',3);
     const extra=num('gapX',0,6);
-    return{...P,gapX:gap+extra,pageW:100+gap+extra+left+right,rowPitch:jm('labelPitch',30)+num('pitch',0,6),shift:jm('labelY',0)+num('shift',-6,8),sheetLeft:Math.max(0,left+num('shiftX',-4,6))}}
-   return{...P,gapX:num('gapX',0,6),rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
+    return{...P,...adj(),gapX:gap+extra,pageW:100+gap+extra+left+right,rowPitch:jm('labelPitch',30)+num('pitch',0,6),shift:jm('labelY',0)+num('shift',-6,8),sheetLeft:Math.max(0,left+num('shiftX',-4,6))}}
+   return{...P,...adj(),gapX:num('gapX',0,6),rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
   // The maker's own label look (UGREEN box label): bold 'Model: X | P/N: SKU', the product name in regular weight on two
   // lines, a wide tall barcode and large digits. Used by the stand-alone sticker page (design:'factory').
   // Largest font (down to `min`) at which the whole text wraps into the space left for it (`avail` mm high); if even the
@@ -232,13 +235,14 @@
    const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:9.5,barH:8,digits:9.5}:{pad:1,line:6.2,detail:6,barH:4.2,digits:7};
    // "Move down" (shift > 0) must not push the bottom of the label out of the printed page: the content block is
    // made shorter instead (bars and name give up the room), so nothing is cut off at the bottom
-   const down=Math.max(0,p.shift),upMove=Math.min(0,p.shift),minFont=big?6:3.8,lineH=F.line*1.1*.3528+(big?.8:.5);
+   const tS=(p.txS??100)/100,bS=(p.bcS??100)/100;F.line*=tS;F.detail*=tS;F.barH*=bS;
+   const down=Math.max(0,p.shift),upMove=Math.min(0,p.shift),minFont=(big?6:3.8)*Math.min(1,tS),lineH=F.line*1.1*.3528+(big?.8:.5);
    // free height for the name = label - top padding - first line - bottom padding - barcode block; bars shrink (to 60%) only when the name would not get two lines at its smallest size
    const svgH=h=>h+.9+F.digits*.3528*.75,roomFor=h=>p.dieH-F.pad-down-lineH-svgH(h)-1.3-.9;
    let barH=F.barH;while(barH>F.barH*.6&&roomFor(barH)<2*minFont*1.2*.3528)barH-=.25;
    const room=roomFor(barH);
    const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,(p.dieW-F.pad*2)*PX*.9,F.line,4.5),q={...p,eanBarH:barH,bcH:barH,digits:F.digits};
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${upMove}mm;padding:${F.pad+down}mm ${F.pad}mm 0"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?(()=>{const d=fitText(it.text,(p.dieW-F.pad*2)*PX*.94,Math.max(2.4,room),F.detail,big?6:3.8);return`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor(Math.max(2.4,room)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`})():''}<div class="st-bc">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${upMove}mm;padding:${F.pad+down}mm ${F.pad}mm 0"><div class="st-tx" style="transform:translate(${p.txX||0}mm,${p.txY||0}mm);flex:none"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${it.text?(()=>{const d=fitText(it.text,(p.dieW-F.pad*2)*PX*.94,Math.max(2.4,room),F.detail,minFont);return`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor(Math.max(2.4,room)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`})():''}</div><div class="st-bc" style="transform:translate(${p.bcX||0}mm,${p.bcY||0}mm)">${useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`}</div></div></div>`;
   }
   function label(it,p){
    if(design==='factory')return labelFactory(it,p);
@@ -284,10 +288,10 @@
    window.addEventListener('afterprint',clean);
    requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
   }
-  const save=()=>{for(const k of perSize?['pitch','shift','type','size']:['pitch','shift','shiftX','gapX','type','size'])write(KEY+k,setting(k).value);if(perSize)for(const k of ['gapX','shiftX'])write(KEY+k+'_'+curSize,setting(k).value);write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
+  const save=()=>{for(const k of perSize?['pitch','shift','type','size']:['pitch','shift','shiftX','gapX','type','size'])write(KEY+k,setting(k).value);if(perSize)for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+curSize,el.value)}write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
 
   host.addEventListener('change',e=>{
-   if(e.target.dataset.set==='size'&&perSize&&e.target.value!==curSize){for(const k of ['gapX','shiftX'])write(KEY+k+'_'+curSize,setting(k).value);curSize=e.target.value;sizeVals()}
+   if(e.target.dataset.set==='size'&&perSize&&e.target.value!==curSize){for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+curSize,el.value)}curSize=e.target.value;sizeVals()}
    if(e.target.dataset.set)save();else onEdit(e)});
   host.addEventListener('input',e=>{const f=e.target.dataset.f;if(f==='text'||f==='qty')onEdit(e)});
   host.addEventListener('click',e=>{
