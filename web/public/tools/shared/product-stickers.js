@@ -143,10 +143,14 @@
 
   for(const k of ['pitch','shift','shiftX','gapX']){const v=read(KEY+k)??(design==='factory'?null:read(AIS[k]));if(v!==null&&v!=='')setting(k).value=v}
   // factory design = a new page with no old printer calibration: start from the roll's real 1.5 mm gap between stickers
-  if(design==='factory'){if(read(KEY+'gapX')===null)setting('gapX').value='1.5';if(read(KEY+'shiftX')===null)setting('shiftX').value='-1.5'}
   {const v=read(KEY+'sep');if(v!==null)setting('sep').checked=v==='1'}
   {const v=read(KEY+'type');if(['auto','ean','c128'].includes(v))setting('type').value=v}
   {const v=read(KEY+'size');if(SIZES[v])setting('size').value=v}
+  // factory design = a new page with no old printer calibration, and each size has its own gap / left-right shift:
+  // 3-up starts at the roll's real 1.5 mm gap, 2-up at the Jaymart roll's saved values (no extra)
+  const perSize=design==='factory';let curSize=setting('size').value;
+  const sizeVals=()=>{for(const k of ['gapX','shiftX']){const v=read(KEY+k+'_'+curSize);setting(k).value=v??(curSize==='s3'?{gapX:'1.5',shiftX:'-1.5'}[k]:'0')}};
+  if(perSize)sizeVals();
   // EAN-13 only for a 13-digit code with a valid check digit; anything else stays Code 128 whatever is chosen
   const useEan=code=>setting('type').value!=='c128'&&eanOk(code);
 
@@ -200,7 +204,8 @@
   const profile=()=>{
    const P=SIZES[setting('size').value]||SIZES.s3;
    if(P.jaymart){const gap=jm('labelGap',0),left=jm('labelLeft',3),right=jm('labelRight',3);
-    return{...P,gapX:gap,pageW:100+gap+left+right,rowPitch:jm('labelPitch',30)+num('pitch',0,6),shift:jm('labelY',0)+num('shift',-6,8),sheetLeft:Math.max(0,left+num('shiftX',-4,6))}}
+    const extra=num('gapX',0,6);
+    return{...P,gapX:gap+extra,pageW:100+gap+extra+left+right,rowPitch:jm('labelPitch',30)+num('pitch',0,6),shift:jm('labelY',0)+num('shift',-6,8),sheetLeft:Math.max(0,left+num('shiftX',-4,6))}}
    return{...P,gapX:num('gapX',0,6),rowPitch:P.dieH+num('pitch',0,6),shift:num('shift',-6,8),sheetLeft:Math.max(0,P.sheetLeft+num('shiftX',-4,6))}};
   // The maker's own label look (UGREEN box label): bold 'Model: X | P/N: SKU', the product name in regular weight on two
   // lines, a wide tall barcode and large digits. Used by the stand-alone sticker page (design:'factory').
@@ -262,9 +267,11 @@
    window.addEventListener('afterprint',clean);
    requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
   }
-  const save=()=>{for(const k of ['pitch','shift','shiftX','gapX','type','size'])write(KEY+k,setting(k).value);write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
+  const save=()=>{for(const k of perSize?['pitch','shift','type','size']:['pitch','shift','shiftX','gapX','type','size'])write(KEY+k,setting(k).value);if(perSize)for(const k of ['gapX','shiftX'])write(KEY+k+'_'+curSize,setting(k).value);write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
 
-  host.addEventListener('change',e=>{if(e.target.dataset.set)save();else onEdit(e)});
+  host.addEventListener('change',e=>{
+   if(e.target.dataset.set==='size'&&perSize&&e.target.value!==curSize){for(const k of ['gapX','shiftX'])write(KEY+k+'_'+curSize,setting(k).value);curSize=e.target.value;sizeVals()}
+   if(e.target.dataset.set)save();else onEdit(e)});
   host.addEventListener('input',e=>{const f=e.target.dataset.f;if(f==='text'||f==='qty')onEdit(e)});
   host.addEventListener('click',e=>{
    const act=e.target.closest('[data-act]')?.dataset.act;

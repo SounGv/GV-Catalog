@@ -180,7 +180,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  $('qMinus').addEventListener('click',()=>{$('qty').value=Math.max(1,qtyNow()-1);pushToEngine(true);refresh()});
  $('qPlus').addEventListener('click',()=>{$('qty').value=Math.min(20000,qtyNow()+1);pushToEngine(true);refresh()});
  $('qChips').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(b){$('qty').value=b.dataset.q;pushToEngine(true);refresh()}});
- $('seg').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){setEngine('size',b.dataset.s);syncSeg();refresh()}});
+ $('seg').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){setEngine('size',b.dataset.s);for(const k of ['gapX','shiftX'])$(k).value=engSet(k).value;syncSeg();refresh()}});
  for(const k of ['gapX','shiftX','shift','pitch'])$(k).addEventListener('change',()=>{setEngine(k,$(k).value);refresh()});
  $('source').addEventListener('change',()=>{try{localStorage.setItem('gv-stickerprint-source',$('source').value)}catch{}if(current)show(current)});
  $('goBtn').addEventListener('click',()=>{pushToEngine(true);eng('[data-act=print]')?.click()});
