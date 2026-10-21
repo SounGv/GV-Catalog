@@ -362,7 +362,7 @@ function createPackingPrint(app) {
   }
   const sp = { count: simple.querySelector('#spCount'), bar: simple.querySelector('#spBar'), go: simple.querySelector('#spGo'), search: simple.querySelector('#spSearch'), list: simple.querySelector('#spList') };
   let openModel = '', pickModel = '';
-  const picked = new Set(); // cartons ticked in a model's carton picker (print only these)
+  const pickQty = new Map(); // model id -> how many cartons to print (typed in the model's quantity box)
   const spStyle = document.createElement('style');
   spStyle.textContent = `.sp{padding:16px 17px;display:grid;gap:12px}.sp-title{margin:0;font-size:17px}
     .sp-lot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-weight:700}.sp-lot label{display:flex!important;align-items:center;gap:8px;flex:1;min-width:220px;margin:0!important;width:auto!important;font-weight:700}.sp-lot input{flex:1;min-height:46px;font-size:16px!important;border:2px solid #185c45!important;border-radius:10px!important;padding:0 12px!important}
@@ -380,7 +380,7 @@ function createPackingPrint(app) {
     .sp-ctns{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto}
     .sp-ctn{min-width:52px;min-height:44px;padding:0 10px;border-radius:10px;border:1px solid #cbd9df;background:#fff;font:inherit;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer}
     .sp-ctn.done{background:#eaf7ef;color:#14773e;border-color:#bfe3cc}.sp-ctn.on{background:#185c45;color:#fff;border-color:#185c45}
-    .sp-pickbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp-pickbar input{flex:1;min-width:150px;min-height:44px;border:1px solid #cbd9df;border-radius:10px;padding:0 12px;font:inherit}
+    .sp-pickbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp-qty{display:flex;align-items:center;gap:8px;font-weight:700}.sp-qty input{width:96px;min-height:48px;border:2px solid #185c45;border-radius:10px;text-align:center;font:inherit;font-size:20px;font-weight:800}
     .sp-chip{min-height:42px;border-radius:999px;border:1px solid #cbd9df;background:#fff;padding:0 14px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
     .sp-chip.print{background:#185c45;color:#fff;border-color:#185c45}.sp-chip.ok{background:#c9ecd6;color:#14773e;border-color:#9fd3b3}.sp-chip.mid{background:#ffe7a6;color:#946200;border-color:#f0cf70}
     .sp-settings{border-top:1px solid #dfe9e3}.sp-essentials{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:0 17px 8px}.sp-essentials label{display:flex!important;flex-direction:column;align-items:stretch!important;gap:4px;width:auto!important;margin:0!important;font-size:13px}.sp-essentials select,.sp-essentials input{min-height:44px;width:100%!important;font-size:15px}.sp-settings>.sp-hint{padding:0 17px}.sp-settings>summary{cursor:pointer;padding:14px 17px;font-weight:700;color:#185c45}`;
@@ -447,14 +447,13 @@ function createPackingPrint(app) {
       } else {
         actions = `<button class="sp-chip print" data-sp="print" data-model="${esc(m.id)}" type="button">พิมพ์ ${total * 2} ใบ</button>`;
       }
-      if (!m.mixed && total > 1) actions += `<button class="sp-chip" data-sp="pickopen" data-model="${esc(m.id)}" type="button">${pickModel === m.id ? 'ปิดการเลือกลัง' : 'เลือกลัง'}</button>`;
+      if (!m.mixed && total > 1) actions += `<button class="sp-chip" data-sp="pickopen" data-model="${esc(m.id)}" type="button">${pickModel === m.id ? 'ปิด' : 'ระบุจำนวนลัง'}</button>`;
       let pickPanel = '';
       if (pickModel === m.id && !m.mixed) {
-        const rowKeys = m.rows.map(r => keys[rows.indexOf(r)]), on = rowKeys.filter(k => picked.has(k)).length;
-        pickPanel = `<div class="sp-pick"><p>ติ๊กลังที่ต้องการพิมพ์ (สีเขียวอ่อน = พิมพ์แล้ว) · เลขที่แสดงคือเลขลัง CTN</p>
-          <div class="sp-ctns">${m.rows.map((r, i) => `<button type="button" class="sp-ctn ${picked.has(rowKeys[i]) ? 'on' : r.printed ? 'done' : ''}" data-sp="ctn" data-model="${esc(m.id)}" data-key="${esc(rowKeys[i])}" aria-pressed="${picked.has(rowKeys[i])}">${esc(r.ctn)}${r.printed ? ' ✓' : ''}</button>`).join('')}</div>
-          <div class="sp-pickbar"><input data-sp-range placeholder="หรือพิมพ์เลขลัง เช่น 5, 12-14" aria-label="เลขลังที่จะเลือก"><button type="button" class="sp-chip" data-sp="range" data-model="${esc(m.id)}">เลือกตามเลข</button><button type="button" class="sp-chip" data-sp="unprinted" data-model="${esc(m.id)}">เลือกที่ยังไม่พิมพ์</button><button type="button" class="sp-chip" data-sp="clear" data-model="${esc(m.id)}">ล้างที่เลือก</button></div>
-          <button type="button" class="sp-go" style="min-height:52px;margin:0;font-size:16px" data-sp="printpick" data-model="${esc(m.id)}" ${on ? '' : 'disabled'}>${on ? `พิมพ์ ${on} ลังที่เลือก (${on * 2} ใบ)` : 'ติ๊กลังที่จะพิมพ์ก่อน'}</button></div>`;
+        const avail = m.rows.filter(r => !r.printed).length || total, n = Math.max(1, Math.min(avail, pickQty.get(m.id) || 1));
+        pickPanel = `<div class="sp-pick"><p>ใส่จำนวนลังที่จะพิมพ์ ระบบพิมพ์ลังที่ยังไม่พิมพ์ก่อน เรียงตามเลขลัง (เหลือ ${avail} ลัง)</p>
+          <div class="sp-pickbar"><label class="sp-qty">พิมพ์ <input type="number" inputmode="numeric" min="1" max="${avail}" value="${n}" data-sp-qty="${esc(m.id)}" aria-label="จำนวนลังที่จะพิมพ์"> ลัง</label>${[1, 2, 5, 10].filter(v => v < avail).map(v => `<button type="button" class="sp-chip" data-sp="qtychip" data-model="${esc(m.id)}" data-q="${v}">${v}</button>`).join('')}<button type="button" class="sp-chip" data-sp="qtychip" data-model="${esc(m.id)}" data-q="${avail}">ทั้งหมด ${avail}</button></div>
+          <button type="button" class="sp-go" style="min-height:52px;margin:0;font-size:16px" data-sp="printqty" data-model="${esc(m.id)}">พิมพ์ <b data-sp-n>${n}</b> ลัง (<b data-sp-pages>${n * 2}</b> ใบ)</button></div>`;
       }
       const where = m.mixed ? `รุ่น ${m.members.map(esc).join(', ')}` : esc(m.loc || '—');
       return `<div class="sp-row ${state}"><div><div class="sp-sku">${esc(m.item)}</div><div class="sp-meta">${where} · ${total * 2} ใบ${state === 'part' ? ` · พิมพ์ไป ${m.done * 2}/${total * 2}` : ''}</div></div><div class="sp-actions">${actions}</div>${pickPanel}</div>`;
@@ -467,7 +466,14 @@ function createPackingPrint(app) {
     printRows(rows.filter(r => !r.printed).slice(0, step / 2));
   });
   sp.search.addEventListener('input', renderSimple);
-  sp.list.addEventListener('keydown', event => { if (event.key === 'Enter' && event.target.matches('[data-sp-range]')) { event.preventDefault(); event.target.closest('.sp-pick')?.querySelector('[data-sp=range]')?.click(); } });
+  sp.list.addEventListener('input', event => {
+    const input = event.target.closest('[data-sp-qty]');
+    if (!input) return;
+    const max = Number(input.max) || 1, n = Math.max(1, Math.min(max, Math.floor(Number(input.value)) || 1)), box = input.closest('.sp-pick');
+    pickQty.set(input.dataset.spQty, n);
+    box.querySelector('[data-sp-n]').textContent = n; box.querySelector('[data-sp-pages]').textContent = n * 2;
+  });
+  sp.list.addEventListener('keydown', event => { if (event.key === 'Enter' && event.target.matches('[data-sp-qty]')) { event.preventDefault(); event.target.closest('.sp-pick')?.querySelector('[data-sp=printqty]')?.click(); } });
   sp.list.addEventListener('click', event => {
     const button = event.target.closest('[data-sp]');
     if (!button) return;
@@ -475,23 +481,14 @@ function createPackingPrint(app) {
     const model = list.find(m => m.id === button.dataset.model);
     if (!model) return;
     const action = button.dataset.sp;
-    if (['pickopen', 'ctn', 'range', 'unprinted', 'clear', 'printpick'].includes(action)) {
-      const keyOfRow = r => keys[rows.indexOf(r)];
-      if (action === 'pickopen') pickModel = pickModel === model.id ? '' : model.id;
-      else if (action === 'ctn') { const k = button.dataset.key; picked.has(k) ? picked.delete(k) : picked.add(k); }
-      else if (action === 'unprinted') { for (const r of model.rows) if (!r.printed) picked.add(keyOfRow(r)); }
-      else if (action === 'clear') { for (const r of model.rows) picked.delete(keyOfRow(r)); }
-      else if (action === 'range') {
-        const input = button.closest('.sp-pick')?.querySelector('[data-sp-range]');
-        try { const match = parseRanges(input?.value, 'เลขลัง'); for (const r of model.rows) if (match(Number(r.ctn))) picked.add(keyOfRow(r)); }
-        catch (e) { app.toast(e.message, true); return; }
-      }
-      else if (action === 'printpick') {
-        const chosen = model.rows.filter(r => picked.has(keyOfRow(r)));
-        if (chosen.length) { for (const r of chosen) picked.delete(keyOfRow(r)); printRows(chosen, true); }
-        return;
-      }
-      renderSimple();
+    if (['pickopen', 'qtychip', 'printqty'].includes(action)) {
+      const todo = model.rows.filter(r => !r.printed), pool = todo.length ? todo : model.rows;
+      const readQty = () => { const v = Math.floor(Number(button.closest('.sp-pick')?.querySelector('[data-sp-qty]')?.value)); return Math.max(1, Math.min(pool.length, Number.isFinite(v) ? v : 1)); };
+      if (action === 'pickopen') { pickModel = pickModel === model.id ? '' : model.id; renderSimple(); return; }
+      if (action === 'qtychip') { pickQty.set(model.id, Number(button.dataset.q)); renderSimple(); return; }
+      const n = readQty();
+      pickQty.set(model.id, n);
+      printRows(pool.slice(0, n), true);
       return;
     }
     if (action === 'open') { openModel = model.id; renderSimple(); return; }
