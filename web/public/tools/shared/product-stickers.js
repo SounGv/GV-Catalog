@@ -177,7 +177,14 @@
     const k=kept.get(it.code)||{};
     it.pick=k.pick??it.pick??false; /* nothing ticked until staff choose; red rows show what must change */ it.qty=k.qty??it.qty;it.text=k.text??(catalogDetail(it.model)||detailOf(it.desc,it.brand,it.model));
     // factory design: the product line starts with the brand, as on the maker's own label
-    if(design==='factory'&&k.text===undefined&&it.text&&it.brand&&!new RegExp('^'+it.brand,'i').test(it.text))it.text=it.brand+' '+it.text;
+    // (FANTECH's line 1 is its FAN-... part number, which already names the brand, so the brand is not repeated below)
+    if(design==='factory'&&k.text===undefined&&it.text&&it.brand&&it.brand!=='FANTECH'&&!new RegExp('^'+it.brand,'i').test(it.text))it.text=it.brand+' '+it.text;
+    // factory design: whatever line 1 already says (brand, model code, parts of the part number) is not repeated in the name
+    if(design==='factory'&&k.text===undefined&&it.text){
+     const seen=new Set(`${it.model||''} ${it.mc||''} ${it.brand||''}`.toUpperCase().split(/[^A-Z0-9]+/).filter(w=>w.length>=4));
+     const cut=it.text.split(/\s+/).filter(w=>!seen.has(w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g,'').toUpperCase())).join(' ').replace(/\(\s*\)/g,'').replace(/^[-.\s]+/,'').replace(/\s+/g,' ').trim();
+     if(cut)it.text=cut;
+    }
    }
    draw();
    return items.length;
