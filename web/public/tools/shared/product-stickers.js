@@ -173,7 +173,7 @@
    }
    items=[...by.values()].sort((a,b)=>rank[b.status]-rank[a.status]||String(a.model).localeCompare(String(b.model),undefined,{numeric:true}));
    for(const it of items){
-    it.brand=brandOf(it.desc);
+    it.brand=/^FAN-/i.test(it.model||'')?'FANTECH':brandOf(it.desc); // every FANTECH part number starts with FAN-
     const k=kept.get(it.code)||{};
     it.pick=k.pick??it.pick??false; /* nothing ticked until staff choose; red rows show what must change */ it.qty=k.qty??it.qty;it.text=k.text??(catalogDetail(it.model)||detailOf(it.desc,it.brand,it.model));
     // factory design: the product line starts with the brand, as on the maker's own label
