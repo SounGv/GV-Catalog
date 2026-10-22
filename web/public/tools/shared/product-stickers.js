@@ -228,7 +228,9 @@
     for(const x of words){const l=width(x,size);if(w&&w+sp+l>maxPx){n++;w=l}else w+=(w?sp:0)+l}return n};
    let result=null;
    for(let size=start;size>=min-1e-9;size-=.2){const n=count(size);if(n*size*1.2*.3528<=avail){result={size,lines:n};break}}
-   result=result||{size:min,lines:Math.max(1,Math.floor(avail/(min*1.2*.3528)))};
+   // never cut the name: below the usual smallest size keep shrinking (to 70% of it, at least 3pt) until all of it fits
+   if(!result){const floor=Math.max(3,min*.7);for(let size=min-.2;size>=floor-1e-9;size-=.2){const n=count(size);if(n*size*1.2*.3528<=avail){result={size,lines:n};break}}
+    if(!result){const n=count(floor);result={size:floor,lines:n}}}
    probe.remove();return result;
   }
   function labelFactory(it,p){
