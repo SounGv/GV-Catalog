@@ -11,8 +11,8 @@ import { pool } from "@/lib/db";
 export async function GET(request: Request) {
   // `?all=1` also lists products that have no main barcode yet (the sticker page lets staff type one in)
   const all = new URL(request.url).searchParams.get("all") === "1";
-  const { rows: products } = await pool.query<{ sku: string; name: string; gtin: string | null }>(
-    all ? "SELECT sku, name, gtin FROM products ORDER BY sku" : "SELECT sku, name, gtin FROM products WHERE gtin IS NOT NULL AND gtin <> '' ORDER BY sku",
+  const { rows: products } = await pool.query<{ sku: string; name: string; gtin: string | null; brand: string }>(
+    all ? "SELECT sku, name, gtin, brand FROM products ORDER BY sku" : "SELECT sku, name, gtin, brand FROM products WHERE gtin IS NOT NULL AND gtin <> '' ORDER BY sku",
   );
   const { rows: retailerBarcodes } = await pool.query<{ sku: string; retailer: string; barcode: string }>(
     "SELECT sku, retailer, barcode FROM product_barcodes ORDER BY sku, retailer",
@@ -27,6 +27,7 @@ export async function GET(request: Request) {
     sku: p.sku,
     name: p.name,
     gtin: p.gtin ?? "",
+    brand: p.brand,
     retailerBarcodes: byRetailerBySku[p.sku] ?? {},
   }));
 

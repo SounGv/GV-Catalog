@@ -146,7 +146,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   const code=printedCode(current);
   if(!code){engine.update([]);return}
   const text=$('nameInput').value;
-  engine.update([{code,model:current.sku,mc:modelCode(current.name),desc:descOf(current.name),qty:qtyNow(),status:'same',pick:true}]);
+  engine.update([{code,model:current.sku,mc:modelCode(current.name),brand:current.brand==='Fantech'?'FANTECH':'',desc:descOf(current.name),qty:qtyNow(),status:'same',pick:true}]);
   const row=eng('tbody tr');if(!row)return;
   const t=row.querySelector('[data-f=text]'),q=row.querySelector('[data-f=qty]'),p=row.querySelector('[data-f=pick]');
   if(keepText&&text!==''&&t&&t.value!==text){t.value=text;t.dispatchEvent(new Event('input',{bubbles:true}))}
@@ -154,6 +154,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   if(p&&!p.checked){p.checked=true;p.dispatchEvent(new Event('change',{bubbles:true}))}
  }
  function show(p){
+  if(current!==p&&engine.reset)engine.reset(); // a new product starts with its own text, never one left over from another product with the same number
   current=p;
   const b=barcodeOf(p),mc=modelCode(p.name);
   $('fSku').textContent=p.sku;$('foundCard').hidden=false;

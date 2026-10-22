@@ -167,13 +167,13 @@
    const by=new Map();
    for(const r of lines){
     const code=String(r.code||'').trim();if(!code)continue;
-    const g=by.get(code)||{code,model:r.model||'',desc:r.desc||'',qty:0,status:r.status||'unknown',pick:!!r.pick,mc:r.mc||''};
+    const g=by.get(code)||{code,model:r.model||'',desc:r.desc||'',qty:0,status:r.status||'unknown',pick:!!r.pick,mc:r.mc||'',brandHint:r.brand||''};
     g.qty+=Number(r.qty)||0;if(rank[r.status]>rank[g.status])g.status=r.status;if(!g.model&&r.model)g.model=r.model;
     by.set(code,g);
    }
    items=[...by.values()].sort((a,b)=>rank[b.status]-rank[a.status]||String(a.model).localeCompare(String(b.model),undefined,{numeric:true}));
    for(const it of items){
-    it.brand=/^FAN-/i.test(it.model||'')?'FANTECH':brandOf(it.desc); // every FANTECH part number starts with FAN-
+    it.brand=it.brandHint||(/^FAN-/i.test(it.model||'')?'FANTECH':brandOf(it.desc)); // the Catalog's own brand first, else FAN-... part numbers
     const k=kept.get(it.code)||{};
     it.pick=k.pick??it.pick??false; /* nothing ticked until staff choose; red rows show what must change */ it.qty=k.qty??it.qty;it.text=k.text??(catalogDetail(it.model)||detailOf(it.desc,it.brand,it.model));
     // factory design: the product line starts with the brand, as on the maker's own label
@@ -313,7 +313,7 @@
    else if(act==='print')print(false);
    else if(act==='test')print(true);
   });
-  return{update};
+  return{update,reset:()=>kept.clear()};
  }
  window.GVProductStickers={mount,ready:()=>loadCatalogNames()};
 })();
