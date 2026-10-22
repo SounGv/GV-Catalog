@@ -246,7 +246,8 @@
    const txMax=((p.dieW-2*margin)-.7*(p.dieW-F.pad*2))/2,clampedTX=Math.max(-txMax,Math.min(txMax,rawTX));
    const effW=Math.max(6,Math.min(p.dieW-F.pad*2,p.dieW-margin*2-2*Math.abs(clampedTX)));
    const downMax=Math.max(0,roomFor(barH)-(it.text?2*minFont*1.2*.3528:0)),txY=Math.max(-(F.pad+down-margin),Math.min(downMax,rawTY)),room=Math.max(0,roomFor(barH)-Math.max(0,txY));
-   const line1=it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,effW*PX*.9,F.line,4.5),q={...p,eanBarH:barH,bcH:barH,digits:F.digits};
+   // FANTECH's own label shows only the part number, in bold, with no 'P/N:' or 'Model:' words
+   const line1=/^fantech$/i.test(it.brand||'')?it.model:it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,effW*PX*.9,F.line,4.5),q={...p,eanBarH:barH,bcH:barH,digits:F.digits};
    const barSvg=useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`;
    const svgW=Number((barSvg.match(/width:([\d.]+)mm/)||[])[1])||p.dieW*.8;
    const d=it.text?fitText(it.text,effW*PX*.94,Math.max(2.4,room),F.detail,minFont):null;
