@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ใบแปะลังจากออเดอร์ BigSeller</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif; background: #eef1f6; color: #111; min-height: 100vh; }
+a.back { display: inline-block; padding: 10px 22px 0; color: #64748b; text-decoration: none; font-size: 13px; font-weight: 600; }
+#form-panel { max-width: 680px; margin: 14px auto 48px; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.10); overflow: hidden; }
+.form-header { background: linear-gradient(135deg, #185c45 0%, #1d6b4f 100%); padding: 22px 28px; color: #fff; }
+.form-header h1 { font-size: 1.2rem; font-weight: 800; }
+.form-header p { font-size: .8rem; opacity: .75; margin-top: 4px; }
+.form-body { padding: 24px 28px 32px; }
+.sec-title { font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #6b7280; margin: 22px 0 12px; padding-bottom: 7px; border-bottom: 1.5px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+.sec-title:first-of-type { margin-top: 0; }
+.pill { font-size: .68rem; font-weight: 700; color: #185c45; background: #e8f2ed; padding: 1px 9px; border-radius: 99px; text-transform: none; letter-spacing: 0; }
+.pick { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn-file { display: inline-flex; align-items: center; padding: 10px 18px; background: #185c45; color: #fff; border-radius: 10px; font-weight: 700; font-size: .9rem; cursor: pointer; min-height: 44px; }
+.btn-file input { display: none; }
+.hint { color: #6b7280; font-size: .78rem; line-height: 1.5; margin-top: 8px; }
+.hint code { background: #f3f4f6; border-radius: 4px; padding: 0 4px; }
+.status { color: #374151; font-size: .82rem; }
+.empty { padding: 18px; background: #fff6dc; color: #6f5200; border-radius: 10px; font-size: .88rem; display: none; }
+.bill { border: 1.5px solid #e5e7eb; border-radius: 12px; background: #f9fafb; margin-bottom: 14px; overflow: hidden; }
+.bill-head { padding: 12px 15px; background: #fff; border-bottom: 1.5px solid #e5e7eb; }
+.bill-id { font-size: .73rem; font-weight: 800; color: #185c45; background: #e8f2ed; padding: 2px 11px; border-radius: 99px; display: inline-block; margin-bottom: 8px; }
+.g3 { display: grid; grid-template-columns: 1.6fr 1fr .8fr; gap: 10px; }
+.field label { display: block; font-size: .72rem; font-weight: 700; margin-bottom: 3px; color: #374151; }
+.field input { width: 100%; padding: 8px 12px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: .9rem; outline: none; background: #fafafa; font-family: inherit; min-height: 44px; }
+.field input:focus { border-color: #185c45; box-shadow: 0 0 0 3px rgba(24,92,69,.12); background: #fff; }
+.field input[readonly] { background: #f0f4ff; }
+.field input.empty { border-color: #e2b93b; background: #fff6dc; }
+.line { padding: 12px 15px; border-top: 1px dashed #e5e7eb; }
+.line:first-of-type { border-top: 0; }
+.line-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.sku-badge { font-size: .85rem; font-weight: 800; color: #185c45; }
+.sku-name { color: #6b7280; font-size: .76rem; font-weight: 400; margin-left: 6px; }
+.badge { font-size: .76rem; font-weight: 800; color: #065f46; background: #d1fae5; padding: 2px 11px; border-radius: 99px; }
+.badge.none { color: #92400e; background: #fef3c7; font-weight: 700; }
+.g2 { display: grid; grid-template-columns: .8fr 1fr; gap: 10px; max-width: 360px; }
+.src { font-size: .7rem; color: #6b7280; margin-top: 3px; }
+.split { font-size: .78rem; color: #374151; margin-top: 8px; }
+.split span { display: inline-block; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 0 8px; margin: 2px 4px 0 0; font-variant-numeric: tabular-nums; }
+.split span.last { border-color: #e2b93b; background: #fff6dc; }
+#summary-bar { margin-top: 14px; padding: 12px 16px; background: #e8f2ed; border-radius: 10px; color: #185c45; font-weight: 700; font-size: .9rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.btn-print { display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 14px; padding: 14px; background: #185c45; color: #fff; border: 0; border-radius: 12px; font: inherit; font-size: 1rem; font-weight: 800; cursor: pointer; }
+.btn-print:disabled { background: #9db8ad; cursor: not-allowed; }
+/* preview */
+#preview-area { max-width: 760px; margin: 0 auto 60px; display: none; }
+#preview-bar { display: flex; align-items: center; justify-content: space-between; background: #fff; border-radius: 10px; padding: 13px 22px; margin: 14px 0 20px; box-shadow: 0 2px 8px rgba(0,0,0,.08); gap: 8px; flex-wrap: wrap; }
+#preview-title { font-size: .85rem; color: #374151; font-weight: 700; }
+.preview-actions { display: flex; gap: 10px; }
+.btn-back { padding: 9px 14px; background: #f3f4f6; color: #374151; border: 1.5px solid #d1d5db; border-radius: 7px; font-size: .82rem; font-weight: 700; cursor: pointer; font-family: inherit; min-height: 44px; }
+.btn-reprint { padding: 9px 18px; background: #185c45; color: #fff; border: none; border-radius: 7px; font-size: .85rem; font-weight: 800; cursor: pointer; font-family: inherit; min-height: 44px; }
+#label-grid { display: flex; flex-wrap: wrap; gap: 20px; }
+/* label 101.6mm x 152.4mm (4x6 in), same layout as "พิมพ์ใบแปะกล่อง" */
+.label-card { width: 101.6mm; height: 152.4mm; border: 2px solid #000; background: #fff; display: flex; flex-direction: column; font-family: Arial, sans-serif; flex-shrink: 0; overflow: hidden; }
+.lbl-company-wrap { height: 20mm; flex-shrink: 0; padding: 0 5mm; border-bottom: 1.5px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.lbl-company { font-weight: 900; white-space: nowrap; text-align: center; overflow: hidden; display: block; width: 100%; }
+.lbl-pr-date-row { height: 28mm; flex-shrink: 0; display: flex; border-bottom: 1.5px solid #000; }
+.lbl-pr-cell { flex: 0 0 60%; border-right: 1.5px solid #000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm 4mm; gap: 1.5mm; overflow: hidden; }
+.lbl-date-cell { flex: 0 0 40%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm 3mm; gap: 1.5mm; overflow: hidden; }
+.lbl-cell-key { font-size: 8pt; font-weight: 700; color: #777; white-space: nowrap; line-height: 1; text-transform: uppercase; letter-spacing: .05em; }
+.lbl-pr-val, .lbl-date-val { font-weight: 900; line-height: 1; white-space: nowrap; text-align: center; display: block; overflow: hidden; }
+.lbl-sku-wrap { flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 5mm 5mm; border-bottom: 1.5px solid #000; }
+.lbl-sku-box { width: 100%; border: 3px solid #000; border-radius: 4mm; padding: 2.5mm 4mm; font-weight: 900; text-align: center; white-space: nowrap; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.lbl-qty-wrap { height: 28mm; flex-shrink: 0; padding: 2mm 5mm 2mm; border-bottom: 1.5px solid #000; display: flex; flex-direction: column; justify-content: center; gap: 0.5mm; overflow: hidden; }
+.lbl-qty-key { font-size: 9.5pt; font-weight: 800; color: #444; line-height: 1; letter-spacing: .05em; }
+.lbl-qty-row { display: flex; align-items: baseline; gap: 2mm; line-height: 1; }
+.lbl-qty-num { font-weight: 900; line-height: .88; white-space: nowrap; display: block; }
+.lbl-qty-unit { font-size: 20pt; font-weight: 800; color: #222; }
+.lbl-ctn-row { height: 24mm; flex-shrink: 0; display: flex; }
+.lbl-ctn-no, .lbl-ctn-total { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm 3mm; gap: 1mm; overflow: hidden; }
+.lbl-ctn-no { border-right: 1.5px solid #000; }
+.lbl-ctn-key { font-size: 8pt; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: .04em; line-height: 1; }
+.lbl-ctn-val { font-weight: 900; line-height: .88; white-space: nowrap; display: block; }
+@media print {
+  @page { size: 4in 6in; margin: 0; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  a.back, #form-panel, #preview-bar { display: none !important; }
+  #preview-area { display: block !important; margin: 0; padding: 0; max-width: none; }
+  #label-grid { display: block; margin: 0; padding: 0; }
+  .label-card { width: 4in; height: 6in; border: none; margin: 0; padding: 0; page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
+  .label-card:last-child { page-break-after: auto; break-after: auto; }
+  .lbl-company-wrap, .lbl-pr-date-row, .lbl-sku-wrap, .lbl-qty-wrap { border-bottom: 1pt solid #000; }
+  .lbl-pr-cell, .lbl-ctn-no { border-right: 1pt solid #000; }
+  .lbl-sku-box { border: 2pt solid #000; }
+}
+@media (max-width: 560px) { .g3 { grid-template-columns: 1fr 1fr; } .g3 .field:first-child { grid-column: 1 / -1; } .form-body { padding: 18px 16px 24px; } }
+</style>
+<link rel="stylesheet" href="../shared/gv-header.css">
+</head>
+<body>
+<a class="back" href="/">&lsaquo; กลับหน้าหลัก</a>
+<div id="form-panel">
+  <div class="form-header">
+    <h1>🖨 ใบแปะลังจากออเดอร์ BigSeller</h1>
+    <p>เปิดไฟล์ออเดอร์ ใส่จำนวนต่อลัง ระบบนับจำนวนใบและเลขลังให้</p>
+  </div>
+  <div class="form-body">
+    <div class="sec-title">📋 ไฟล์ออเดอร์จาก BigSeller</div>
+    <div class="pick">
+      <label class="btn-file">เลือกไฟล์ออเดอร์ (.json)<input id="file" type="file" accept=".json,application/json"></label>
+      <span class="status" id="status">ยังไม่ได้เลือกไฟล์</span>
+    </div>
+    <p class="hint">สร้างไฟล์ได้ที่เครื่องที่ล็อกอิน BigSeller: ดับเบิลคลิก <code>scripts\run-export-processing-orders.bat</code> แล้วเลือกไฟล์ <code>output\processing-orders.json</code> · ไฟล์เปิดอ่านในเครื่องนี้เท่านั้น ไม่ถูกส่งขึ้นเว็บ</p>
+    <div class="empty" id="empty">ไฟล์นี้ไม่มีออเดอร์ ตรวจที่ BigSeller ว่าแท็บ "พิมพ์ได้" ของร้านมีออเดอร์ค้างพิมพ์อยู่หรือไม่</div>
+
+    <div class="sec-title">📦 ออเดอร์ <span id="count" class="pill">0 บิล</span></div>
+    <div id="bills"></div>
+
+    <div id="summary-bar" style="display:none"></div>
+    <button class="btn-print" id="go" type="button" disabled>เลือกไฟล์ออเดอร์ก่อน</button>
+  </div>
+</div>
+
+<div id="preview-area">
+  <div id="preview-bar">
+    <span id="preview-title"></span>
+    <div class="preview-actions">
+      <button class="btn-back" id="back" type="button">← แก้ไขข้อมูล</button>
+      <button class="btn-reprint" id="reprint" type="button">🖨 พิมพ์</button>
+    </div>
+  </div>
+  <div id="label-grid"></div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad2 = n => String(n).padStart(2, '0');
+const MEM_KEY = 'gv-order-labels-per';
+let bills = [];                       // [{ bill, orderNo, header, pr, date, lines: [{ sku, qty }] }]
+let catalog = new Map();              // sku -> { name, perCarton }
+let memory = {};
+try { memory = JSON.parse(localStorage.getItem(MEM_KEY) || '{}') || {}; } catch (_) { memory = {}; }
+
+/* ---- data helpers ---- */
+const perOf = sku => Number(memory[sku]) || (catalog.get(sku) || {}).perCarton || 0;
+const perSource = sku => memory[sku] ? 'คุณกรอก · ใช้กับ SKU นี้ทุกบิล' : ((catalog.get(sku) || {}).perCarton ? 'ค่าจาก Catalog (BigSeller)' : 'ยังไม่เคยกรอก');
+const split = (qty, per) => { if (!(per > 0)) return null; const a = Array(Math.floor(qty / per)).fill(per); if (qty % per) a.push(qty % per); return a; };
+// "บริษัท ออฟฟิศเมท (ไทย) จำกัด สาขารังสิต (สาขาที่ 00001)" -> "ออฟฟิศเมท"
+const shortName = r => String(r || '').replace(/^บริษัท\s*/, '').replace(/\s*\(.*$/, '').replace(/\s*จำกัด.*$/, '').replace(/\s*สาขา.*$/, '').trim();
+const dateOf = d => { const m = String(d || '').match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/); return m ? `${pad2(m[1])}/${pad2(m[2])}/${m[3].slice(2)}` : ''; };
+
+async function loadCatalog() {
+  try {
+    const r = await fetch('/api/catalog/barcodes?all=1', { cache: 'no-store' });
+    const d = await r.json();
+    catalog = new Map(d.rows.map(x => [String(x.sku).trim(), { name: x.name || '', perCarton: Number(x.perCarton) || 0 }]));
+  } catch (_) { catalog = new Map(); }
+}
+
+/* ---- load file ---- */
+$('file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  let data;
+  try { data = JSON.parse(await f.text()); } catch (_) { $('status').textContent = 'อ่านไฟล์ไม่ได้ ต้องเป็นไฟล์ที่สร้างจาก run-export-processing-orders.bat'; return; }
+  const orders = Array.isArray(data.orders) ? data.orders : [];
+  await loadCatalog();
+  bills = orders.map(o => ({
+    bill: o.bill || '', orderNo: o.orderNo || '',
+    header: [shortName(o.recipient), o.shipTo].filter(Boolean).join(' / ') || (o.store || ''),
+    pr: o.orderNo ? 'PO' + o.orderNo : '', date: dateOf(o.shipDate),
+    recipient: o.recipient || '', lines: (o.lines || []).filter(l => l.sku && l.qty > 0),
+  })).filter(b => b.lines.length);
+  const when = data.exportedAt ? new Date(data.exportedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }) : '';
+  $('status').textContent = `ร้าน ${data.store || '-'} · ดึงเมื่อ ${when} · ${bills.length} บิล`;
+  $('empty').style.display = bills.length ? 'none' : 'block';
+  draw();
+});
+
+/* ---- screen ---- */
+function draw() {
+  const box = $('bills'); box.innerHTML = '';
+  bills.forEach((b, bi) => {
+    const el = document.createElement('div'); el.className = 'bill';
+    el.innerHTML = `<div class="bill-head"><span class="bill-id">บิล ${esc(b.bill)}${b.recipient ? ' · ' + esc(b.recipient) : ''}</span>
+      <div class="g3">
+        <div class="field"><label>หัวใบ</label><input data-bi="${bi}" data-k="header" value="${esc(b.header)}"></div>
+        <div class="field"><label>PR NO. (PO)</label><input data-bi="${bi}" data-k="pr" value="${esc(b.pr)}" placeholder="เช่น PO260240486"></div>
+        <div class="field"><label>วันที่ส่ง</label><input data-bi="${bi}" data-k="date" value="${esc(b.date)}" placeholder="dd/mm/yy"></div>
+      </div></div>` + b.lines.map((l, li) => `
+      <div class="line" data-bi="${bi}" data-li="${li}">
+        <div class="line-head"><span><span class="sku-badge">${esc(l.sku)}</span><span class="sku-name">${esc((catalog.get(l.sku) || {}).name || '')}</span></span><span class="badge" data-role="badge"></span></div>
+        <div class="g2">
+          <div class="field"><label>สั่ง (ชิ้น)</label><input value="${l.qty}" readonly></div>
+          <div class="field"><label>ใส่ต่อลัง</label><input data-per="${esc(l.sku)}" inputmode="numeric" placeholder="เช่น 10"><div class="src" data-role="src"></div></div>
+        </div>
+        <div class="split" data-role="split"></div>
+      </div>`).join('');
+    box.appendChild(el);
+  });
+  box.querySelectorAll('input[data-per]').forEach(i => { i.value = perOf(i.dataset.per) || ''; });
+  $('count').textContent = bills.length + ' บิล';
+  refresh();
+}
+
+// recompute the carton numbers, badges and the summary without re-rendering (keeps the cursor in the box being typed in)
+function plan() {
+  const out = []; let ready = 0, skipped = 0, labels = 0;
+  bills.forEach((b, bi) => {
+    const parts = b.lines.map(l => split(l.qty, perOf(l.sku)));
+    const total = parts.reduce((n, p) => n + (p ? p.length : 0), 0);
+    let run = 0;
+    b.lines.forEach((l, li) => {
+      const p = parts[li];
+      if (!p) { skipped++; out.push({ bi, li, start: 0, parts: null, total }); return; }
+      out.push({ bi, li, start: run + 1, parts: p, total }); run += p.length; ready++; labels += p.length;
+    });
+  });
+  return { out, ready, skipped, labels };
+}
+function refresh() {
+  const pl = plan();
+  pl.out.forEach(x => {
+    const line = document.querySelector(`.line[data-bi="${x.bi}"][data-li="${x.li}"]`); if (!line) return;
+    const l = bills[x.bi].lines[x.li], per = perOf(l.sku), inp = line.querySelector('input[data-per]');
+    inp.classList.toggle('empty', !per);
+    line.querySelector('[data-role=src]').textContent = perSource(l.sku);
+    const badge = line.querySelector('[data-role=badge]');
+    badge.className = 'badge' + (x.parts ? '' : ' none');
+    badge.textContent = x.parts ? `${x.parts.length} ใบ · ลังที่ ${pad2(x.start)}–${pad2(x.start + x.parts.length - 1)} จาก ${pad2(x.total)}` : 'ใส่จำนวนต่อลังก่อน';
+    line.querySelector('[data-role=split]').innerHTML = x.parts
+      ? x.parts.map((n, k) => `<span class="${k === x.parts.length - 1 && n !== per ? 'last' : ''}">ลัง ${pad2(x.start + k)}: ${n} ชิ้น</span>`).join('') : '';
+  });
+  const bar = $('summary-bar'); bar.style.display = bills.length ? 'flex' : 'none';
+  bar.innerHTML = `<span>พร้อมพิมพ์ ${pl.ready}/${pl.ready + pl.skipped} รายการ${pl.skipped ? ' · ข้าม ' + pl.skipped + ' (ยังไม่ใส่ต่อลัง)' : ''}</span><span>รวม ${pl.labels} ใบ</span>`;
+  const go = $('go'); go.disabled = pl.labels === 0;
+  go.textContent = pl.labels ? `สร้างใบปริ้น ${pl.labels} ใบ และดูตัวอย่าง` : (bills.length ? 'ใส่จำนวนต่อลังอย่างน้อย 1 รายการ' : 'เลือกไฟล์ออเดอร์ก่อน');
+}
+$('bills').addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.k) { bills[el.dataset.bi][el.dataset.k] = el.value; return; }
+  if (el.dataset.per) {
+    const v = parseInt(el.value, 10);
+    if (v > 0) memory[el.dataset.per] = v; else delete memory[el.dataset.per];
+    try { localStorage.setItem(MEM_KEY, JSON.stringify(memory)); } catch (_) {}
+    // the same SKU in other bills of the file shows the same number
+    document.querySelectorAll('input[data-per]').forEach(o => { if (o !== el && o.dataset.per === el.dataset.per) o.value = el.value; });
+    refresh();
+  }
+});
+
+/* ---- labels (same layout and fitting as the "พิมพ์ใบแปะกล่อง" page) ---- */
+const _ctx = document.createElement('canvas').getContext('2d');
+function canvasFitPt(text, maxPx, startPt, minPt, weight, family) {
+  if (!text || maxPx <= 0) return minPt;
+  _ctx.font = `${weight} ${startPt}pt ${family}`;
+  const w = _ctx.measureText(text).width;
+  if (w <= maxPx) return startPt;
+  let fitted = Math.max(minPt, Math.floor(startPt * (maxPx / w) * 2) / 2);
+  while (fitted > minPt) { _ctx.font = `${weight} ${fitted}pt ${family}`; if (_ctx.measureText(text).width <= maxPx) break; fitted -= 0.5; }
+  return fitted;
+}
+const applyFit = (el, text, maxPx, start, min, weight, family) => { el.style.fontSize = canvasFitPt(text, maxPx, start, min, weight, family) + 'pt'; };
+function fitCard(card) {
+  const FONT = 'Arial';
+  const cw = card.querySelector('.lbl-company-wrap'), ce = card.querySelector('.lbl-company');
+  if (cw && ce) {
+    const avail = cw.clientWidth - 38, text = ce.textContent;
+    ce.style.whiteSpace = 'nowrap'; ce.style.lineHeight = 'normal';
+    const sz = canvasFitPt(text, avail, 30, 9, '900', FONT); ce.style.fontSize = sz + 'pt';
+    _ctx.font = `900 ${sz}pt ${FONT}`;
+    if (_ctx.measureText(text).width > avail) {
+      ce.style.whiteSpace = 'normal'; ce.style.wordBreak = 'break-word'; ce.style.lineHeight = '1.2';
+      let pt = sz; while (pt > 6 && ce.scrollHeight > cw.clientHeight) { pt -= 0.5; ce.style.fontSize = pt + 'pt'; }
+    }
+  }
+  const pc = card.querySelector('.lbl-pr-cell'), pv = card.querySelector('.lbl-pr-val');
+  if (pc && pv) applyFit(pv, pv.textContent, pc.clientWidth - 30, 26, 8, '900', FONT);
+  const dc = card.querySelector('.lbl-date-cell'), dv = card.querySelector('.lbl-date-val');
+  if (dc && dv) applyFit(dv, dv.textContent, dc.clientWidth - 24, 26, 8, '900', FONT);
+  const sw = card.querySelector('.lbl-sku-wrap'), sb = card.querySelector('.lbl-sku-box');
+  if (sw && sb) applyFit(sb, sb.textContent, sw.clientWidth - 74, Math.min(68, Math.floor(sw.clientHeight * 0.70 / 1.333)), 9, '900', FONT);
+  const qw = card.querySelector('.lbl-qty-wrap'), qn = card.querySelector('.lbl-qty-num');
+  if (qw && qn) applyFit(qn, qn.textContent, qw.clientWidth - 38 - 70, Math.min(60, Math.floor((qw.clientHeight - 14) * 0.80 / 1.333)), 14, '900', FONT);
+  [['.lbl-ctn-no', '.lbl-ctn-no .lbl-ctn-val'], ['.lbl-ctn-total', '.lbl-ctn-total .lbl-ctn-val']].forEach(([cs, vs]) => {
+    const c = card.querySelector(cs), v = card.querySelector(vs);
+    if (c && v) applyFit(v, v.textContent, c.clientWidth - 24, Math.min(52, Math.floor((c.clientHeight - 14) * 0.85 / 1.333)), 14, '900', FONT);
+  });
+}
+function buildCard({ header, pr, date, sku, qty, ctnNo, total }) {
+  const c = document.createElement('div'); c.className = 'label-card';
+  c.innerHTML = `
+    <div class="lbl-company-wrap"><span class="lbl-company">${esc(header || 'HEADER')}</span></div>
+    <div class="lbl-pr-date-row">
+      <div class="lbl-pr-cell"><span class="lbl-cell-key">PR No.</span><span class="lbl-pr-val">${esc(pr || '—')}</span></div>
+      <div class="lbl-date-cell"><span class="lbl-cell-key">วันที่ส่ง</span><span class="lbl-date-val">${esc(date || '—')}</span></div>
+    </div>
+    <div class="lbl-sku-wrap"><div class="lbl-sku-box">${esc(sku)}</div></div>
+    <div class="lbl-qty-wrap"><div class="lbl-qty-key">QTY :</div><div class="lbl-qty-row"><span class="lbl-qty-num">${qty}</span><span class="lbl-qty-unit">PCS</span></div></div>
+    <div class="lbl-ctn-row">
+      <div class="lbl-ctn-no"><span class="lbl-ctn-key">CTN. No.</span><span class="lbl-ctn-val">${pad2(ctnNo)}</span></div>
+      <div class="lbl-ctn-total"><span class="lbl-ctn-key">CTN. TOTAL</span><span class="lbl-ctn-val">${pad2(total)}</span></div>
+    </div>`;
+  return c;
+}
+$('go').addEventListener('click', () => {
+  const pl = plan(), grid = $('label-grid'); grid.innerHTML = '';
+  let n = 0;
+  pl.out.forEach(x => {
+    if (!x.parts) return;
+    const b = bills[x.bi], l = b.lines[x.li];
+    x.parts.forEach((q, k) => { grid.appendChild(buildCard({ header: b.header, pr: b.pr, date: b.date, sku: l.sku, qty: q, ctnNo: x.start + k, total: x.total })); n++; });
+  });
+  if (!n) return;
+  $('preview-title').textContent = `ตัวอย่าง ${n} ใบ จาก ${new Set(pl.out.filter(x => x.parts).map(x => x.bi)).size} บิล${pl.skipped ? ` · ข้าม ${pl.skipped} รายการที่ยังไม่ใส่ต่อลัง` : ''}`;
+  $('preview-area').style.display = 'block'; $('form-panel').style.display = 'none';
+  window.scrollTo({ top: 0 });
+  requestAnimationFrame(() => requestAnimationFrame(() => grid.querySelectorAll('.label-card').forEach(fitCard)));
+});
+$('back').addEventListener('click', () => { $('preview-area').style.display = 'none'; $('form-panel').style.display = ''; });
+$('reprint').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>

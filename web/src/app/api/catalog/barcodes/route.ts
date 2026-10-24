@@ -11,8 +11,8 @@ import { pool } from "@/lib/db";
 export async function GET(request: Request) {
   // `?all=1` also lists products that have no main barcode yet (the sticker page lets staff type one in)
   const all = new URL(request.url).searchParams.get("all") === "1";
-  const { rows: products } = await pool.query<{ sku: string; name: string; gtin: string | null; brand: string }>(
-    all ? "SELECT sku, name, gtin, brand FROM products ORDER BY sku" : "SELECT sku, name, gtin, brand FROM products WHERE gtin IS NOT NULL AND gtin <> '' ORDER BY sku",
+  const { rows: products } = await pool.query<{ sku: string; name: string; gtin: string | null; brand: string; qty_per_carton: number | null }>(
+    all ? "SELECT sku, name, gtin, brand, qty_per_carton FROM products ORDER BY sku" : "SELECT sku, name, gtin, brand, qty_per_carton FROM products WHERE gtin IS NOT NULL AND gtin <> '' ORDER BY sku",
   );
   const { rows: retailerBarcodes } = await pool.query<{ sku: string; retailer: string; barcode: string }>(
     "SELECT sku, retailer, barcode FROM product_barcodes ORDER BY sku, retailer",
@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     name: p.name,
     gtin: p.gtin ?? "",
     brand: p.brand,
+    perCarton: p.qty_per_carton ?? 0, // pieces per carton from BigSeller's Carton unit rule, 0 = not known (the carton-label page default)
     retailerBarcodes: byRetailerBySku[p.sku] ?? {},
   }));
 
