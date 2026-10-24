@@ -103,13 +103,13 @@ a.back { display: inline-block; padding: 10px 22px 0; color: #64748b; text-decor
     <div class="sec-title">📋 ไฟล์ออเดอร์จาก BigSeller</div>
     <div class="pick">
       <button class="btn-file" id="sync" type="button">ซิงค์จาก BigSeller</button>
-      <span class="hint" style="margin:0">PIN <input id="pin" type="password" inputmode="numeric" autocomplete="off" style="width:96px;padding:6px 10px;border:1.5px solid #d1d5db;border-radius:8px;font:inherit;min-height:40px"></span>
+      <span class="hint" style="margin:0">PIN (ถ้ามี) <input id="pin" type="password" inputmode="numeric" autocomplete="off" style="width:96px;padding:6px 10px;border:1.5px solid #d1d5db;border-radius:8px;font:inherit;min-height:40px"></span>
     </div>
     <div class="pick" style="margin-top:10px">
       <label class="btn-file" style="background:#e8f2ed;color:#185c45">เลือกไฟล์ออเดอร์ (.json)<input id="file" type="file" accept=".json,application/json"></label>
       <span class="status" id="status">ยังไม่ได้เลือกไฟล์</span>
     </div>
-    <p class="hint">กด "ซิงค์จาก BigSeller" ใส่ PIN พนักงาน ระบบดึงออเดอร์ที่พิมพ์ได้ให้ (ใช้เวลาประมาณ 1 นาที) · ถ้าซิงค์ไม่ได้ ใช้ไฟล์แทน: สร้างไฟล์ได้ที่เครื่องที่ล็อกอิน BigSeller: ดับเบิลคลิก <code>scripts\run-export-processing-orders.bat</code> แล้วเลือกไฟล์ <code>output\processing-orders.json</code> · ไฟล์เปิดอ่านในเครื่องนี้เท่านั้น ไม่ถูกส่งขึ้นเว็บ</p>
+    <p class="hint">กด "ซิงค์จาก BigSeller" (ถ้ามีการตั้ง PIN ให้ใส่ด้วย) ระบบดึงออเดอร์ที่พิมพ์ได้ให้ (ใช้เวลาประมาณ 1 นาที) · ถ้าซิงค์ไม่ได้ ใช้ไฟล์แทน: สร้างไฟล์ได้ที่เครื่องที่ล็อกอิน BigSeller: ดับเบิลคลิก <code>scripts\run-export-processing-orders.bat</code> แล้วเลือกไฟล์ <code>output\processing-orders.json</code> · ไฟล์เปิดอ่านในเครื่องนี้เท่านั้น ไม่ถูกส่งขึ้นเว็บ</p>
     <div class="empty" id="empty">ไฟล์นี้ไม่มีออเดอร์ ตรวจที่ BigSeller ว่าแท็บ "พิมพ์ได้" ของร้านมีออเดอร์ค้างพิมพ์อยู่หรือไม่</div>
 
     <div class="sec-title">📦 ออเดอร์ <span id="count" class="pill">0 บิล</span></div>
@@ -182,10 +182,9 @@ $('file').addEventListener('change', async e => {
 try { $('pin').value = localStorage.getItem('gv-order-labels-pin') || ''; } catch (_) {}
 $('sync').addEventListener('click', async () => {
   const pin = $('pin').value.trim();
-  if (!pin) { $('status').textContent = 'ใส่ PIN พนักงานก่อน'; $('pin').focus(); return; }
   const btn = $('sync'); btn.disabled = true; $('status').textContent = 'กำลังดึงออเดอร์จาก BigSeller… (ประมาณ 1 นาที ห้ามปิดหน้านี้)';
   try {
-    const res = await fetch('/api/bigseller/orders', { headers: { 'x-gv-pin': pin }, cache: 'no-store' });
+    const res = await fetch('/api/bigseller/orders', { headers: pin ? { 'x-gv-pin': pin } : {}, cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.error) { $('status').textContent = data.error || 'ซิงค์ไม่สำเร็จ'; return; }
     try { localStorage.setItem('gv-order-labels-pin', pin); } catch (_) {}

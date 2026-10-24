@@ -5,11 +5,11 @@ export const maxDuration = 60; // the BigSeller read takes about 45 seconds
 
 /**
  * "ซิงค์จาก BigSeller" on the carton-label page (public/tools/order-labels). The browser never talks to the machine
- * that holds the BigSeller login: it calls this route with the staff PIN, and this route calls that machine's local
+ * that holds the BigSeller login: it calls this route (with the staff PIN when one is set), and this route calls that machine's local
  * orders API through the tunnel with a shared key. Orders hold customer names and PO numbers, so nothing here is
  * stored or logged, and every step fails closed (a missing env value refuses the request).
  *
- * Env (Vercel): ORDER_LABELS_PIN (staff PIN), BIGSELLER_ORDERS_URL (tunnel URL, no trailing slash),
+ * Env (Vercel): ORDER_LABELS_PIN (optional staff PIN; leave unset to let anyone with the link sync), BIGSELLER_ORDERS_URL (tunnel URL, no trailing slash),
  * PROCESSING_ORDERS_API_KEY (same value as in the BigSeller machine's .env), ORDER_LABELS_STORES (optional,
  * comma list, default "GV ส่งเอง").
  */
@@ -20,12 +20,12 @@ const same = (given: string, expected: string): boolean =>
   expected.length > 0 && given.length === expected.length && timingSafeEqual(Buffer.from(given), Buffer.from(expected));
 
 export async function GET(request: Request) {
-  const pin = process.env.ORDER_LABELS_PIN ?? "";
+  const pin = process.env.ORDER_LABELS_PIN ?? ""; // optional: no PIN set = no PIN asked (the owner's choice; the tunnel URL and key below are still required)
   const base = (process.env.BIGSELLER_ORDERS_URL ?? "").replace(/\/$/, "");
   const key = process.env.PROCESSING_ORDERS_API_KEY ?? "";
-  if (!pin || !base || !key) return Response.json({ error: "ยังไม่ได้ตั้งค่าการเชื่อมต่อ BigSeller (ติดต่อผู้ดูแลระบบ)" }, { status: 503 });
+  if (!base || !key) return Response.json({ error: "ยังไม่ได้ตั้งค่าการเชื่อมต่อ BigSeller (ติดต่อผู้ดูแลระบบ)" }, { status: 503 });
 
-  if (!same(request.headers.get("x-gv-pin") ?? "", pin)) return Response.json({ error: "PIN ไม่ถูกต้อง" }, { status: 401 });
+  if (pin && !same(request.headers.get("x-gv-pin") ?? "", pin)) return Response.json({ error: "PIN ไม่ถูกต้อง" }, { status: 401 });
 
   const stores = (process.env.ORDER_LABELS_STORES ?? "GV ส่งเอง").split(",").map((s) => s.trim()).filter(Boolean);
   const store = new URL(request.url).searchParams.get("store") ?? stores[0];
