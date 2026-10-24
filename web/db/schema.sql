@@ -292,3 +292,15 @@ CREATE TABLE IF NOT EXISTS pick_locations (
   synced_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (sku, position)
 );
+
+-- Latest BigSeller "processing" orders per store, pushed by the machine that is logged in to BigSeller
+-- (BigSeller-Inventory scripts/push-processing-orders.ts, every 10-15 minutes) and read by the carton-label page
+-- (public/tools/order-labels). One row per store, replaced on every push, so nothing piles up; the push route also
+-- deletes rows not refreshed for 3 days. Holds customer names and PO numbers: only the two /api/bigseller/orders
+-- routes read or write it.
+CREATE TABLE IF NOT EXISTS order_snapshots (
+  store text PRIMARY KEY,
+  exported_at timestamptz NOT NULL,
+  pushed_at timestamptz NOT NULL DEFAULT now(),
+  orders jsonb NOT NULL
+);
