@@ -165,7 +165,7 @@ async function useOrders(data) {
   bills = orders.map(o => ({
     bill: o.bill || '', orderNo: o.orderNo || '',
     header: [shortName(o.recipient), o.shipTo].filter(Boolean).join(' / ') || (o.store || ''),
-    pr: o.orderNo ? 'PO' + o.orderNo : '', date: dateOf(o.shipDate),
+    pr: o.orderNo ? (/^\d+$/.test(o.orderNo) ? 'PO' + o.orderNo : o.orderNo) : '', date: dateOf(o.shipDate),
     recipient: o.recipient || '', lines: (o.lines || []).filter(l => l.sku && l.qty > 0),
   })).filter(b => b.lines.length);
   const when = data.exportedAt ? new Date(data.exportedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }) : '';
