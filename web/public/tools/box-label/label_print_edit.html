@@ -694,7 +694,7 @@ function readOrderFile(rows) {
   const head = (rows[0] || []).map(v => String(v ?? '').trim());
   const col = names => { for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
   const cSku = col(['SKU Merchant', 'SKU', 'เลข SKU']), cQty = col(['จำนวน', 'QTY', 'Qty']);
-  const cOrder = col(['หมายเลขคำสั่งซื้อ']), cShop = col(['ร้านค้า BigSeller']), cBuyer = col(['ชื่อผู้รับ', 'ชื่อผู้ซื้อ']);
+  const cOrder = col(['หมายเลขคำสั่งซื้อ']), cShop = col(['ร้านค้า BigSeller']), cBuyer = col(['ชื่อผู้ซื้อ', 'ชื่อลูกค้า', 'ชื่อผู้รับ']);
   const cShip = col(['ชื่อโลจิสติกส์']), cNote = col(['หมายเหตุผู้ขาย']);
   if (cSku < 0 || cQty < 0) return null;
   const byOrder = new Map();
@@ -717,8 +717,9 @@ function readOrderFile(rows) {
 }
 function useFileOrder(o) {
   const items = [...o.qty.entries()].map(([code, qty]) => ({ code, qty: String(qty), per: '' }));
-  const pr = document.getElementById('f-pr'), date = document.getElementById('f-date');
+  const pr = document.getElementById('f-pr'), date = document.getElementById('f-date'), company = document.getElementById('f-company');
   const filled = [];
+  if (o.buyer) { company.value = o.buyer; filled.push('ชื่อผู้ซื้อ (หัวใบ)'); } // the buyer printed at the top of every label
   if (o.no && !pr.value.trim()) { pr.value = o.no; clearErr(pr); filled.push('เลข PR'); }
   if (o.date) { date.value = o.date; filled.push('วันที่ส่ง'); }
   addSkuItems(items, 'ไฟล์ ' + (o.no || '') + ' ' + items.length + ' รุ่น' + (filled.length ? ' · เติม' + filled.join(' และ ') + 'ให้' : ''));
