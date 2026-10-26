@@ -312,7 +312,7 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
       </div>
       <div class="field">
         <label>วันที่ส่ง</label>
-        <input id="f-date" type="date" tabindex="3" onkeydown="nextOnEnter(event,'f-unit')">
+        <input id="f-date" type="text" inputmode="numeric" placeholder="วว/ดด/ปปปป" maxlength="10" tabindex="3" oninput="clearErr(this)" onkeydown="nextOnEnter(event,'f-unit')">
       </div>
       <div class="field">
         <label>หน่วย</label>
@@ -524,7 +524,7 @@ function fitCard(card) {
    STATE
 ══════════════════════════════════════════════════════ */
 let uid = 0;
-document.getElementById('f-date').valueAsDate = new Date();
+document.getElementById('f-date').value = thDate(new Date()); // shown day/month/year whatever the browser language
 addSku();
 
 
@@ -723,7 +723,7 @@ function useFileOrder(o) {
   const filled = [];
   if (o.buyer) { company.value = o.buyer; filled.push('ชื่อผู้ซื้อ (หัวใบ)'); } // the buyer printed at the top of every label
   if (o.no && !pr.value.trim()) { pr.value = o.no; clearErr(pr); filled.push('เลข PR'); }
-  if (o.date) { date.value = o.date; filled.push('วันที่ส่ง'); }
+  if (o.date) { const [y, m, d] = o.date.split('-'); date.value = d + '/' + m + '/' + y; filled.push('วันที่ส่ง'); }
   addSkuItems(items, 'ไฟล์ ' + (o.no || '') + ' ' + items.length + ' รุ่น' + (filled.length ? ' · เติม' + filled.join(' และ ') + 'ให้' : '') + (oneCarton ? ' · ' + oneCarton + ' รุ่นจำนวนน้อย (1–5 ชิ้น) ใส่ 1 ลังให้แล้ว' : ''));
   document.getElementById('sku-file-pick').classList.remove('show');
 }
@@ -930,7 +930,7 @@ function generateLabels() {
 
   const company = document.getElementById('f-company').value.trim();
   const pr      = document.getElementById('f-pr').value.trim();
-  const dateVal = document.getElementById('f-date').value;
+  const dateVal = isoDate(document.getElementById('f-date').value);
   const unit    = document.getElementById('f-unit').value.trim() || 'PCS';
 
   recalcAll();
@@ -1033,6 +1033,8 @@ function validateForm() {
   let ok = true;
   const prEl = document.getElementById('f-pr');
   if (!prEl.value.trim()) { prEl.classList.add('err'); ok = false; }
+  const dateEl = document.getElementById('f-date');
+  if (!isoDate(dateEl.value)) { dateEl.classList.add('err'); ok = false; }
 
   const rows = document.querySelectorAll('.sku-row');
   if (!rows.length) { alert('กรุณาเพิ่ม SKU อย่างน้อย 1 รายการ'); return false; }
@@ -1097,6 +1099,24 @@ function clamp(v,lo,hi)  { return Math.max(lo, Math.min(hi, v)); }
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
                   .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+/* The ship date box is plain text in day/month/year (a native date box shows month/day/year on an English browser). */
+function thDate(d) {
+  return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+}
+/* "27/10/2026", "27/10/26", "27-10-2026" or "2026-10-27" -> "2026-10-27"; '' when it is not a date. */
+function isoDate(text) {
+  const t = String(text || '').trim();
+  let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+  m = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);
+  if (!m) return '';
+  const day = +m[1], month = +m[2];
+  let year = +m[3];
+  if (year < 100) year += 2000;
+  if (year > 2400) year -= 543; // a Buddhist-era year typed by habit
+  if (month < 1 || month > 12 || day < 1 || day > 31) return '';
+  return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
 }
 function fmtDate(v) {
   if (!v) return '—';
