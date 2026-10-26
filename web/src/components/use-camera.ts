@@ -11,6 +11,10 @@ type SnapOptions = {
   maxSide?: number;
   /** Mild auto contrast and sharpening, for a cleaner product-shot look. */
   enhance?: boolean;
+  /** Crop a centred box with this width / height ratio (1 = the square viewfinder, 2 = the wide barcode strip). Overrides `square`. */
+  aspect?: number;
+  /** Digital zoom, 1 = none: keeps only the centre of the box, the same part the zoomed preview shows. */
+  zoom?: number;
 };
 
 /** Unsharp mask: adds back a little of the difference between the picture and a blurred copy. */
@@ -67,7 +71,12 @@ export function useCamera() {
     }
   }, []);
 
+  // Bumped by every stop()/start(): a getUserMedia that resolves after the hook was stopped
+  // (unmount) or restarted (camera switched quickly) sees a stale number and drops its stream.
+  const generation = useRef(0);
+
   const stop = useCallback(() => {
+    generation.current += 1;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
   }, []);
@@ -75,6 +84,7 @@ export function useCamera() {
   const start = useCallback(
     async (wantedDevice: string) => {
       stop();
+      const myGeneration = generation.current;
       setError("");
       if (!navigator.mediaDevices?.getUserMedia) {
         setError("เบราว์เซอร์นี้เปิดกล้องไม่ได้ (ต้องเปิดผ่าน https)");
@@ -85,6 +95,10 @@ export function useCamera() {
         if (wantedDevice) video.deviceId = { exact: wantedDevice };
         else video.facingMode = { ideal: "environment" };
         const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
+        if (myGeneration !== generation.current) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         streamRef.current = stream;
         if (videoEl.current) {
           videoEl.current.srcObject = stream;
@@ -136,7 +150,7 @@ export function useCamera() {
   }
 
   /** Takes a JPEG still, using the camera's own full-resolution photo mode when it has one. */
-  async function snap({ square = false, maxSide = 2400, enhance = true }: SnapOptions = {}): Promise<Blob | null> {
+  async function snap({ square = false, maxSide = 2400, enhance = true, aspect, zoom = 1 }: SnapOptions = {}): Promise<Blob | null> {
     const video = videoEl.current;
     if (!video || !video.videoWidth) return null;
     let source: CanvasImageSource = video;
@@ -168,11 +182,20 @@ export function useCamera() {
       }
     }
 
-    const cropSide = Math.min(width, height);
-    const sw = square ? cropSide : width;
-    const sh = square ? cropSide : height;
-    const sx = square ? (width - cropSide) / 2 : 0;
-    const sy = square ? (height - cropSide) / 2 : 0;
+    // the box the viewfinder shows (ratio), then its centre when zoomed in
+    const ratio = aspect ?? (square ? 1 : 0);
+    let sw = width;
+    let sh = height;
+    if (ratio > 0) {
+      if (width / height > ratio) sw = height * ratio;
+      else sh = width / ratio;
+    }
+    if (zoom > 1) {
+      sw /= zoom;
+      sh /= zoom;
+    }
+    const sx = (width - sw) / 2;
+    const sy = (height - sh) / 2;
     const scale = Math.min(1, maxSide / Math.max(sw, sh));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(sw * scale);
@@ -181,6 +204,7 @@ export function useCamera() {
     if (!ctx) return null;
     if (enhance) ctx.filter = "contrast(1.06) saturate(1.05) brightness(1.02)";
     ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    if (source instanceof ImageBitmap) source.close();
     ctx.filter = "none";
     if (enhance) sharpen(canvas, 0.6);
     return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
