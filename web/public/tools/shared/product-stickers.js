@@ -238,7 +238,31 @@
    // never cut the name: below the usual smallest size keep shrinking (to 70% of it, at least 3pt) until all of it fits
    if(!result){const floor=Math.max(3,min*.7);for(let size=min-.2;size>=floor-1e-9;size-=.2){const n=count(size);if(n*size*1.2*.3528<=avail){result={size,lines:n};break}}
     if(!result){const n=count(floor);result={size:floor,lines:n}}}
+   result.rows=balance(words,result.size,result.lines,maxPx,width);
    probe.remove();return result;
+  }
+  // Break the name into n lines of similar length instead of filling the first lines and leaving one word alone
+  // ("KEYCAP SET - ONE PIECE - / TH" -> "KEYCAP SET - / ONE PIECE - TH"). A lone dash stays with the word before it
+  // and a break right after a dash is preferred. Falls back to the plain greedy lines when nothing fits.
+  function balance(words,size,n,maxPx,width){
+   const toks=[];for(const w of words){if(/^[-\u2013\u2014\/|]$/.test(w)&&toks.length)toks[toks.length-1]+=' '+w;else toks.push(w)}
+   if(n<2||toks.length<2)return [words.join(' ')];
+   const m=toks.length,sp=width('a a',size)-width('aa',size),wd=toks.map(t=>width(t,size));
+   const span=(i,j)=>{let w=0;for(let k=i;k<j;k++)w+=wd[k]+(k>i?sp:0);return w};
+   const best=Array.from({length:n+1},()=>Array(m+1).fill(Infinity)),from=Array.from({length:n+1},()=>Array(m+1).fill(0));
+   best[0][0]=0;
+   for(let r=1;r<=n;r++)for(let j=r;j<=m;j++)for(let i=r-1;i<j;i++){
+    const w=span(i,j);if(w>maxPx||best[r-1][i]===Infinity)continue;
+    const slack=maxPx-w,last=r===n;
+    // the last line may be shorter; every other line should be close to full width... of the longest line
+    let cost=best[r-1][i]+(last?slack*slack*.5:slack*slack);
+    if(i>0&&/[-\u2013\u2014]$/.test(toks[i-1]))cost-=maxPx*maxPx*.14; // break after a dash reads naturally
+    if(j-i===1&&!last&&r>1)cost+=maxPx*maxPx*.05;
+    if(cost<best[r][j]){best[r][j]=cost;from[r][j]=i}
+   }
+   if(best[n][m]===Infinity)return [words.join(' ')];
+   const rows=[];let j=m;for(let r=n;r>=1;r--){const i=from[r][j];rows.unshift(toks.slice(i,j).join(' '));j=i}
+   return rows;
   }
   function labelFactory(it,p){
    const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:9.5,barH:8,digits:9.5}:{pad:1,line:6.2,detail:6,barH:4.2,digits:7};
@@ -264,7 +288,7 @@
    const gapAbove=Math.max(0,barTop-(F.pad+down+lineH+detailH)-.2),bcSpace=Math.max(0,(p.dieW-svgW)/2-margin);
    const txX=Math.max(-(p.dieW-effW)/2+margin,Math.min((p.dieW-effW)/2-margin,clampedTX));
    const bcX=Math.max(-bcSpace,Math.min(bcSpace,rawBX)),bcY=Math.max(-gapAbove,Math.min(1.3-margin,rawBY));
-   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${upMove}mm;padding:${F.pad+down}mm ${F.pad}mm 0"><div class="st-tx" data-ex="${txX}" data-ey="${txY}" style="transform:translate(${txX}mm,${txY}mm);flex:none;width:${effW}mm;margin:0 auto"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${d?`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor(Math.max(2.4,room)/(d.size*1.2*.3528)))};max-height:none">${esc(it.text)}</div>`:''}</div><div class="st-bc" data-ex="${bcX}" data-ey="${bcY}" style="transform:translate(${bcX}mm,${bcY}mm)">${barSvg}</div></div></div>`;
+   return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${upMove}mm;padding:${F.pad+down}mm ${F.pad}mm 0"><div class="st-tx" data-ex="${txX}" data-ey="${txY}" style="transform:translate(${txX}mm,${txY}mm);flex:none;width:${effW}mm;margin:0 auto"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${d?`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor(Math.max(2.4,room)/(d.size*1.2*.3528)))};max-height:none">${d&&d.rows&&d.rows.length>1?d.rows.map(r=>`<span style="display:block;white-space:nowrap">${esc(r)}</span>`).join(''):esc(it.text)}</div>`:''}</div><div class="st-bc" data-ex="${bcX}" data-ey="${bcY}" style="transform:translate(${bcX}mm,${bcY}mm)">${barSvg}</div></div></div>`;
   }
   function label(it,p){
    if(design==='factory')return labelFactory(it,p);
