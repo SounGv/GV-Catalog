@@ -213,9 +213,19 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
 .sku-bulk input:focus-visible, .sku-bulk button:focus-visible { outline: 3px solid #bf860e; outline-offset: 2px; }
 .sku-bulk-msg { min-height: 1.4em; margin-top: 6px; font-size: .78rem; color: #185c45; }
 .sku-bulk-msg.bad { color: #a3140b; }
+.qty-quick { margin-top: 12px; border-top: 1.5px solid #c9e3d8; padding-top: 10px; }
+.qty-quick h4 { font-size: .8rem; font-weight: 800; color: #123b2c; margin-bottom: 2px; }
+.qty-quick p { font-size: .72rem; color: #64748b; margin-bottom: 6px; }
+.qq-head, .qq-row { display: grid; grid-template-columns: minmax(0,1fr) 62px 56px 40px; gap: 4px; align-items: center; }
+.qq-head { font-size: .68rem; color: #64748b; font-weight: 700; padding: 0 2px 3px; }
+.qq-row { padding: 3px 0; border-top: 1px dashed #e5e7eb; }
+.qq-sku { font-family: ui-monospace, Consolas, monospace; font-size: .78rem; font-weight: 700; color: #185c45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qq-row input { width: 100%; min-width: 0; min-height: 40px; padding: 4px 6px; border: 1.5px solid #bdccc5; border-radius: 8px; font-size: .9rem; font-family: inherit; text-align: right; }
+.qq-row input:focus-visible { outline: 3px solid #bf860e; outline-offset: 1px; }
+.qq-out { font-size: .72rem; color: #185c45; font-weight: 700; text-align: right; white-space: nowrap; }
 #bulk-side { max-width: 680px; margin: 20px auto -12px; background: #fff; border-color: #c9e3d8; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
 @media (min-width: 1180px) {
-  #bulk-side { position: fixed; top: 143px; left: calc(50% + 356px); width: 280px; margin: 0; }
+  #bulk-side { position: fixed; top: 143px; left: calc(50% + 356px); width: 300px; margin: 0; max-height: calc(100vh - 160px); overflow-y: auto; }
 }
 </style>
 <style>@media print{a[href="/"]{display:none!important}}</style><link rel="stylesheet" href="../shared/gv-header.css"></head>
@@ -225,7 +235,8 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
 
 <aside id="bulk-side" class="sku-bulk" aria-label="สร้างช่องรุ่นสินค้าตามจำนวน">
   <label for="sku-paste">วางรุ่นสินค้า <span>วางทีละหลายรุ่น (บรรทัดละรุ่น หรือคั่นด้วยเว้นวรรค/จุลภาค) หรือรุ่นเดียวก็ได้ · คัดลอกมาจาก BigSeller ได้เลย แล้วกดสร้าง จากนั้นพนักงานกรอกจำนวนเอง</span></label>
-  <textarea id="sku-paste" rows="5" placeholder="20884&#10;11630&#10;25444&#10;FAN-KEY-K514-TH" spellcheck="false"></textarea>
+  <textarea id="sku-paste" rows="5" placeholder="20884&#10;11630   25&#10;25444   40   10&#10;FAN-KEY-K514-TH" spellcheck="false"></textarea>
+  <div style="font-size:.72rem;color:#64748b;margin:-4px 0 8px">ใส่จำนวนต่อท้ายรหัสได้: <b>รหัส  จำนวน  ลังละ</b> (คัดลอก 2–3 คอลัมน์จาก Excel ได้เลย)</div>
   <div class="sku-bulk-row" style="margin-bottom:12px">
     <button type="button" onclick="pasteSkuRows()">สร้างช่องจากรุ่นที่วาง</button>
   </div>
@@ -236,6 +247,7 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
     <button type="button" onclick="makeSkuRows()">สร้างช่องรุ่นสินค้า</button>
   </div>
   <div id="sku-bulk-msg" class="sku-bulk-msg" role="status"></div>
+  <div id="qty-quick" class="qty-quick" hidden></div>
 </aside>
 <div id="form-panel">
   <div class="form-header">
@@ -500,7 +512,7 @@ function addSku(noFocus) {
     <div class="field">
       <label>ชื่อ SKU / สินค้า</label>
       <input id="sn-${id}" type="text" placeholder="เช่น FAN-KEY-MK921-BK-BK-BR"
-             tabindex="${t}" oninput="clearErr(this)" onkeydown="nextOnEnter(event,'sq-${id}')">
+             tabindex="${t}" oninput="clearErr(this);refreshQuick()" onkeydown="nextOnEnter(event,'sq-${id}')">
       <div class="err-msg">กรุณากรอกชื่อ SKU</div>
     </div>
     <div class="g3">
@@ -577,29 +589,97 @@ function makeSkuRows() {
 function pasteSkuRows() {
   const msg = document.getElementById('sku-bulk-msg');
   const box = document.getElementById('sku-paste');
-  const seen = new Set(), codes = [];
-  box.value.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean).forEach(c => { const k = c.toUpperCase(); if (!seen.has(k)) { seen.add(k); codes.push(c); } });
-  if (!codes.length) { msg.className = 'sku-bulk-msg bad'; msg.textContent = 'วางรหัสรุ่นสินค้าก่อน'; return; }
+  const seen = new Set(), items = [];
+  const add = (code, qty, per) => { const k = code.toUpperCase(); if (!seen.has(k)) { seen.add(k); items.push({ code, qty, per }); } };
+  box.value.split(/\r?\n/).forEach(line => {
+    const parts = line.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
+    if (!parts.length) return;
+    // "code qty" or "code qty per-carton" (two or three columns from Excel); otherwise every word is a code
+    if (parts.length <= 3 && parts.length >= 2 && /^\d+$/.test(parts[1]) && (parts.length === 2 || /^\d+$/.test(parts[2]))) {
+      add(parts[0], parts[1], parts[2] || '');
+    } else {
+      parts.forEach(code => add(code, '', ''));
+    }
+  });
+  if (!items.length) { msg.className = 'sku-bulk-msg bad'; msg.textContent = 'วางรหัสรุ่นสินค้าก่อน'; return; }
   const have = new Set([...document.querySelectorAll('.sku-row')].map(r => document.getElementById('sn-' + r.dataset.uid).value.trim().toUpperCase()).filter(Boolean));
-  const fresh = codes.filter(c => !have.has(c.toUpperCase()));
-  const dup = codes.length - fresh.length;
+  const fresh = items.filter(it => !have.has(it.code.toUpperCase()));
+  const dup = items.length - fresh.length;
   if (document.querySelectorAll('.sku-row').length - [...document.querySelectorAll('.sku-row')].filter(skuRowIsEmpty).length + fresh.length > SKU_MAX) {
     msg.className = 'sku-bulk-msg bad'; msg.textContent = 'รวมแล้วเกิน ' + SKU_MAX + ' รุ่น แบ่งสร้างเป็นหลายรอบ'; return;
   }
   const ids = [];
-  fresh.forEach(code => {
+  let withQty = 0;
+  fresh.forEach(it => {
     let row = [...document.querySelectorAll('.sku-row')].find(r => skuRowIsEmpty(r));
     if (!row) { addSku(true); row = [...document.querySelectorAll('.sku-row')].pop(); }
-    document.getElementById('sn-' + row.dataset.uid).value = code;
-    ids.push(row.dataset.uid);
+    const id = row.dataset.uid;
+    document.getElementById('sn-' + id).value = it.code;
+    if (it.qty) { document.getElementById('sq-' + id).value = it.qty; withQty++; }
+    if (it.per) { const sp = document.getElementById('sp-' + id); sp.value = it.per; onSpInput(sp, id); }
+    else if (it.qty) onSqInput(id);
+    ids.push(id);
   });
   refreshBadges();
   recalcAll();
   box.value = '';
   msg.className = 'sku-bulk-msg';
-  msg.textContent = 'สร้าง ' + fresh.length + ' รุ่นแล้ว' + (dup ? ' · ข้าม ' + dup + ' รุ่นที่มีอยู่แล้ว' : '') + ' · กรอก QTY รวม และจำนวนลัง (หรือชิ้น/ลัง) ของแต่ละรุ่น';
-  if (ids.length) document.getElementById('sq-' + ids[0]).focus();
+  msg.textContent = 'สร้าง ' + fresh.length + ' รุ่นแล้ว' + (withQty ? ' (ใส่จำนวนให้ ' + withQty + ' รุ่น)' : '') + (dup ? ' · ข้าม ' + dup + ' รุ่นที่มีอยู่แล้ว' : '') + ' · กรอกจำนวนในตารางด้านล่างได้เลย';
+  const firstEmpty = document.querySelector('#qty-quick .qq-qty[value=""], #qty-quick .qq-qty:not([value])');
+  if (firstEmpty) firstEmpty.focus(); else if (ids.length) document.getElementById('sq-' + ids[0]).focus();
 }
+
+/* Quick quantity table in the side panel: every SKU row in one list, so staff type the totals without scrolling the
+   cards. It writes into the same boxes as the cards (QTY total, pieces per carton) and shows the carton count. */
+var quickKey = ''; // var: recalcAll() runs before this line on page load
+function refreshQuick() {
+  const box = document.getElementById('qty-quick');
+  if (!box) return;
+  const rows = [...document.querySelectorAll('.sku-row')].filter(r => document.getElementById('sn-' + r.dataset.uid).value.trim());
+  if (!rows.length) { box.hidden = true; box.innerHTML = ''; quickKey = ''; return; }
+  const key = rows.map(r => r.dataset.uid + ':' + document.getElementById('sn-' + r.dataset.uid).value.trim()).join('|');
+  if (key !== quickKey) {
+    quickKey = key;
+    box.innerHTML = '<h4>กรอกจำนวนแต่ละรุ่น</h4><p>ใส่จำนวนรวม (ชิ้น) และลังละกี่ชิ้น ระบบคิดจำนวนลังให้</p>'
+      + '<div class="qq-head"><span>รุ่น</span><span style="text-align:right">จำนวน</span><span style="text-align:right">ลังละ</span><span style="text-align:right">ลัง</span></div>'
+      + rows.map(r => {
+          const id = r.dataset.uid, code = esc(document.getElementById('sn-' + id).value.trim());
+          return '<div class="qq-row" data-id="' + id + '"><span class="qq-sku" title="' + code + '">' + code + '</span>'
+            + '<input class="qq-qty" type="number" min="1" inputmode="numeric" aria-label="จำนวน ' + code + '" placeholder="ชิ้น">'
+            + '<input class="qq-per" type="number" min="1" inputmode="numeric" aria-label="ลังละกี่ชิ้น ' + code + '" placeholder="ลังละ">'
+            + '<span class="qq-out"></span></div>';
+        }).join('');
+    box.hidden = false;
+  }
+  box.querySelectorAll('.qq-row').forEach(line => {
+    const id = line.dataset.id;
+    const q = line.querySelector('.qq-qty'), p = line.querySelector('.qq-per');
+    if (document.activeElement !== q) q.value = document.getElementById('sq-' + id).value;
+    if (document.activeElement !== p) p.value = document.getElementById('sp-' + id).value;
+    const c = parseIntSafe(document.getElementById('sc-' + id).value);
+    line.querySelector('.qq-out').textContent = c > 0 ? c + ' ลัง' : '';
+  });
+}
+
+document.getElementById('qty-quick').addEventListener('input', e => {
+  const line = e.target.closest('.qq-row');
+  if (!line) return;
+  const id = line.dataset.id;
+  if (e.target.classList.contains('qq-qty')) {
+    const sq = document.getElementById('sq-' + id);
+    sq.value = e.target.value; clearErr(sq); onSqInput(id);
+  } else if (e.target.classList.contains('qq-per')) {
+    const sp = document.getElementById('sp-' + id);
+    sp.value = e.target.value; clearErr(sp); onSpInput(sp, id);
+  }
+});
+document.getElementById('qty-quick').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.matches('.qq-row input')) return;
+  e.preventDefault();
+  const all = [...document.querySelectorAll('#qty-quick .qq-row input')];
+  const next = all[all.indexOf(e.target) + 1];
+  if (next) next.focus();
+});
 
 function delSku(rowId) {
   const el = document.getElementById(rowId);
@@ -645,6 +725,7 @@ function recalcAll() {
     row.dataset.grandTotal = grandTotal;
   });
 
+  refreshQuick();
   const bar = document.getElementById('summary-bar');
   const n   = document.querySelectorAll('.sku-row').length;
   if (grandTotal > 0) {
