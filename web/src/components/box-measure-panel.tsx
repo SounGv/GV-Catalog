@@ -9,6 +9,7 @@ import {
 import { calibrateCamera, distanceCm, solveBoxSize, type BoxDetection } from "@/lib/box-measure";
 import { useBoxLock } from "@/components/use-box-lock";
 import { useDeviceLevel } from "@/components/use-device-level";
+import { readScale, writeScale } from "@/lib/camera-scale";
 import type { useCamera } from "@/components/use-camera";
 
 type Camera = Omit<ReturnType<typeof useCamera>, "attachVideo">;
@@ -19,25 +20,6 @@ type Saved = { lengthCm: number | null; widthCm: number | null; heightCm: number
 type FlatShot = { detection: BoxDetection; frame: { w: number; h: number }; still: Blob | null };
 
 const LEVEL_OK_DEG = 3;
-const scaleKey = (deviceId: string) => `gv-camera-scale:${deviceId || "default"}`;
-
-function readScale(deviceId: string): number {
-  try {
-    return Number(localStorage.getItem(scaleKey(deviceId))) || 0;
-  } catch {
-    return 0;
-  }
-}
-
-function writeScale(deviceId: string, value: number) {
-  try {
-    if (value) localStorage.setItem(scaleKey(deviceId), String(value));
-    else localStorage.removeItem(scaleKey(deviceId));
-  } catch {
-    // calibration is then asked for again next time
-  }
-}
-
 const cm = (v: number | null | undefined) => (v === null || v === undefined ? "–" : v.toFixed(1));
 
 /** Draws the measured size onto the flat photo: outline, side lengths and the full size underneath. */
@@ -149,12 +131,16 @@ export function BoxMeasurePanel({
     if (!detection || !lock.frameSize || capturing.current || (!force && !levelOk)) return;
     if (step === "flat") {
       capturing.current = true;
-      const still = await snapRef.current({ square: false, maxSide: 1600, enhance: true });
-      setFlat({ detection, frame: lock.frameSize, still });
-      navigator.vibrate?.(80);
-      lock.reset();
-      setStep("side");
-      capturing.current = false;
+      try {
+        const still = await snapRef.current({ square: false, maxSide: 1600, enhance: true });
+        setFlat({ detection, frame: lock.frameSize, still });
+        navigator.vibrate?.(80);
+        lock.reset();
+        setStep("side");
+      } finally {
+        // A failed snap must not leave the flag set, or auto-capture would never fire again until a reload.
+        capturing.current = false;
+      }
     } else if (step === "side" && flat) {
       const same =
         Math.abs(detection.longCm - flat.detection.longCm) < 0.6 && Math.abs(detection.shortCm - flat.detection.shortCm) < 0.6;
@@ -235,6 +221,7 @@ export function BoxMeasurePanel({
     setSide(null);
     setNotFlipped(false);
     setMessage(null);
+    if (preview) URL.revokeObjectURL(preview.url);
     setPreview(null);
     lock.reset();
     setStep("flat");
@@ -291,30 +278,25 @@ export function BoxMeasurePanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-1" aria-label={`ขั้นที่ ${stepIndex + 1} จาก 3`}>
-        {[0, 1, 2].map((i) => (
-          <span key={i} className={`h-1.5 flex-1 rounded-full ${i < stepIndex ? "bg-[#cdeb03]" : i === stepIndex ? "bg-accent" : "bg-line"}`} />
-        ))}
-      </div>
-
       {aiming ? (
         <>
           <div>
-            <p className="text-xl font-bold text-ink">{step === "flat" ? "วางกล่องนอนราบกลางแผ่นรอง" : "พลิกกล่องตั้งข้าง"}</p>
-            <p className="text-sm text-muted">
-              {step === "flat"
-                ? "ไม่ต้องกดปุ่ม พอครบทุกข้อด้านล่าง ระบบถ่ายและวัดให้เอง"
-                : "ให้ด้านบางลงพื้น อยู่กลางแผ่นรองเหมือนเดิม ระบบถ่ายให้เองอีกครั้ง"}
+            <p className="text-xs font-bold text-accent">ขั้น {stepIndex + 1}/3</p>
+            <p className="text-base leading-snug font-bold text-ink">
+              {step === "flat" ? "วางกล่องนอนราบกลางแผ่นรองสีฟ้า" : "พลิกกล่องตั้งข้าง (ด้านบางลงพื้น)"}
+            </p>
+            <p className="text-xs text-muted">
+              {step === "flat" ? "ไม่ต้องกดปุ่ม ครบเงื่อนไขแล้วระบบถ่ายให้เอง" : "วางกลางแผ่นรองเหมือนเดิม ระบบถ่ายให้เองอีกครั้ง"}
             </p>
           </div>
 
           {level.needsPermission ? (
-            <button type="button" onClick={level.requestPermission} className="min-h-11 rounded-[10px] border border-line bg-surface text-base">
+            <button type="button" onClick={level.requestPermission} className="min-h-11 rounded-[10px] border border-line bg-surface text-sm">
               เปิดตัววัดระดับมือถือ
             </button>
           ) : null}
 
-          <div className="relative mx-auto w-full max-w-[720px] overflow-hidden rounded-xl bg-black" style={{ aspectRatio: String(aspect) }}>
+          <div className="relative mx-auto w-full max-w-[720px] overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: String(aspect) }}>
             <video ref={attachVideo} playsInline muted className="h-full w-full object-contain" />
             {corners && lock.frameSize ? (
               <svg viewBox={`0 0 ${lock.frameSize.w} ${lock.frameSize.h}`} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full">
@@ -327,11 +309,11 @@ export function BoxMeasurePanel({
                 />
               </svg>
             ) : null}
-            <span className={`absolute top-2 left-2 rounded-full px-3 py-1 text-sm font-semibold ${lock.locked ? "bg-[#cdeb03] text-ink" : "bg-black/60 text-white"}`}>
+            <span className={`absolute top-2.5 left-2.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${lock.locked ? "bg-[#cdeb03] text-ink" : "bg-black/60 text-white"}`}>
               {lock.locked ? (levelOk ? "● ล็อกแล้ว · กำลังถ่าย" : "● ล็อกแล้ว · ถือให้ตรง") : lock.detection ? "กำลังล็อกขอบ…" : "กำลังหากล่อง…"}
             </span>
             {level.supported ? (
-              <span className="absolute top-2 right-2 block h-11 w-11 rounded-full border-2 border-white bg-black/30" aria-label="วัดระดับ">
+              <span className="absolute top-2 right-2 block h-10 w-10 rounded-full border-2 border-white bg-black/30" aria-label="วัดระดับ">
                 <span
                   className={`absolute top-1/2 left-1/2 block h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full ${levelOk ? "bg-[#cdeb03]" : "bg-amber-400"}`}
                   style={{ marginLeft: dot(level.x), marginTop: dot(level.y) }}
@@ -339,37 +321,38 @@ export function BoxMeasurePanel({
               </span>
             ) : null}
             {lock.failure ? (
-              <p className="absolute inset-x-2 bottom-2 rounded-[10px] bg-amber-300/95 p-3 text-center text-lg font-semibold text-ink">
-                {lock.failure}
-              </p>
+              <p className="absolute inset-x-2 bottom-2 rounded-[10px] bg-amber-300/95 p-2 text-center text-sm font-semibold text-ink">{lock.failure}</p>
             ) : null}
             {lock.detection ? (
-              <span className="absolute right-2 bottom-2 rounded-lg bg-black/70 px-3 py-1.5 font-mono text-lg text-white tabular-nums">
+              <span className="absolute right-2 bottom-2 rounded-lg bg-black/70 px-2.5 py-1 font-mono text-sm text-white tabular-nums">
                 {cm(lock.detection.longCm)} × {cm(lock.detection.shortCm)} cm
               </span>
             ) : null}
           </div>
 
           {notFlipped ? (
-            <p className="rounded-[10px] bg-red-50 p-3 text-base text-red-700">ยังไม่ได้พลิกกล่อง — ขนาดเหมือนรูปแรก ให้พลิกกล่องตั้งข้างก่อน</p>
+            <p className="rounded-[10px] bg-red-50 p-2.5 text-sm text-red-700">ยังไม่ได้พลิกกล่อง ขนาดเหมือนรูปแรก ให้พลิกกล่องตั้งข้างก่อน</p>
           ) : null}
 
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-wrap gap-1.5">
             {checks.map((check) => (
-              <li key={check.text} className="flex items-center gap-2 text-base">
-                <span className={check.ok ? "font-bold text-green-700" : "font-bold text-amber-600"}>{check.ok ? "✓" : "●"}</span>
+              <li
+                key={check.text}
+                className={`rounded-full border px-2.5 py-0.5 text-xs ${check.ok ? "border-green-200 bg-green-50 font-semibold text-green-800" : "border-line bg-surface text-muted"}`}
+              >
+                <span className={check.ok ? "" : "text-amber-600"}>{check.ok ? "✓ " : "● "}</span>
                 {check.text}
               </li>
             ))}
           </ul>
 
           {lock.locked && !levelOk ? (
-            <button type="button" onClick={() => void takeShot(true)} className="min-h-11 rounded-[10px] border border-line bg-surface text-base">
+            <button type="button" onClick={() => void takeShot(true)} className="min-h-11 rounded-[10px] border border-line bg-surface text-sm font-semibold">
               ถ่ายเลย (ไม่รอวัดระดับ)
             </button>
           ) : null}
           {step === "side" ? (
-            <button type="button" onClick={restart} className="text-sm text-muted underline">
+            <button type="button" onClick={restart} className="min-h-11 text-sm text-muted underline">
               เริ่มใหม่จากรูปแรก
             </button>
           ) : null}
@@ -377,50 +360,64 @@ export function BoxMeasurePanel({
       ) : null}
 
       {step === "calibrate" ? (
-        <section className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3">
-          <h3 className="text-lg font-bold">ปรับเทียบกล้องครั้งแรก</h3>
-          <p className="text-base text-muted">
-            ทำครั้งเดียวต่อมือถือ 1 เครื่อง: วัดกล่องใบนี้ด้วยตลับเมตร แล้วใส่ 2 ค่า ระบบจะรู้ระยะกล้องของเครื่องนี้ ครั้งต่อไปวัดอัตโนมัติทั้งหมด
-          </p>
+        <section className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-3.5">
+          <div>
+            <p className="text-xs font-bold text-accent">ขั้น 3/3</p>
+            <h3 className="text-base leading-snug font-bold">ครั้งแรกของเครื่องนี้: ใส่ขนาดที่วัดด้วยตลับเมตร</h3>
+            <p className="text-xs text-muted">ทำครั้งเดียว ครั้งต่อไประบบวัดให้เองทั้งหมด</p>
+          </div>
+          <BoxSidesPicture />
+          {saved?.lengthCm && saved.heightCm ? (
+            <button
+              type="button"
+              onClick={() => {
+                setTapeLength(String(saved.lengthCm));
+                setTapeHeight(String(saved.heightCm));
+              }}
+              className="min-h-11 self-start rounded-[10px] border-[1.5px] border-dashed border-accent bg-accent-soft px-3 text-sm font-semibold text-accent"
+            >
+              ใช้ขนาดเดิมในระบบ ({cm(saved.lengthCm)} × {cm(saved.heightCm)})
+            </button>
+          ) : null}
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex flex-col gap-1 text-sm text-muted">
-              ยาว (ด้านที่ยาวที่สุด) cm
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              ยาว (cm)
               <input
                 type="number"
                 inputMode="decimal"
                 step={0.1}
                 value={tapeLength}
                 onChange={(event) => setTapeLength(event.target.value)}
-                className="min-h-12 rounded-[10px] border border-line px-3 text-lg text-ink"
+                className="min-h-12 w-full min-w-0 rounded-[10px] border border-line px-3 text-right text-base text-ink tabular-nums"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm text-muted">
-              สูง (ด้านที่บางที่สุด) cm
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              สูง (cm)
               <input
                 type="number"
                 inputMode="decimal"
                 step={0.1}
                 value={tapeHeight}
                 onChange={(event) => setTapeHeight(event.target.value)}
-                className="min-h-12 rounded-[10px] border border-line px-3 text-lg text-ink"
+                className="min-h-12 w-full min-w-0 rounded-[10px] border border-line px-3 text-right text-base text-ink tabular-nums"
               />
             </label>
           </div>
-          {calibrationError ? <p className="text-base text-red-700">{calibrationError}</p> : null}
+          {calibrationError ? <p className="text-sm text-red-700">{calibrationError}</p> : null}
           <button
             type="button"
             onClick={calibrate}
             disabled={!Number(tapeLength) || !Number(tapeHeight)}
-            className="min-h-12 rounded-[10px] bg-accent text-base font-semibold text-white disabled:opacity-50"
+            className="min-h-12 rounded-xl bg-accent text-[15px] font-bold text-white disabled:opacity-50"
           >
-            ปรับเทียบและคำนวณขนาด
+            คำนวณขนาด
           </button>
         </section>
       ) : null}
 
       {step === "done" && shown && raw ? (
-        <section className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3">
-          <h3 className="text-lg font-bold">ขนาดกล่อง {sku}</h3>
+        <section className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-3.5">
+          <h3 className="text-base font-bold">ขนาดกล่อง {sku}</h3>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {preview ? <img src={preview.url} alt="รูปบอกขนาดกล่อง" className="w-full rounded-[10px]" /> : null}
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -432,47 +429,60 @@ export function BoxMeasurePanel({
               ] as const
             ).map(([text, value, before]) => (
               <div key={text} className="rounded-[10px] bg-bg p-2">
-                <p className="font-mono text-2xl font-bold text-ink tabular-nums">{roundUp ? value.toFixed(0) : cm(value)}</p>
-                <p className="text-sm text-muted">{text} (cm)</p>
+                <p className="font-mono text-xl font-bold text-ink tabular-nums">{roundUp ? value.toFixed(0) : cm(value)}</p>
+                <p className="text-xs text-muted">{text} (cm)</p>
                 <p className="text-xs text-muted">เดิม {cm(before)}</p>
               </div>
             ))}
           </div>
           {raw.mismatchCm > 0.5 ? (
-            <p className="rounded-[10px] bg-amber-50 p-3 text-sm text-amber-800">
-              2 รูปให้ค่าไม่ตรงกัน {raw.mismatchCm.toFixed(1)} cm — ถือกล้องให้ตรงแล้ววัดใหม่ หรือปรับเทียบกล้องใหม่
+            <p className="rounded-[10px] bg-amber-50 p-2.5 text-xs text-amber-800">
+              2 รูปให้ค่าไม่ตรงกัน {raw.mismatchCm.toFixed(1)} cm ถือกล้องให้ตรงแล้ววัดใหม่ หรือปรับเทียบกล้องใหม่
             </p>
           ) : null}
-          <label className="flex min-h-12 items-center justify-between gap-3 rounded-[10px] border border-line px-3 text-base">
+          <label className="flex min-h-11 items-center justify-between gap-3 text-sm">
             ปัดขึ้นเป็น cm เต็ม (ใช้กับขนส่ง)
-            <input type="checkbox" checked={roundUp} onChange={(event) => setRoundUp(event.target.checked)} className="h-6 w-6" />
+            <input type="checkbox" checked={roundUp} onChange={(event) => setRoundUp(event.target.checked)} className="h-5 w-5 accent-[#185c45]" />
           </label>
-          <button
-            type="button"
-            onClick={() => void save()}
-            disabled={busy}
-            className="min-h-12 rounded-[10px] bg-accent text-base font-semibold text-white disabled:opacity-50"
-          >
+          <button type="button" onClick={() => void save()} disabled={busy} className="min-h-12 rounded-xl bg-accent text-[15px] font-bold text-white disabled:opacity-50">
             {busy ? "กำลังบันทึก…" : "บันทึกขนาด + รูปบอกขนาด"}
           </button>
-          <div className="flex gap-3">
-            <button type="button" onClick={restart} disabled={busy} className="min-h-11 flex-1 rounded-[10px] border border-line text-base">
-              วัดใหม่
-            </button>
-            <button type="button" onClick={recalibrate} disabled={busy} className="min-h-11 flex-1 rounded-[10px] border border-line text-base">
+          <button type="button" onClick={restart} disabled={busy} className="min-h-11 rounded-xl border border-line text-sm font-semibold">
+            วัดใหม่
+          </button>
+          <p className="text-center text-xs text-muted">
+            คลาดเคลื่อนได้ราว 2–3 mm เมื่อถือกล้องตรง ·{" "}
+            <button type="button" onClick={recalibrate} disabled={busy} className="min-h-8 underline">
               ปรับเทียบกล้องใหม่
             </button>
-          </div>
-          <p className="text-xs text-muted">ค่าจากรูปคลาดเคลื่อนได้ราว 2 ถึง 3 mm เมื่อถือกล้องตรง</p>
+          </p>
         </section>
       ) : null}
 
       {message ? (
-        <p role="status" className={`rounded-[10px] p-3 text-base ${message.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`}>
+        <p role="status" className={`rounded-[10px] px-3 py-2 text-sm font-semibold ${message.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`}>
           {message.ok ? "✓ " : ""}
           {message.text}
         </p>
       ) : null}
     </div>
+  );
+}
+
+/** Which two sides to measure with the tape: the longest side and the thinnest one (the height when lying flat). */
+export function BoxSidesPicture() {
+  return (
+    <svg viewBox="0 0 260 132" role="img" aria-label="กล่อง: ยาว คือด้านยาวที่สุด สูง คือด้านที่บางที่สุด" className="mx-auto w-full max-w-[260px]">
+      <g fill="none" stroke="#18232b" strokeWidth="2">
+        <path d="M30 48h140l30-22H60z" fill="#f1dcc0" />
+        <path d="M30 48v52h140V48" fill="#e8c9a0" />
+        <path d="M170 48l30-22v52l-30 22" fill="#d9b88a" />
+      </g>
+      <g stroke="#185c45" strokeWidth="2.5" fill="none">
+        <path d="M30 112h140M30 108v8M170 108v8M212 26v52M208 26h8M208 78h8" />
+      </g>
+      <text x="100" y="129" textAnchor="middle" fontSize="12" fill="#185c45" fontWeight="700">ยาว (ด้านยาวสุด)</text>
+      <text x="236" y="56" textAnchor="middle" fontSize="12" fill="#185c45" fontWeight="700">สูง</text>
+    </svg>
   );
 }
