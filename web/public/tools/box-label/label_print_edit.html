@@ -51,6 +51,7 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
 .sku-row.has-error { border-color: #fca5a5; background: #fff5f5; }
 .sku-row-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .sku-badge { font-size: .73rem; font-weight: 800; color: #185c45; background: #e8f2ed; padding: 2px 11px; border-radius: 99px; }
+.ctn-split { font-size: .78rem; color: #185c45; font-weight: 700; margin: -2px 0 8px; min-height: 1em; }
 .ctn-range-badge { font-size: .7rem; font-weight: 700; color: #065f46; background: #d1fae5; padding: 2px 9px; border-radius: 99px; display: none; }
 .ctn-range-badge.visible { display: inline; }
 .btn-del { background: none; border: none; cursor: pointer; color: #ef4444; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: .95rem; }
@@ -506,24 +507,25 @@ function addSku(noFocus) {
       <div class="field">
         <label>QTY รวม (ชิ้น)</label>
         <input id="sq-${id}" type="number" min="1" placeholder="100"
-               tabindex="${t+1}" oninput="recalcQtyPerCtn(${id});clearErr(this)"
-               onkeydown="nextOnEnter(event,'sc-${id}')">
+               tabindex="${t+1}" oninput="onSqInput(${id});clearErr(this)"
+               onkeydown="nextOnEnter(event,'sp-${id}')">
         <div class="err-msg">กรุณากรอก QTY</div>
       </div>
       <div class="field">
-        <label>จำนวนลัง (CTN)</label>
-        <input id="sc-${id}" type="number" min="1" placeholder="10"
-               tabindex="${t+2}" oninput="recalcQtyPerCtn(${id});recalcAll();clearErr(this)"
-               onkeydown="nextOnEnter(event,'sp-${id}')">
-        <div class="err-msg">กรุณากรอกจำนวนลัง</div>
+        <label>ลังละกี่ชิ้น</label>
+        <input id="sp-${id}" type="number" min="1" placeholder="เช่น 10"
+               tabindex="${t+2}" oninput="onSpInput(this,${id});clearErr(this)"
+               onkeydown="nextOnEnter(event,'sc-${id}')">
       </div>
       <div class="field">
-        <label>ชิ้น / ลัง <span style="font-weight:400;color:#9ca3af">(แก้ไขได้ เช่น ลังเศษ)</span></label>
-        <input id="sp-${id}" type="number" min="1" placeholder="อัตโนมัติ"
-               tabindex="${t+3}" oninput="onSpInput(this,${id});clearErr(this)"
+        <label>จำนวนลัง (CTN) <span style="font-weight:400;color:#9ca3af">(ระบบคำนวณให้)</span></label>
+        <input id="sc-${id}" type="number" min="1" placeholder="อัตโนมัติ"
+               tabindex="${t+3}" oninput="onScInput(${id});clearErr(this)"
                onkeydown="nextOnEnter(event,'sf-${id}')">
+        <div class="err-msg">กรุณากรอกลังละกี่ชิ้น หรือจำนวนลัง</div>
       </div>
     </div>
+    <div class="ctn-split" id="sh-${id}"></div>
     <div class="divider-label">ช่วงที่จะปริ้น (CTN No.)</div>
     <div class="g2">
       <div class="field">
@@ -653,15 +655,58 @@ function recalcAll() {
 
 function recalcQtyPerCtn(id) {
   const row = document.getElementById('sr-' + id);
-  if (row && row.dataset.spManual === '1') return;   /* user typed a custom value — don't overwrite it */
+  if (row && row.dataset.spManual === '1') return;   /* user typed pieces per carton — don't overwrite it */
   const qt = parseIntSafe(document.getElementById('sq-' + id).value);
   const ct = parseIntSafe(document.getElementById('sc-' + id).value);
   document.getElementById('sp-' + id).value = (qt > 0 && ct > 0) ? Math.ceil(qt / ct) : '';
 }
 
+/* Quantity of every carton, first to last. Full cartons hold `per`; the last one holds what is left
+   (25 pieces, 10 per carton -> 10, 10, 5). If the typed numbers do not fit that way (e.g. carton count typed by hand),
+   the pieces are spread evenly. null while something is missing. */
+function cartonQtys(qt, per, ct) {
+  if (!(qt > 0 && per > 0 && ct > 0) || ct > qt) return null;
+  const last = qt - per * (ct - 1);
+  if (last >= 1 && last <= per) return [...Array(ct - 1).fill(per), last];
+  const base = Math.floor(qt / ct), extra = qt % ct;
+  return Array.from({ length: ct }, (_, i) => base + (i < extra ? 1 : 0));
+}
+
+function showSplit(id) {
+  const el = document.getElementById('sh-' + id);
+  if (!el) return;
+  const q = cartonQtys(parseIntSafe(document.getElementById('sq-' + id).value),
+                       parseIntSafe(document.getElementById('sp-' + id).value),
+                       parseIntSafe(document.getElementById('sc-' + id).value));
+  el.textContent = q ? 'แบ่งเป็น ' + q.length + ' ลัง: ' + (q.length > 8 ? q.slice(0, 5).join(' · ') + ' · … · ' + q[q.length - 1] : q.join(' · ')) + ' ชิ้น' : '';
+}
+
+/* typed pieces per carton -> carton count follows (rounded up, the last carton takes the rest) */
+function deriveCtnCount(id) {
+  const qt  = parseIntSafe(document.getElementById('sq-' + id).value);
+  const per = parseIntSafe(document.getElementById('sp-' + id).value);
+  document.getElementById('sc-' + id).value = (qt > 0 && per > 0) ? Math.ceil(qt / per) : '';
+}
+
+function onSqInput(id) {
+  const row = document.getElementById('sr-' + id);
+  if (row && row.dataset.spManual === '1') deriveCtnCount(id); else recalcQtyPerCtn(id);
+  recalcAll(); showSplit(id);
+}
+
 function onSpInput(el, id) {
   const row = document.getElementById('sr-' + id);
   if (row) row.dataset.spManual = el.value.trim() ? '1' : '0';
+  if (el.value.trim()) deriveCtnCount(id); else recalcQtyPerCtn(id);
+  recalcAll(); showSplit(id);
+}
+
+/* the carton count typed by hand wins over an earlier "pieces per carton" and splits the total evenly */
+function onScInput(id) {
+  const row = document.getElementById('sr-' + id);
+  if (row) row.dataset.spManual = '0';
+  recalcQtyPerCtn(id);
+  recalcAll(); showSplit(id);
 }
 
 
@@ -700,10 +745,8 @@ function generateLabels() {
 
     for (let ctnNo = pf; ctnNo <= pt; ctnNo++) {
       let qty = qtyPerCtn || '—';
-      if (qtyTotal > 0 && qtyPerCtn > 0 && ctnCount > 0) {
-        const pos = ctnNo - ctnStart + 1;
-        qty = (pos === ctnCount) ? qtyTotal - qtyPerCtn * (ctnCount - 1) : qtyPerCtn;
-      }
+      const split = cartonQtys(qtyTotal, qtyPerCtn, ctnCount);
+      if (split) qty = split[ctnNo - ctnStart];
       grid.appendChild(buildCard({ company, pr, dateVal, unit, skuName, qty, ctnNo, grandTotal }));
       totalCards++;
     }
