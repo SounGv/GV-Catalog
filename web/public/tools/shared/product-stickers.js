@@ -262,7 +262,8 @@
    }
    if(best[n][m]===Infinity)return [words.join(' ')];
    const rows=[];let j=m;for(let r=n;r>=1;r--){const i=from[r][j];rows.unshift(toks.slice(i,j).join(' '));j=i}
-   return rows;
+   // a separator dash left at the end of a line adds nothing: "KEYCAP SET -" / "ONE PIECE - TH" -> "KEYCAP SET" / "ONE PIECE - TH"
+   return rows.map((row,k)=>k<rows.length-1?row.replace(/\s+[-–—]$/,''):row);
   }
   function labelFactory(it,p){
    const big=p.dieW>40,F=big?{pad:2.2,line:9,detail:9.5,barH:8,digits:9.5}:{pad:1,line:6.2,detail:6,barH:4.2,digits:7};
