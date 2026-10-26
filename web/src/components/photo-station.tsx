@@ -9,10 +9,6 @@ import {
 } from "@/app/admin/products/photos-actions";
 import { PACKAGE_ANGLES, UNIT_ANGLE, type PhotoAngle } from "@/lib/photo-angles";
 import { useCamera } from "@/components/use-camera";
-import { BoxMeasurePanel } from "@/components/box-measure-panel";
-import { useBoxLock } from "@/components/use-box-lock";
-import { calibrateCamera, distanceCm, solveBoxSize, type BoxDetection } from "@/lib/box-measure";
-import { readScale, writeScale } from "@/lib/camera-scale";
 
 const ANGLES: { id: PhotoAngle; label: string }[] = [...PACKAGE_ANGLES, UNIT_ANGLE].map((angle) => ({
   id: angle.id,
@@ -21,10 +17,13 @@ const ANGLES: { id: PhotoAngle; label: string }[] = [...PACKAGE_ANGLES, UNIT_ANG
 
 type FoundProduct = { sku: string; name: string; brand: string; gtin: string | null };
 type Saved = Partial<Record<PhotoAngle, string>>;
-type BoxSize = Awaited<ReturnType<typeof getProductBoxSizeAction>>;
+type SizeField = "lengthCm" | "widthCm" | "heightCm";
 
-/** Photos of a whole box face, shot on the blue mat, that can be measured (not the barcode, label or unit photos). */
-const SIZE_ANGLES = new Set<PhotoAngle>(["front", "back", "top", "bottom"]);
+const SIZE_FIELDS: { id: SizeField; label: string }[] = [
+  { id: "lengthCm", label: "ยาว" },
+  { id: "widthCm", label: "กว้าง" },
+  { id: "heightCm", label: "สูง" },
+];
 
 function nextMissing(saved: Saved, after?: PhotoAngle): PhotoAngle {
   const start = after ? ANGLES.findIndex((angle) => angle.id === after) + 1 : 0;
@@ -32,7 +31,7 @@ function nextMissing(saved: Saved, after?: PhotoAngle): PhotoAngle {
   return (order.find((angle) => !saved[angle.id]) ?? ANGLES[0]).id;
 }
 
-/** Pick a model, take a photo, choose the angle and save: the photo goes straight into that model. */
+/** Pick a model, take a photo, choose the angle and save: the photo goes straight into that model. The box size is typed in. */
 export function PhotoStation({ initialSku }: { initialSku: string }) {
   const { attachVideo, ...camera } = useCamera();
   const [mode, setMode] = useState<"photo" | "measure">("photo");
@@ -46,40 +45,32 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
   const [still, setStill] = useState<{ blob: Blob; url: string } | null>(null);
   const [zoom, setZoom] = useState(1); // digital zoom for the barcode close-up
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Box size from the package photos: each saved photo of a box face keeps the reading taken on the blue mat.
-  const [faces, setFaces] = useState<Partial<Record<PhotoAngle, BoxDetection>>>({});
-  const [shotReading, setShotReading] = useState<BoxDetection | null>(null);
-  const [scale, setScale] = useState(0);
-  const [savedSize, setSavedSize] = useState<BoxSize | null>(null);
-  const [calLength, setCalLength] = useState("");
-  const [calHeight, setCalHeight] = useState("");
-  const [sizeNote, setSizeNote] = useState<{ ok: boolean; text: string } | null>(null);
-  const [sizeBusy, setSizeBusy] = useState(false);
-  // Live edge lock in the photo view too: outline the box and show its size while aiming.
-  const lock = useBoxLock(camera.frame, mode === "photo" && !still);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  // Box size typed by staff (cm), filled with what the Catalog already has.
+  const [size, setSize] = useState<Record<SizeField, string>>({ lengthCm: "", widthCm: "", heightCm: "" });
+  const [sizeBusy, setSizeBusy] = useState(false);
+  const [sizeNote, setSizeNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const loadSize = useCallback(async (sku: string) => {
+    const saved = await getProductBoxSizeAction(sku);
+    const text = (v: number | null) => (v === null ? "" : String(v));
+    setSize({ lengthCm: text(saved.lengthCm), widthCm: text(saved.widthCm), heightCm: text(saved.heightCm) });
+  }, [setSize]);
 
   const loadProduct = useCallback(async (picked: FoundProduct) => {
     setProduct(picked);
     setFound([]);
     setQuery("");
     setMessage(null);
+    setSizeNote(null);
     const state = await listProductPhotosAction(picked.sku);
     setPhotos(state.photos);
     setLots(state.lots);
     setAngle(nextMissing(state.photos));
     setLot(Object.values(state.lots)[0] ?? "");
-    setFaces({});
-    setSizeNote(null);
-    setSavedSize(await getProductBoxSizeAction(picked.sku));
-  }, [setProduct, setFound, setQuery, setMessage, setPhotos, setLots, setAngle, setLot, setFaces, setSizeNote, setSavedSize]);
-
-  // The calibration belongs to the camera in use (the measuring tab can change it too).
-  useEffect(() => {
-    const timer = setTimeout(() => setScale(readScale(camera.deviceId)), 0);
-    return () => clearTimeout(timer);
-  }, [camera.deviceId, mode]);
+    await loadSize(picked.sku);
+  }, [setProduct, setFound, setQuery, setMessage, setSizeNote, setPhotos, setLots, setAngle, setLot, loadSize]);
 
   // ?sku= opens that model straight away.
   useEffect(() => {
@@ -114,7 +105,6 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
     const blob = await camera.snap(angle === "barcode" ? { aspect: 2, zoom, maxSide: 2400, enhance: true } : { square: true, maxSide: 2400, enhance: true });
     if (blob) {
       setMessage(null);
-      setShotReading(SIZE_ANGLES.has(angle) && lock.detection ? lock.detection : null);
       setStill({ blob, url: URL.createObjectURL(blob) });
     }
   }
@@ -139,11 +129,6 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
       const label = ANGLES.find((item) => item.id === angle)?.label ?? angle;
       setMessage({ ok: true, text: `บันทึกรูป ${label} ของ ${product.sku} แล้ว` });
       setStill(null);
-      if (shotReading) {
-        setFaces((previous) => ({ ...previous, [angle]: shotReading }));
-        setSizeNote(null);
-      }
-      setShotReading(null);
       setAngle(nextMissing(state.photos, angle));
       setZoom(1);
     } catch (error) {
@@ -153,55 +138,23 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
     }
   }
 
-  // Two saved faces of different size: the bigger one is the box lying flat, the other one is a side.
-  const faceList = Object.values(faces).filter((face): face is BoxDetection => Boolean(face));
-  const firstFace = faceList[0] ?? null;
-  let sizePair: { flat: BoxDetection; side: BoxDetection } | null = null;
-  for (let i = 0; i < faceList.length && !sizePair; i++) {
-    for (let j = i + 1; j < faceList.length && !sizePair; j++) {
-      const [a, b] = [faceList[i], faceList[j]];
-      if (Math.abs(a.longCm - b.longCm) >= 0.6 || Math.abs(a.shortCm - b.shortCm) >= 0.6) {
-        sizePair = a.longCm * a.shortCm >= b.longCm * b.shortCm ? { flat: a, side: b } : { flat: b, side: a };
-      }
-    }
-  }
-  const boxSize =
-    sizePair && scale
-      ? solveBoxSize(
-          { longCm: sizePair.flat.longCm, shortCm: sizePair.flat.shortCm, distanceCm: distanceCm(sizePair.flat, scale) },
-          { longCm: sizePair.side.longCm, shortCm: sizePair.side.shortCm, distanceCm: distanceCm(sizePair.side, scale) },
-        )
-      : null;
-
-  function calibrateFromPhotos() {
-    if (!sizePair) return;
-    const value = calibrateCamera(sizePair.flat, Number(calLength), Number(calHeight));
-    if (!value) {
-      setSizeNote({ ok: false, text: "ตัวเลขไม่เข้ากับรูป ตรวจว่าใส่ ยาว (ด้านยาวสุด) และ สูง (ด้านบางสุด) ของกล่องใบนี้ถูกต้อง" });
-      return;
-    }
-    writeScale(camera.deviceId, value);
-    setScale(value);
-    setSizeNote(null);
-  }
-
-  async function saveBoxSize() {
-    if (!product || !boxSize) return;
+  async function saveSize() {
+    if (!product) return;
+    const value = (field: SizeField) => Number(size[field]);
     setSizeBusy(true);
     setSizeNote(null);
-    const size = {
-      lengthCm: Math.round(boxSize.lengthCm * 10) / 10,
-      widthCm: Math.round(boxSize.widthCm * 10) / 10,
-      heightCm: Math.round(boxSize.heightCm * 10) / 10,
-    };
     try {
-      const result = await saveProductBoxSizeAction(product.sku, size);
+      const result = await saveProductBoxSizeAction(product.sku, {
+        lengthCm: value("lengthCm"),
+        widthCm: value("widthCm"),
+        heightCm: value("heightCm"),
+      });
       if (!result.ok) {
         setSizeNote({ ok: false, text: result.error ?? "บันทึกขนาดไม่สำเร็จ" });
         return;
       }
-      setSavedSize(await getProductBoxSizeAction(product.sku));
-      setSizeNote({ ok: true, text: `บันทึกขนาดกล่องแล้ว ${size.lengthCm} × ${size.widthCm} × ${size.heightCm} cm` });
+      await loadSize(product.sku);
+      setSizeNote({ ok: true, text: `บันทึกขนาดกล่องของ ${product.sku} แล้ว ${size.lengthCm} × ${size.widthCm} × ${size.heightCm} cm` });
     } catch (error) {
       setSizeNote({ ok: false, text: error instanceof Error ? error.message : "บันทึกขนาดไม่สำเร็จ" });
     } finally {
@@ -209,6 +162,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
     }
   }
 
+  const sizeReady = SIZE_FIELDS.every((field) => Number(size[field.id]) > 0);
   const replacing = Boolean(photos[angle]);
   const doneCount = ANGLES.filter((item) => photos[item.id]).length;
   const wide = angle === "barcode";
@@ -252,8 +206,6 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
                 setLots({});
                 setStill(null);
                 setMode("photo");
-                setFaces({});
-                setSavedSize(null);
                 setSizeNote(null);
               }}
               className="min-h-11 shrink-0 px-1.5 text-sm font-semibold text-accent"
@@ -292,10 +244,45 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
       </section>
 
       {product && mode === "measure" ? (
-        <>
-          {camera.error ? <p className="rounded-[10px] bg-red-50 p-3 text-sm text-red-700">{camera.error}</p> : null}
-          <BoxMeasurePanel key={product.sku} camera={camera} attachVideo={attachVideo} sku={product.sku} />
-        </>
+        <section aria-label="ขนาดกล่อง" className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3.5">
+          <div>
+            <h2 className="text-base font-bold">ขนาดกล่อง (cm)</h2>
+            <p className="text-xs text-muted">วัดด้วยตลับเมตรแล้วใส่ตัวเลข ระบบเติมค่าที่มีอยู่ใน Catalog ไว้ให้</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {SIZE_FIELDS.map((field) => (
+              <label key={field.id} className="flex flex-col gap-1 text-xs text-muted">
+                {field.label}
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step={0.1}
+                  value={size[field.id]}
+                  onChange={(event) => {
+                    setSize((previous) => ({ ...previous, [field.id]: event.target.value }));
+                    setSizeNote(null);
+                  }}
+                  className="min-h-12 w-full min-w-0 rounded-[10px] border border-line px-3 text-right text-base text-ink tabular-nums"
+                />
+              </label>
+            ))}
+          </div>
+          {sizeNote ? (
+            <p role="status" className={`rounded-[10px] px-3 py-2 text-sm font-semibold ${sizeNote.ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`}>
+              {sizeNote.ok ? "✓ " : ""}
+              {sizeNote.text}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void saveSize()}
+            disabled={!sizeReady || sizeBusy}
+            className="min-h-12 rounded-xl bg-accent text-[15px] font-bold text-white disabled:opacity-50"
+          >
+            {sizeBusy ? "กำลังบันทึก…" : "บันทึกขนาด"}
+          </button>
+        </section>
       ) : null}
 
       {product && mode === "photo" ? (
@@ -326,35 +313,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
                   </svg>
                 )
               ) : null}
-              {!still && !wide && lock.detection && lock.frameSize ? (
-                <svg
-                  viewBox={(() => {
-                    const side = Math.min(lock.frameSize.w, lock.frameSize.h);
-                    return `${(lock.frameSize.w - side) / 2} ${(lock.frameSize.h - side) / 2} ${side} ${side}`;
-                  })()}
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 h-full w-full"
-                >
-                  <polygon
-                    points={lock.detection.corners.map((p) => `${p.x},${p.y}`).join(" ")}
-                    fill={lock.locked ? "rgba(205,235,3,0.12)" : "none"}
-                    stroke={lock.locked ? "#cdeb03" : "#ffffff"}
-                    strokeWidth={lock.locked ? 2.5 : 1.5}
-                    strokeDasharray={lock.locked ? undefined : "6 4"}
-                  />
-                </svg>
-              ) : null}
               <span className="absolute top-2.5 left-2.5 rounded-full bg-black/65 px-2.5 text-xs font-bold text-white">มุม: {angleLabel}</span>
-              {!still && !wide && lock.detection ? (
-                <span
-                  className={`absolute top-2.5 right-2.5 rounded-lg px-2.5 py-1 font-mono text-sm font-semibold tabular-nums ${
-                    lock.locked ? "bg-[#cdeb03] text-ink" : "bg-black/70 text-white"
-                  }`}
-                >
-                  {lock.locked ? "● " : ""}
-                  {lock.detection.longCm.toFixed(1)} × {lock.detection.shortCm.toFixed(1)} cm
-                </span>
-              ) : null}
               {wide && !still && !camera.error ? (
                 <span className="pointer-events-none absolute inset-x-0 bottom-2 text-center text-xs font-bold text-white [text-shadow:0_1px_3px_#000]">
                   ถ่ายใกล้ๆ ให้บาร์โค้ดเต็มกรอบ เห็นตัวเลขใต้เส้นชัด
@@ -387,14 +346,6 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
               </div>
             ) : null}
 
-            {!still && !wide && lock.detection ? (
-              <p className="text-center text-xs text-muted">
-                ขนาดมุมขวาบนคือ ยาว × กว้าง ของด้านที่เห็น{" "}
-                <button type="button" onClick={() => setMode("measure")} className="font-semibold text-accent underline">
-                  ไปวัดขนาดกล่อง
-                </button>
-              </p>
-            ) : null}
             {camera.resolution && Math.max(camera.resolution.width, camera.resolution.height) < 1920 && !still ? (
               <p className="text-xs text-amber-700">
                 กล้องส่งภาพแค่ {camera.resolution.width}×{camera.resolution.height} ภาพจึงไม่คมเท่าที่ควร ลองเลือกกล้องอีกตัวในแท็บ ตั้งค่า
@@ -448,105 +399,6 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
               ถ่ายรูป · มุม{angleLabel}
             </button>
           )}
-
-          {/* Box size from the photos themselves: a big face and a side face shot on the blue mat give length × width × height. */}
-          <section aria-label="ขนาดกล่อง" className="rounded-xl border border-line bg-surface px-3 py-2.5 text-sm">
-            {sizeNote?.ok ? (
-              <p className="font-bold text-green-800">✓ {sizeNote.text}</p>
-            ) : !firstFace ? (
-              <>
-                <p className="font-bold">📏 ขนาดกล่อง</p>
-                <p className="text-xs text-muted">วางกล่องบนแผ่นรองสีฟ้าแล้วถ่ายตามปกติ ระบบวัดจากรูปให้เอง (ถ่าย 2 ด้าน: ด้านใหญ่ กับ ด้านข้าง เช่น มุมหน้า + มุมบน)</p>
-              </>
-            ) : !sizePair ? (
-              <>
-                <p className="font-bold">
-                  📏 ได้ด้านแรกแล้ว {firstFace.longCm.toFixed(1)} × {firstFace.shortCm.toFixed(1)} cm
-                </p>
-                <p className="text-xs text-muted">ถ่ายอีก 1 ด้านที่ขนาดต่างกัน (เช่น มุมบน/หูแขวน) ระบบคำนวณ ยาว × กว้าง × สูง ให้</p>
-              </>
-            ) : !scale ? (
-              <div className="flex flex-col gap-2">
-                <p className="font-bold">📏 ครั้งแรกของเครื่องนี้</p>
-                <p className="text-xs text-muted">ใส่ ยาว (ด้านยาวสุด) และ สูง (ด้านบางสุด) จริง 1 ครั้ง ครั้งต่อไปคำนวณเองทั้งหมด</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step={0.1}
-                    placeholder="ยาว cm"
-                    value={calLength}
-                    onChange={(event) => setCalLength(event.target.value)}
-                    className="min-h-11 w-full min-w-0 rounded-[10px] border border-line px-3 text-right text-[15px] tabular-nums"
-                  />
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step={0.1}
-                    placeholder="สูง cm"
-                    value={calHeight}
-                    onChange={(event) => setCalHeight(event.target.value)}
-                    className="min-h-11 w-full min-w-0 rounded-[10px] border border-line px-3 text-right text-[15px] tabular-nums"
-                  />
-                </div>
-                {sizeNote && !sizeNote.ok ? <p className="text-xs text-red-700">{sizeNote.text}</p> : null}
-                <div className="flex gap-2">
-                  {savedSize?.lengthCm && savedSize.heightCm ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCalLength(String(savedSize.lengthCm));
-                        setCalHeight(String(savedSize.heightCm));
-                      }}
-                      className="min-h-11 flex-1 rounded-[10px] border border-line text-sm font-semibold"
-                    >
-                      ใช้ขนาดเดิมในระบบ
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={calibrateFromPhotos}
-                    disabled={!Number(calLength) || !Number(calHeight)}
-                    className="min-h-11 flex-1 rounded-[10px] bg-accent text-sm font-bold text-white disabled:opacity-50"
-                  >
-                    คำนวณ
-                  </button>
-                </div>
-              </div>
-            ) : boxSize ? (
-              <div className="flex flex-col gap-2">
-                <p className="font-bold">📏 ขนาดกล่อง (คำนวณจากรูป)</p>
-                <div className="grid grid-cols-3 gap-1.5 text-center">
-                  {(
-                    [
-                      ["ยาว", boxSize.lengthCm, savedSize?.lengthCm],
-                      ["กว้าง", boxSize.widthCm, savedSize?.widthCm],
-                      ["สูง", boxSize.heightCm, savedSize?.heightCm],
-                    ] as const
-                  ).map(([text, value, before]) => (
-                    <div key={text} className="rounded-lg bg-bg px-1 py-1">
-                      <p className="font-mono text-base font-bold tabular-nums">{value.toFixed(1)}</p>
-                      <p className="text-[11px] text-muted">
-                        {text} · เดิม {before === null || before === undefined ? "–" : before.toFixed(1)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                {boxSize.mismatchCm > 0.5 ? (
-                  <p className="text-xs text-amber-800">2 รูปให้ค่าไม่ตรงกัน {boxSize.mismatchCm.toFixed(1)} cm ถ่ายใหม่ให้กล้องตรง หรือใช้แท็บ วัดขนาด</p>
-                ) : null}
-                {sizeNote && !sizeNote.ok ? <p className="text-xs text-red-700">{sizeNote.text}</p> : null}
-                <button
-                  type="button"
-                  onClick={() => void saveBoxSize()}
-                  disabled={sizeBusy}
-                  className="min-h-11 rounded-[10px] bg-accent text-sm font-bold text-white disabled:opacity-50"
-                >
-                  {sizeBusy ? "กำลังบันทึก…" : "บันทึกขนาด"}
-                </button>
-              </div>
-            ) : null}
-          </section>
         </>
       ) : null}
 
@@ -556,7 +408,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
             {(
               [
                 ["photo", "ถ่ายรูป", "M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"],
-                ["measure", "วัดขนาด", "M3 17 17 3l4 4L7 21zM8 12l2 2M11 9l2 2M14 6l2 2"],
+                ["measure", "ขนาดกล่อง", "M3 17 17 3l4 4L7 21zM8 12l2 2M11 9l2 2M14 6l2 2"],
                 ["settings", "ตั้งค่า", "M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"],
               ] as const
             ).map(([id, text, icon]) => {
@@ -603,7 +455,7 @@ export function PhotoStation({ initialSku }: { initialSku: string }) {
             </label>
             {cameraSelect}
             <p className="text-xs text-muted">
-              วิธีถ่าย: วางสินค้ากลางกรอบให้เต็มกรอบพอดี พื้นหลังเรียบ แสงสม่ำเสมอ ภาพที่บันทึกคือส่วนในกรอบ ถ้าวางกล่องบนแผ่นรองสีฟ้า กล้องจะล็อกขอบกล่องและบอกขนาดให้เอง
+              วิธีถ่าย: วางสินค้ากลางกรอบให้เต็มกรอบพอดี พื้นหลังเรียบ แสงสม่ำเสมอ ภาพที่บันทึกคือส่วนในกรอบ
             </p>
             <button type="button" onClick={() => setSettingsOpen(false)} className="min-h-12 rounded-xl bg-accent text-[15px] font-bold text-white">
               เสร็จ
