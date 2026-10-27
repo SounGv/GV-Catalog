@@ -54,6 +54,7 @@ button{font:inherit}
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-header img{height:34px;width:auto}.app-header h1{margin:0;font-size:1.25rem}.app-header span{font-size:.9rem}
+.paper{margin:10px 0 0;padding:8px 12px;border-radius:10px;background:var(--soft);color:var(--accent);font-size:.85rem;font-weight:700;display:flex;gap:6px;flex-wrap:wrap;align-items:center}.paper small{font-weight:400;color:var(--muted)}
 </style>
 <script defer src="../shared/JsBarcode.code128.min.js"></script><script defer src="../shared/product-stickers.js"></script>
 <link rel="stylesheet" href="../shared/gv-header.css"></head>
@@ -78,6 +79,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
    <div><div class="qbox"><button class="s" type="button" id="qMinus" aria-label="ลดจำนวน">−</button><input id="qty" type="number" inputmode="numeric" min="1" max="20000" value="" placeholder="ใส่จำนวน" aria-label="จำนวนดวง"><button class="s" type="button" id="qPlus" aria-label="เพิ่มจำนวน">+</button><span class="bc" style="margin:0">ดวง</span></div>
     <div class="chips" id="qChips"><button type="button" data-q="10">10</button><button type="button" data-q="30">30</button><button type="button" data-q="50">50</button><button type="button" data-q="100">100</button></div></div>
   </div>
+  <p class="paper" id="paper"></p>
   <div class="prev" id="prevBox"><div class="scale" id="scale"></div></div>
   <p class="cap" id="cap"></p>
   <div class="nudge"><h4>ปรับตำแหน่งให้ตรงสติกเกอร์ <small>กดลูกศร ดูตัวอย่างขยับทันที</small></h4>
@@ -171,6 +173,8 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  const sizeCols=()=>engSet('size').value==='s2'?2:3;
  function refresh(){
   const prevRow=eng('[data-el=preview] .st-row'),host=$('scale'),n=qtyNow(),rows=Math.ceil(n/sizeCols());
+  const pp=engine.paper&&engine.paper();
+  $('paper').innerHTML=pp?`🖨 กระดาษที่ใช้พิมพ์: <b>${+pp.w.toFixed(1)} × ${+pp.h.toFixed(1)} มม.</b> <small>(1 แถว = ${sizeCols()} ดวง · ตั้งขนาดนี้ในเครื่องพิมพ์ครั้งเดียว)</small>`:'';
   const ready=!!current&&!!eng('tbody tr');
   $('goBtn').innerHTML=n>0?`พิมพ์สติกเกอร์ <b id="goN">${n}</b> ดวง`:'ใส่จำนวนดวงก่อน';$('goBtn').disabled=!ready||n===0;$('testBtn').disabled=!ready;
   if(!prevRow){host.innerHTML='';$('cap').textContent='';return}
@@ -227,7 +231,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  document.querySelector('.pad').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;const m=MAP[tgt],d={up:['y',-1],down:['y',1],left:['x',-1],right:['x',1]}[b.dataset.d];nudge(m[d[0]],d[1]*stepV,-8,8)});
  $('szbar').addEventListener('click',e=>{const b=e.target.closest('[data-z]');if(!b)return;nudge('txS',Number(b.dataset.z),60,150)});
  $('testBtn2').addEventListener('click',()=>$('testBtn').click());$('resetBtn2').addEventListener('click',()=>$('resetAdj').click());
- $('resetAdj').addEventListener('click',()=>{const s3=engSet('size').value==='s3';const def={gapX:s3?'1.5':'0',shiftX:s3?'-1.5':'0',shift:'0',pitch:s3?'3':'0',bcX:'0',bcY:'0',bcS:'100',txX:'0',txY:'0',txS:'100'};for(const k of KEYS){$(k).value=def[k];setEngine(k,def[k])}refresh()});
+ $('resetAdj').addEventListener('click',()=>{const s3=engSet('size').value==='s3';const def={gapX:s3?'1.5':'0',shiftX:s3?'-1.5':'0',shift:'0',pitch:'0',bcX:'0',bcY:'0',bcS:'100',txX:'0',txY:'0',txS:'100'};for(const k of KEYS){$(k).value=def[k];setEngine(k,def[k])}refresh()});
  addEventListener('resize',refresh);
  window.addEventListener('DOMContentLoaded',init);
 })();
