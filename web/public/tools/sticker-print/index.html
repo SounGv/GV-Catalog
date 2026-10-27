@@ -74,6 +74,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   <label class="fld">ชื่อใต้บาร์โค้ด (แก้ได้)<input id="nameInput" autocomplete="off"></label>
  </section>
  <section class="card" id="printCard" hidden><div class="steps"><b>3</b> เลือกขนาดและจำนวน</div>
+  <label class="fld">เครื่องพิมพ์ที่ใช้<select id="printer"><option value="birch">Birch DP-4432B</option><option value="tsc">TSC TE210</option></select></label>
   <div class="row2">
    <div class="seg" id="seg"><button type="button" data-s="s3">3 ดวง/แถว<small>32.3 × 20 มม.</small></button><button type="button" data-s="s2">2 ดวง/แถว<small>50 × 30 มม.</small></button></div>
    <div><div class="qbox"><button class="s" type="button" id="qMinus" aria-label="ลดจำนวน">−</button><input id="qty" type="number" inputmode="numeric" min="1" max="20000" value="" placeholder="ใส่จำนวน" aria-label="จำนวนดวง"><button class="s" type="button" id="qPlus" aria-label="เพิ่มจำนวน">+</button><span class="bc" style="margin:0">ดวง</span></div>
@@ -174,7 +175,8 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  function refresh(){
   const prevRow=eng('[data-el=preview] .st-row'),host=$('scale'),n=qtyNow(),rows=Math.ceil(n/sizeCols());
   const pp=engine.paper&&engine.paper();
-  $('paper').innerHTML=pp?`🖨 กระดาษที่ใช้พิมพ์: <b>${+pp.w.toFixed(1)} × ${+pp.h.toFixed(1)} มม.</b> <small>(1 แถว = ${sizeCols()} ดวง · ตั้งขนาดนี้ในเครื่องพิมพ์ครั้งเดียว)</small>`:'';
+  const pn=$('printer').selectedOptions[0].textContent;
+  $('paper').innerHTML=pp?`🖨 ตอนกดพิมพ์ เลือกเครื่อง <b>${pn}</b> · กระดาษ <b>${+pp.w.toFixed(1)} × ${+pp.h.toFixed(1)} มม.</b> <small>(1 แถว = ${sizeCols()} ดวง · หน้านี้ส่งขนาดกระดาษให้เอง · ค่าปรับตำแหน่งจำแยกตามเครื่อง)</small>`:'';
   const ready=!!current&&!!eng('tbody tr');
   $('goBtn').innerHTML=n>0?`พิมพ์สติกเกอร์ <b id="goN">${n}</b> ดวง`:'ใส่จำนวนดวงก่อน';$('goBtn').disabled=!ready||n===0;$('testBtn').disabled=!ready;
   if(!prevRow){host.innerHTML='';$('cap').textContent='';return}
@@ -210,6 +212,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   // this page's controls start from what the engine holds (saved on this computer, or the factory defaults)
   for(const k of KEYS)$(k).value=engSet(k).value;
   if(!['s2','s3'].includes(engSet('size').value))setEngine('size','s3');
+  $('printer').value=engine.printer();
   syncSeg();Promise.all([load(),GVProductStickers.ready()]).then(()=>{ready=true;if(pending){const t=pending;pending='';search(t)}});
  }
  $('addForm').addEventListener('submit',e=>{e.preventDefault();search($('skuInput').value);$('skuInput').select()});
@@ -221,6 +224,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  $('qMinus').addEventListener('click',()=>{$('qty').value=Math.max(1,qtyNow()-1);pushToEngine(true);refresh()});
  $('qPlus').addEventListener('click',()=>{$('qty').value=Math.min(20000,qtyNow()+1);pushToEngine(true);refresh()});
  $('qChips').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(b){$('qty').value=b.dataset.q;pushToEngine(true);refresh()}});
+ $('printer').addEventListener('change',()=>{engine.setPrinter($('printer').value);for(const k of KEYS)$(k).value=engSet(k).value;refresh()});
  $('seg').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){setEngine('size',b.dataset.s);for(const k of KEYS)$(k).value=engSet(k).value;syncSeg();refresh()}});
  for(const k of KEYS)$(k).addEventListener('change',()=>{setEngine(k,$(k).value);refresh()});
  $('source').addEventListener('change',()=>{try{localStorage.setItem('gv-stickerprint-source',$('source').value)}catch{}if(current)show(current)});
