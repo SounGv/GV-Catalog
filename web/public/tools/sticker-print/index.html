@@ -176,7 +176,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   const prevRow=eng('[data-el=preview] .st-row'),host=$('scale'),n=qtyNow(),rows=Math.ceil(n/sizeCols());
   const pp=engine.paper&&engine.paper();
   const pn=$('printer').selectedOptions[0].textContent;
-  $('paper').innerHTML=pp?`🖨 ตอนกดพิมพ์ เลือกเครื่อง <b>${pn}</b> · กระดาษ <b>${+pp.w.toFixed(1)} × ${+pp.h.toFixed(1)} มม.</b> <small>(1 แถว = ${sizeCols()} ดวง · หน้านี้ส่งขนาดกระดาษให้เอง · ค่าปรับตำแหน่งจำแยกตามเครื่อง)</small>`:'';
+  $('paper').innerHTML=pp?`🖨 ตอนกดพิมพ์ เลือกเครื่อง <b>${pn}</b> · <small>ขนาดกระดาษใช้ตามที่ตั้งไว้ในไดรเวอร์เครื่องพิมพ์ (ควรเป็น ${+pp.w.toFixed(0)} × ${+pp.h.toFixed(0)} มม. · 1 แถว = ${sizeCols()} ดวง)</small>`:'';
   const ready=!!current&&!!eng('tbody tr');
   $('goBtn').innerHTML=n>0?`พิมพ์สติกเกอร์ <b id="goN">${n}</b> ดวง`:'ใส่จำนวนดวงก่อน';$('goBtn').disabled=!ready||n===0;$('testBtn').disabled=!ready;
   if(!prevRow){host.innerHTML='';$('cap').textContent='';return}

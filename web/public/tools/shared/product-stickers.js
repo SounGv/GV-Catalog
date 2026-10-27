@@ -331,7 +331,7 @@
     document.getElementById('stPrintDoc')?.remove();document.getElementById('stPrintStyle')?.remove();
     doc=document.createElement('div');doc.id='stPrintDoc';doc.innerHTML=out.map(r=>rowHtml(p,r)).join('');
     style=document.createElement('style');style.id='stPrintStyle';
-    style.textContent=`#stPrintDoc{display:none}@media print{@page{size:${p.pageW}mm ${p.rowPitch}mm;margin:0}html,body{width:${p.pageW}mm!important;margin:0!important;padding:0!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}body>:not(#stPrintDoc){display:none!important}#stPrintDoc{display:block!important}#stPrintDoc .st-row{break-after:page;page-break-after:always;margin:0}#stPrintDoc .st-row:last-child{break-after:auto;page-break-after:auto}#stPrintDoc .st-label{outline:0!important}}`;
+    style.textContent=`#stPrintDoc{display:none}@media print{@page{size:${design==='factory'?'auto':p.pageW+'mm '+p.rowPitch+'mm'};margin:0}html,body{${design==='factory'?'':'width:'+p.pageW+'mm!important;'}margin:0!important;padding:0!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}body>:not(#stPrintDoc){display:none!important}#stPrintDoc{display:block!important}#stPrintDoc .st-row{break-after:page;page-break-after:always;margin:0}#stPrintDoc .st-row:last-child{break-after:auto;page-break-after:auto}#stPrintDoc .st-label{outline:0!important}}`;
     document.head.append(style);document.body.append(doc);
    }catch(e){alert('สร้างสติกเกอร์ไม่สำเร็จ: '+e.message);return}
    const clean=()=>{doc.remove();style.remove();window.removeEventListener('afterprint',clean)};
