@@ -83,7 +83,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   <p class="paper" id="paper"></p>
   <div class="prev" id="prevBox"><div class="scale" id="scale"></div></div>
   <p class="cap" id="cap"></p>
-  <div class="nudge" hidden><h4>ปรับตำแหน่งให้ตรงสติกเกอร์ <small>กดลูกศร ดูตัวอย่างขยับทันที</small></h4>
+  <div class="nudge"><h4>ปรับตำแหน่งให้ตรงสติกเกอร์ <small>กดลูกศร ดูตัวอย่างขยับทันที</small></h4>
    <div class="tgt" id="tgt"><button type="button" class="on" data-t="all">ทั้งสติกเกอร์</button><button type="button" data-t="bc">เส้นบาร์โค้ด</button><button type="button" data-t="tx">ข้อความ</button></div>
    <div class="pad"><span></span><button type="button" data-d="up" aria-label="ขึ้น">↑</button><span></span><button type="button" data-d="left" aria-label="ซ้าย">←</button><div class="mid">ขยับ<br>ทีละขั้น</div><button type="button" data-d="right" aria-label="ขวา">→</button><span></span><button type="button" data-d="down" aria-label="ลง">↓</button><span></span></div>
    <div class="stepbar"><span>ขยับทีละ</span><button type="button" data-st="0.25">0.25</button><button type="button" data-st="0.5" class="on">0.5</button><button type="button" data-st="1">1</button><button type="button" data-st="2">2 มม.</button></div>
@@ -92,7 +92,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
    <p class="note" style="text-align:center">กด "พิมพ์ทดสอบ" แล้วกดลูกศรตามที่เห็นบนสติกเกอร์จริง · ค่าจำไว้ในเครื่องนี้ แยกตามขนาด</p>
    <div class="prow2"><button type="button" class="test" id="testBtn2">พิมพ์ทดสอบ 2 แถว</button><button type="button" class="test" id="resetBtn2">ล้างค่า</button></div></div>
   <label class="fld">บาร์โค้ดที่จะพิมพ์<select id="source"></select></label>
-  <details class="set" hidden><summary>ตั้งค่าอื่นๆ (พิมพ์ตัวเลขเอง · ช่องว่างระหว่างดวง/แถว)</summary>
+  <details class="set"><summary>ตั้งค่าอื่นๆ (พิมพ์ตัวเลขเอง · ช่องว่างระหว่างดวง/แถว)</summary>
    <div class="grid"><label>ช่องว่างระหว่างดวง (มม.)<input id="gapX" type="number" min="0" max="6" step="0.1"></label><label>เลื่อนซ้าย–ขวา (มม.)<input id="shiftX" type="number" min="-4" max="6" step="0.5"></label><label>เลื่อนขึ้น–ลง (มม.)<input id="shift" type="number" min="-6" max="8" step="0.5"></label><label>ช่องว่างระหว่างแถว (มม.)<input id="pitch" type="number" min="0" max="6" step="0.5"></label></div>
    <h4 class="grp">เส้นบาร์โค้ด</h4><div class="grid"><label>ซ้าย–ขวา (มม.) · ค่าบวก = ไปทางขวา<input id="bcX" type="number" min="-8" max="8" step="0.5"></label><label>ขึ้น–ลง (มม.) · ค่าบวก = ลงล่าง<input id="bcY" type="number" min="-8" max="8" step="0.5"></label><label>ความสูงเส้น (%)<input id="bcS" type="number" min="50" max="150" step="5"></label></div>
    <h4 class="grp">ข้อความ (ชื่อสินค้าและบรรทัด Model)</h4><div class="grid"><label>ซ้าย–ขวา (มม.) · ค่าบวก = ไปทางขวา<input id="txX" type="number" min="-8" max="8" step="0.5"></label><label>ขึ้น–ลง (มม.) · ค่าบวก = ลงล่าง<input id="txY" type="number" min="-8" max="8" step="0.5"></label><label>ขนาดตัวอักษร (%)<input id="txS" type="number" min="60" max="150" step="5"></label></div>
