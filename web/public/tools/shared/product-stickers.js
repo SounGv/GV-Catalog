@@ -327,6 +327,37 @@
    const total=items.filter(x=>x.pick&&x.qty>0).reduce((a,x)=>a+x.qty,0);
    if(!total)return;
    if(total>20000){alert('จำนวนเกิน 20,000 ดวง กรุณาแบ่งพิมพ์');return}
+   if(design==='factory'&&prn==='tsc'){agentPrint(test).then(ok=>{if(!ok)browserPrint(test)});return}
+   browserPrint(test);
+  }
+  // Direct printing through the GV print agent (print-agent/ on the computer the printer is plugged into): the exact sticker
+  // size is sent to the printer itself, so no paper size is picked in Chrome or the driver. Returns false when the agent is not running.
+  const AGENT='http://127.0.0.1:9101',AGENT_PRINTERS={tsc:'TSC TE210'};
+  const say=(ok,msg)=>host.dispatchEvent(new CustomEvent('gv-print',{detail:{ok,msg}}));
+  async function rasterRow(p,html){
+   const dpm=203/25.4,W=Math.ceil(p.pageW*dpm/8)*8,H=Math.round(p.dieH*dpm),k=W/(p.pageW*96/25.4);
+   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject width="${W}" height="${H}"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${p.pageW}mm;height:${p.dieH}mm;transform:scale(${k});transform-origin:0 0;overflow:hidden;background:#fff"><style>${CSS}.st-row{margin:0!important}.st-label{outline:0!important}</style>${html}</div></foreignObject></svg>`;
+   const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);await img.decode();
+   const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);g.drawImage(img,0,0,W,H);
+   const px=g.getImageData(0,0,W,H).data,bytes=new Uint8Array(W/8*H);
+   for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4,lum=(px[i]*.3+px[i+1]*.59+px[i+2]*.11);if(px[i+3]>40&&lum<165)bytes[y*(W/8)+(x>>3)]|=0x80>>(x&7)}
+   let bin='';for(let i=0;i<bytes.length;i+=8192)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));
+   return{w:W,h:H,data:btoa(bin)};
+  }
+  async function agentPrint(test){
+   try{const r=await fetch(AGENT+'/ping',{signal:AbortSignal.timeout(900)});if(!r.ok)return false}catch{return false}
+   try{
+    const {p,out}=rows(test),pr=AGENT_PRINTERS[prn],jobs=[],cache=new Map();
+    for(const r of out){const html=rowHtml({...p,rowPitch:p.dieH},r);const last=jobs[jobs.length-1];
+     if(last&&last.html===html){last.copies++;continue}
+     if(!cache.has(html))cache.set(html,await rasterRow(p,html));jobs.push({html,copies:1,...cache.get(html)})}
+    const res=await fetch(AGENT+'/print',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({printer:pr,widthMm:p.pageW,heightMm:p.dieH,gapMm:3,jobs:jobs.map(({w,h,data,copies})=>({w,h,data,copies}))})});
+    const b=await res.json().catch(()=>({}));
+    if(res.ok)say(true,`ส่งไปที่ ${pr} แล้ว · ${out.length} แถว (${p.pageW} × ${p.dieH} มม.)`);else say(false,b.error||b.result||'ส่งไปเครื่องพิมพ์ไม่สำเร็จ');
+    return res.ok||!/ยังไม่รองรับ/.test(b.error||'')
+   }catch(e){say(false,'พิมพ์ผ่านโปรแกรมพิมพ์ไม่สำเร็จ: '+e.message);return true}
+  }
+  function browserPrint(test){
    let doc,style;
    try{
     const {p,out}=rows(test);
