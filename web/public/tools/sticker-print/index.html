@@ -121,6 +121,9 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  const qtyNow=()=>Math.max(0,Math.min(20000,Math.floor(Number($('qty').value)||0))); // empty = 0: staff type how many to print
  const qtyPreview=()=>Math.max(1,qtyNow()); // the preview row always needs at least one sticker
  const eng=s=>$('engine').querySelector(s);
+ let agentUp=false;const sizeH=()=>engSet('size').value==='s2'?30:20;
+ async function pingAgent(){try{const r=await fetch('http://127.0.0.1:9101/ping',{signal:AbortSignal.timeout(900)});const up=r.ok&&(await r.json()).printers.includes('TSC TE210');if(up!==agentUp){agentUp=up;refresh()}}catch{if(agentUp){agentUp=false;refresh()}}}
+ setInterval(pingAgent,5000);
  const engSet=k=>$('engine').querySelector(`[data-set="${k}"]`);
 
  async function load(){
@@ -177,7 +180,8 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   const pp=engine.paper&&engine.paper();
   const pn=$('printer').selectedOptions[0].textContent;
   const tip=sizeCols()===2?'Gap ระหว่างแถว 3 มม. (แบบ Labels with gaps)':'ไดรเวอร์ข้ามช่องว่างระหว่างแถวเอง (ระยะแถว 0)';
-  $('paper').innerHTML=pp?`🖨 ตอนกดพิมพ์ เลือกเครื่อง <b>${pn}</b> · กระดาษ <b>${+pp.w.toFixed(1)} × ${+pp.h.toFixed(1)} มม.</b> <small>(หน้านี้ส่งขนาดกระดาษให้เอง)</small><span class="pset">ค่าไดรเวอร์: สเกล <b>100%</b> · ขอบ <b>None</b> · ${tip}</span>`:'';
+  const direct=$('printer').value==='tsc'&&agentUp;
+  $('paper').innerHTML=pp?(direct?`🖨 พิมพ์ตรงเข้า <b>${pn}</b> ผ่านโปรแกรมพิมพ์ ✓ · สติกเกอร์ <b>${+pp.w.toFixed(1)} × ${+sizeH().toFixed(1)} มม.</b> · Gap <b>3 มม.</b> <small>(ไม่ต้องตั้งกระดาษในไดรเวอร์หรือในหน้าต่างพิมพ์)</small>`:`🖨 ตอนกดพิมพ์ เลือกเครื่อง <b>${pn}</b> · กระดาษ <b>${+pp.w.toFixed(1)} × ${+pp.h.toFixed(1)} มม.</b> <small>(หน้านี้ส่งขนาดกระดาษให้เอง)</small><span class="pset">ค่าไดรเวอร์: สเกล <b>100%</b> · ขอบ <b>None</b> · ${tip}${$('printer').value==='tsc'?' · <small>เปิดโปรแกรมพิมพ์ (print-agent) จะพิมพ์ตรงโดยไม่ต้องตั้งค่านี้</small>':''}</span>`):'';
   const ready=!!current&&!!eng('tbody tr');
   $('goBtn').innerHTML=n>0?`พิมพ์สติกเกอร์ <b id="goN">${n}</b> ดวง`:'ใส่จำนวนดวงก่อน';$('goBtn').disabled=!ready||n===0;$('testBtn').disabled=!ready;
   if(!prevRow){host.innerHTML='';$('cap').textContent='';return}
@@ -226,6 +230,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  $('qPlus').addEventListener('click',()=>{$('qty').value=Math.min(20000,qtyNow()+1);pushToEngine(true);refresh()});
  $('qChips').addEventListener('click',e=>{const b=e.target.closest('[data-q]');if(b){$('qty').value=b.dataset.q;pushToEngine(true);refresh()}});
  $('engine').addEventListener('gv-print',e=>msg(e.detail.msg,e.detail.ok?'ok':'bad'));
+ pingAgent();
  $('printer').addEventListener('change',()=>{engine.setPrinter($('printer').value);for(const k of KEYS)$(k).value=engSet(k).value;refresh()});
  $('seg').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){setEngine('size',b.dataset.s);for(const k of KEYS)$(k).value=engSet(k).value;syncSeg();refresh()}});
  for(const k of KEYS)$(k).addEventListener('change',()=>{setEngine(k,$(k).value);refresh()});
