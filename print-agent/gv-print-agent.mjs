@@ -53,8 +53,13 @@ function sendRaw(printer, bytes) {
   });
 }
 
-function tspl(job, widthMm, heightMm, gapMm) {
-  const parts = [Buffer.from(`SIZE ${widthMm} mm,${heightMm} mm\r\nGAP ${gapMm} mm,0 mm\r\nDIRECTION 0,0\r\nREFERENCE 0,0\r\nSET TEAR ON\r\n`)];
+// The printer learns the real label length and gap (GAPDETECT) the first time a size is printed after this program starts,
+// and whenever the size changes, so a roll change or a drifting sensor can't throw the rows off. GV_PRINT_AUTOCAL=0 turns it off.
+const calibrated = new Map();
+function tspl(job, widthMm, heightMm, gapMm, printer) {
+  const key = `${printer}|${widthMm}x${heightMm}|${gapMm}`, cal = process.env.GV_PRINT_AUTOCAL !== '0' && !calibrated.has(key);
+  if (cal) calibrated.set(key, Date.now());
+  const parts = [Buffer.from(`SIZE ${widthMm} mm,${heightMm} mm\r\nGAP ${gapMm} mm,0 mm\r\n${cal ? 'GAPDETECT\r\n' : ''}DIRECTION 0,0\r\nREFERENCE 0,0\r\nSET TEAR ON\r\n`)];
   for (const j of job) {
     const bits = Buffer.from(j.data, 'base64'), wb = j.w / 8;
     if (j.w % 8 || bits.length !== wb * j.h) throw new Error('bad bitmap');
@@ -92,7 +97,7 @@ http.createServer((req, res) => {
         if (!PRINTERS[b.printer]) return reply(res, 400, { error: `ยังไม่รองรับเครื่อง ${b.printer}` });
         const w = Number(b.widthMm), h = Number(b.heightMm), g = Number(b.gapMm);
         if (!(w > 10 && w < 120 && h > 5 && h < 120 && g >= 0 && g < 10) || !Array.isArray(b.jobs) || !b.jobs.length) return reply(res, 400, { error: 'bad job' });
-        const result = await sendRaw(b.printer, tspl(b.jobs, w, h, g));
+        const result = await sendRaw(b.printer, tspl(b.jobs, w, h, g, b.printer));
         console.log(new Date().toLocaleTimeString(), b.printer, `${w}x${h} gap ${g}`, b.jobs.reduce((a, j) => a + j.copies, 0), 'rows ->', result);
         reply(res, result === 'OK' ? 200 : 500, { result });
       } catch (e) { reply(res, 400, { error: String(e.message || e) }); }
