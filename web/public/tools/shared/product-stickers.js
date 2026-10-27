@@ -154,11 +154,13 @@
   // factory design = a new page with no old printer calibration, and each size has its own gap / left-right shift:
   // 3-up starts at the roll's real 1.5 mm gap, 2-up at the Jaymart roll's saved values (no extra)
   const perSize=design==='factory';let curSize=setting('size').value;let prn=read(KEY+'printer')==='tsc'?'tsc':'birch';const sfx=()=>curSize+(prn==='tsc'?'@tsc':''); // each printer keeps its own position adjustments (Birch = the values saved before printers were added)
-  const PS=['gapX','shiftX','shift','pitch','bcX','bcY','bcS','txX','txY','txS'],PS_DEF=(k,sz)=>k==='bcS'||k==='txS'?'100':sz==='s3'&&k==='gapX'?'1.5':sz==='s3'&&k==='shiftX'?'-1.5':'0'; // a row is exactly one label high: the printer's own gap sensor (die-cut stock) finds the next label
+  const PS=['gapX','shiftX','shift','pitch','bcX','bcY','bcS','txX','txY','txS'],PS_DEF=(k,sz)=>k==='bcS'||k==='txS'?'100':'0'; // a row is exactly one label high: the printer's own gap sensor (die-cut stock) finds the next label
   const sizeVals=()=>{for(const k of PS){const el=setting(k);if(!el)continue;const v=read(KEY+k+'_'+sfx());el.value=v??PS_DEF(k,curSize)}};
   // one-time: a 3-up row spacing of 0 saved before the roll's 3 mm gap became the default is moved to 3 (else every row after the first drifts)
   // a 3 mm default shipped for a short time: it is taken back to 0 once, so one page is exactly one row (100 x 20 mm)
   if(perSize&&read(KEY+'rowfix2')!=='1'){if(read(KEY+'pitch_s3')==='3')write(KEY+'pitch_s3','0');write(KEY+'rowfix2','1')}
+  // 3-up now starts from the AIS tool's layout (labels side by side from 1.5 mm, no extra gap/shift): the old 1.5 / -1.5 defaults saved on this computer are moved once; values the operator chose stay
+  if(perSize&&read(KEY+'rowfix3')!=='1'){if(read(KEY+'gapX_s3')==='1.5'&&read(KEY+'shiftX_s3')==='-1.5'){write(KEY+'gapX_s3','0');write(KEY+'shiftX_s3','0')}write(KEY+'rowfix3','1')}
   if(perSize)sizeVals();
   // EAN-13 only for a 13-digit code with a valid check digit; anything else stays Code 128 whatever is chosen
   const useEan=code=>setting('type').value!=='c128'&&eanOk(code);
