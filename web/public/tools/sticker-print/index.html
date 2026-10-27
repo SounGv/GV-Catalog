@@ -75,7 +75,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  <section class="card" id="printCard" hidden><div class="steps"><b>3</b> เลือกขนาดและจำนวน</div>
   <div class="row2">
    <div class="seg" id="seg"><button type="button" data-s="s3">3 ดวง/แถว<small>32.3 × 20 มม.</small></button><button type="button" data-s="s2">2 ดวง/แถว<small>50 × 30 มม.</small></button></div>
-   <div><div class="qbox"><button class="s" type="button" id="qMinus" aria-label="ลดจำนวน">−</button><input id="qty" type="number" inputmode="numeric" min="1" max="20000" value="30" aria-label="จำนวนดวง"><button class="s" type="button" id="qPlus" aria-label="เพิ่มจำนวน">+</button><span class="bc" style="margin:0">ดวง</span></div>
+   <div><div class="qbox"><button class="s" type="button" id="qMinus" aria-label="ลดจำนวน">−</button><input id="qty" type="number" inputmode="numeric" min="1" max="20000" value="" placeholder="ใส่จำนวน" aria-label="จำนวนดวง"><button class="s" type="button" id="qPlus" aria-label="เพิ่มจำนวน">+</button><span class="bc" style="margin:0">ดวง</span></div>
     <div class="chips" id="qChips"><button type="button" data-q="10">10</button><button type="button" data-q="30">30</button><button type="button" data-q="50">50</button><button type="button" data-q="100">100</button></div></div>
   </div>
   <div class="prev" id="prevBox"><div class="scale" id="scale"></div></div>
@@ -115,7 +115,8 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  const gtinsOf=p=>String(p.gtin||'').split(/[\s,;|/]+/).filter(g=>/^\d{8,14}$/.test(g));
  const eanOk=c=>{if(!/^\d{13}$/.test(c))return false;let s=0;for(let i=0;i<12;i++)s+=Number(c[i])*(i%2?3:1);return(10-s%10)%10===Number(c[12])};
  const msg=(t,cls)=>{$('msg').textContent=t||'';$('msg').className='msg'+(cls?' '+cls:'')};
- const qtyNow=()=>Math.max(1,Math.min(20000,Math.floor(Number($('qty').value)||0)));
+ const qtyNow=()=>Math.max(0,Math.min(20000,Math.floor(Number($('qty').value)||0))); // empty = 0: staff type how many to print
+ const qtyPreview=()=>Math.max(1,qtyNow()); // the preview row always needs at least one sticker
  const eng=s=>$('engine').querySelector(s);
  const engSet=k=>$('engine').querySelector(`[data-set="${k}"]`);
 
@@ -146,15 +147,16 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   const code=printedCode(current);
   if(!code){engine.update([]);return}
   const text=$('nameInput').value;
-  engine.update([{code,model:current.sku,mc:modelCode(current.name),brand:current.brand==='Fantech'?'FANTECH':'',desc:descOf(current.name),qty:qtyNow(),status:'same',pick:true}]);
+  engine.update([{code,model:current.sku,mc:modelCode(current.name),brand:current.brand==='Fantech'?'FANTECH':'',desc:descOf(current.name),qty:qtyPreview(),status:'same',pick:true}]);
   const row=eng('tbody tr');if(!row)return;
   const t=row.querySelector('[data-f=text]'),q=row.querySelector('[data-f=qty]'),p=row.querySelector('[data-f=pick]');
   if(keepText&&text!==''&&t&&t.value!==text){t.value=text;t.dispatchEvent(new Event('input',{bubbles:true}))}
-  if(q){q.value=qtyNow();q.dispatchEvent(new Event('input',{bubbles:true}))}
+  if(q){q.value=qtyPreview();q.dispatchEvent(new Event('input',{bubbles:true}))}
   if(p&&!p.checked){p.checked=true;p.dispatchEvent(new Event('change',{bubbles:true}))}
  }
  function show(p){
   if(current!==p&&engine.reset)engine.reset(); // a new product starts with its own text, never one left over from another product with the same number
+  if(current!==p)$('qty').value=''; // and with an empty quantity: how many to print is typed for each model
   current=p;
   const b=barcodeOf(p),mc=modelCode(p.name);
   $('fSku').textContent=p.sku;$('foundCard').hidden=false;
@@ -169,12 +171,13 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  const sizeCols=()=>engSet('size').value==='s2'?2:3;
  function refresh(){
   const prevRow=eng('[data-el=preview] .st-row'),host=$('scale'),n=qtyNow(),rows=Math.ceil(n/sizeCols());
-  $('goN').textContent=n;$('goBtn').disabled=$('testBtn').disabled=!current||!eng('tbody tr');
+  const ready=!!current&&!!eng('tbody tr');
+  $('goBtn').innerHTML=n>0?`พิมพ์สติกเกอร์ <b id="goN">${n}</b> ดวง`:'ใส่จำนวนดวงก่อน';$('goBtn').disabled=!ready||n===0;$('testBtn').disabled=!ready;
   if(!prevRow){host.innerHTML='';$('cap').textContent='';return}
   host.innerHTML='';host.style.transform='none';host.style.width='auto';const row=prevRow.cloneNode(true);host.append(row);
   const box=$('prevBox'),avail=box.clientWidth-28,w=row.getBoundingClientRect().width||1,h=row.getBoundingClientRect().height,k=Math.min(2.2,avail/w);
   host.style.transform=`scale(${k})`;host.style.width=w+'px';box.style.height=(h*k+28)+'px';
-  $('cap').textContent=`ตัวอย่างสติกเกอร์ 1 แถว · พิมพ์ ${n} ดวง = ${rows} แถว`;
+  $('cap').textContent=n>0?`ตัวอย่างสติกเกอร์ 1 แถว · พิมพ์ ${n} ดวง = ${rows} แถว`:'ตัวอย่างสติกเกอร์ 1 แถว · ใส่จำนวนดวงที่จะพิมพ์ในช่องด้านบน';
   for(const el of row.querySelectorAll(tgt==='bc'?'.st-bc':tgt==='tx'?'.st-tx':'.st-in'))el.classList.add('hl');
   readout();
  }
