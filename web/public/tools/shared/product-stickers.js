@@ -153,9 +153,10 @@
   {const v=read(KEY+'size');if(SIZES[v])setting('size').value=v}
   // factory design = a new page with no old printer calibration, and each size has its own gap / left-right shift:
   // 3-up starts at the roll's real 1.5 mm gap, 2-up at the Jaymart roll's saved values (no extra)
-  const perSize=design==='factory';let curSize=setting('size').value;let prn=read(KEY+'printer')==='tsc'?'tsc':'birch';const sfx=()=>curSize+(prn==='tsc'?'@tsc':''); // each printer keeps its own position adjustments (Birch = the values saved before printers were added)
+  const perSize=design==='factory';let curSize=setting('size').value;let prn=read(KEY+'printer')==='tsc'?'tsc':'birch';let locked=design==='factory'&&read(KEY+'locked')!=='0'; // locked = every computer prints with the standard values, whatever was adjusted here before
+  const sfx=()=>curSize+(prn==='tsc'?'@tsc':''); // each printer keeps its own position adjustments (Birch = the values saved before printers were added)
   const PS=['gapX','shiftX','shift','pitch','bcX','bcY','bcS','txX','txY','txS'],PS_DEF=(k,sz)=>k==='bcS'||k==='txS'?'100':'0'; // a row is exactly one label high: the printer's own gap sensor (die-cut stock) finds the next label
-  const sizeVals=()=>{for(const k of PS){const el=setting(k);if(!el)continue;const v=read(KEY+k+'_'+sfx());el.value=v??PS_DEF(k,curSize)}};
+  const sizeVals=()=>{for(const k of PS){const el=setting(k);if(!el)continue;const v=read(KEY+k+'_'+sfx());el.value=locked?PS_DEF(k,curSize):(v??PS_DEF(k,curSize))}};
   // one-time: a 3-up row spacing of 0 saved before the roll's 3 mm gap became the default is moved to 3 (else every row after the first drifts)
   // a 3 mm default shipped for a short time: it is taken back to 0 once, so one page is exactly one row (100 x 20 mm)
   if(perSize&&read(KEY+'rowfix2')!=='1'){if(read(KEY+'pitch_s3')==='3')write(KEY+'pitch_s3','0');write(KEY+'rowfix2','1')}
@@ -218,7 +219,7 @@
    keep(it);if(f==='pick')syncAll();sum();
   }
   const num=(k,lo,hi)=>{const v=Number(setting(k).value);return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):0};
-  const jm=(id,def)=>{const v=Number(read('gv-jm-label-'+id));return read('gv-jm-label-'+id)!==null&&Number.isFinite(v)?v:def};
+  const jm=(id,def)=>{if(design==='factory'&&locked)return def;const v=Number(read('gv-jm-label-'+id));return read('gv-jm-label-'+id)!==null&&Number.isFinite(v)?v:def};
   const numD=(k,lo,hi,def)=>{const el=setting(k);const v=el?Number(el.value):NaN;return el&&el.value!==''&&Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def};
   const adj=()=>design==='factory'?{bcX:num('bcX',-8,8),bcY:num('bcY',-8,8),bcS:numD('bcS',50,150,100),txX:num('txX',-8,8),txY:num('txY',-8,8),txS:numD('txS',60,150,100)}:{};
   const profile=()=>{
@@ -371,10 +372,10 @@
    window.addEventListener('afterprint',clean);
    requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
   }
-  const save=()=>{for(const k of perSize?['type','size']:['pitch','shift','shiftX','gapX','type','size'])write(KEY+k,setting(k).value);if(perSize)for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+sfx(),el.value)}write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
+  const save=()=>{for(const k of perSize?['type','size']:['pitch','shift','shiftX','gapX','type','size'])write(KEY+k,setting(k).value);if(perSize&&!locked)for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+sfx(),el.value)}write(KEY+'sep',setting('sep').checked?'1':'0');sum()};
 
   host.addEventListener('change',e=>{
-   if(e.target.dataset.set==='size'&&perSize&&e.target.value!==curSize){for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+sfx(),el.value)}curSize=e.target.value;sizeVals()}
+   if(e.target.dataset.set==='size'&&perSize&&e.target.value!==curSize){if(!locked)for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+sfx(),el.value)}curSize=e.target.value;sizeVals()}
    if(e.target.dataset.set)save();else onEdit(e)});
   host.addEventListener('input',e=>{const f=e.target.dataset.f;if(f==='text'||f==='qty')onEdit(e)});
   host.addEventListener('click',e=>{
@@ -383,7 +384,7 @@
    else if(act==='print')print(false);
    else if(act==='test')print(true);
   });
-  return{printer:()=>prn,setPrinter:p=>{p=p==='tsc'?'tsc':'birch';if(p===prn)return;if(perSize)for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+sfx(),el.value)}prn=p;write(KEY+'printer',p);sizeVals();save()},update,reset:()=>kept.clear(),paper:()=>{const q=profile();return{w:q.pageW,h:q.rowPitch}}}; // the page one printed row uses, in mm
+  return{locked:()=>locked,setLocked:b=>{b=!!b;if(b===locked)return;if(!locked&&perSize)for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+sfx(),el.value)}locked=b;write(KEY+'locked',b?'1':'0');sizeVals();save()},printer:()=>prn,setPrinter:p=>{p=p==='tsc'?'tsc':'birch';if(p===prn)return;if(perSize&&!locked)for(const k of PS){const el=setting(k);if(el)write(KEY+k+'_'+sfx(),el.value)}prn=p;write(KEY+'printer',p);sizeVals();save()},update,reset:()=>kept.clear(),paper:()=>{const q=profile();return{w:q.pageW,h:q.rowPitch}}}; // the page one printed row uses, in mm
  }
  window.GVProductStickers={mount,ready:()=>loadCatalogNames()};
 })();
