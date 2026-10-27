@@ -154,8 +154,10 @@
   // factory design = a new page with no old printer calibration, and each size has its own gap / left-right shift:
   // 3-up starts at the roll's real 1.5 mm gap, 2-up at the Jaymart roll's saved values (no extra)
   const perSize=design==='factory';let curSize=setting('size').value;
-  const PS=['gapX','shiftX','shift','pitch','bcX','bcY','bcS','txX','txY','txS'],PS_DEF=(k,sz)=>k==='bcS'||k==='txS'?'100':sz==='s3'&&k==='gapX'?'1.5':sz==='s3'&&k==='shiftX'?'-1.5':'0';
+  const PS=['gapX','shiftX','shift','pitch','bcX','bcY','bcS','txX','txY','txS'],PS_DEF=(k,sz)=>k==='bcS'||k==='txS'?'100':sz==='s3'&&k==='gapX'?'1.5':sz==='s3'&&k==='shiftX'?'-1.5':sz==='s3'&&k==='pitch'?'3':'0'; // 3-up roll: 3 mm between rows (label 20 mm + gap 3 mm = 23 mm per row)
   const sizeVals=()=>{for(const k of PS){const el=setting(k);if(!el)continue;const v=read(KEY+k+'_'+curSize);el.value=v??PS_DEF(k,curSize)}};
+  // one-time: a 3-up row spacing of 0 saved before the roll's 3 mm gap became the default is moved to 3 (else every row after the first drifts)
+  if(perSize&&read(KEY+'rowfix')!=='1'){const v=read(KEY+'pitch_s3');if(v===null||v===''||v==='0')write(KEY+'pitch_s3','3');write(KEY+'rowfix','1')}
   if(perSize)sizeVals();
   // EAN-13 only for a 13-digit code with a valid check digit; anything else stays Code 128 whatever is chosen
   const useEan=code=>setting('type').value!=='c128'&&eanOk(code);
