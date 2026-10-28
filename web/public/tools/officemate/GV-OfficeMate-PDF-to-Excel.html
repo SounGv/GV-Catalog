@@ -481,5 +481,6 @@ for(const ev of ["dragleave","drop"])els.drop.addEventListener(ev,e=>{e.preventD
 els.drop.addEventListener("drop",e=>processFiles(Array.from(e.dataTransfer.files).filter(f=>/\.pdf$/i.test(f.name))));
 reset();
 </script>
+<script src="/tools/shared/back-link.js"></script>
 </body>
 </html>

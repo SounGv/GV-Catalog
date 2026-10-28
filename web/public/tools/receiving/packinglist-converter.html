@@ -316,6 +316,7 @@ function sync(){var has=res.classList.contains("show");st.dataset.step=has?"2":"
 new MutationObserver(sync).observe(res,{attributes:true,attributeFilter:["class"]});
 var pc=document.getElementById("printCard");if(pc&&"IntersectionObserver"in window)new IntersectionObserver(function(e){if(e[0].isIntersecting&&res.classList.contains("show")){[].forEach.call(st.children,function(li,i){li.classList.toggle("on",i===2);li.classList.toggle("done",i<2)})}else sync()},{threshold:.35}).observe(pc);sync()})();
 </script>
+<script src="/tools/shared/back-link.js"></script>
 </body></html>
 
 
