@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { notFound } from "next/navigation";
 import { pool } from "@/lib/db";
 import { adminProductEditPath } from "@/lib/catalog-query";
@@ -45,9 +46,7 @@ export default async function AdminReportDetailPage({ params }: { params: Promis
     <main className="mx-auto flex max-w-[640px] flex-col gap-4 px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">รายละเอียดรายงาน</h1>
-        <Link href="/admin/reports" className="text-base text-muted underline">
-          ‹ กลับรายการรายงาน
-        </Link>
+        <BackLink href="/admin/reports">กลับรายการรายงาน</BackLink>
       </div>
 
       <section className="flex flex-col gap-2 rounded-[10px] bg-surface p-4 shadow-[var(--shadow-sm)]">

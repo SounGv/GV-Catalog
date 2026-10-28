@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { notFound } from "next/navigation";
 import { CopySkuLink } from "@/components/copy-sku-link";
 import { GtinCheck } from "@/components/gtin-check";
@@ -53,9 +54,7 @@ export default async function SkuPage({ params, searchParams }: SkuPageProps) {
 
   return (
     <main className="mx-auto flex max-w-[1180px] flex-col gap-6 px-4 py-6">
-      <Link href={catalogHref(query)} className="inline-flex min-h-11 w-fit items-center text-base text-muted">
-        ‹ กลับแค็ตตาล็อก
-      </Link>
+      <BackLink href={catalogHref(query)}>กลับแค็ตตาล็อก</BackLink>
 
       <div className="flex flex-col gap-2">
         <h1 className="font-mono text-2xl font-bold">{product.sku}</h1>

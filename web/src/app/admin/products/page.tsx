@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { pool } from "@/lib/db";
 import { adminProductEditPath } from "@/lib/catalog-query";
 
@@ -47,9 +48,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
     <main className="mx-auto flex max-w-[960px] flex-col gap-4 px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">จัดการสินค้า</h1>
-        <Link href="/admin" className="text-base text-muted underline">
-          ‹ กลับหน้าแรกผู้ดูแล
-        </Link>
+        <BackLink href="/admin">กลับหน้าแรกผู้ดูแล</BackLink>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

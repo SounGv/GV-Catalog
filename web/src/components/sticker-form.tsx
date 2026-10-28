@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import type { Sticker, StickerLogEntry } from "@/lib/stickers";
 import { saveStickerAction, deleteStickerAction } from "@/app/stickers/actions";
 import { StickerDeleteButton, StickerSaveButton } from "@/components/sticker-form-buttons";
@@ -24,9 +25,7 @@ export function StickerForm({ sticker, log = [], error }: StickerFormProps) {
     <main className="mx-auto flex max-w-[720px] flex-col gap-5 px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">{sticker ? "แก้ไขรายการสต็อก" : "เพิ่มรายการสต็อก"}</h1>
-        <Link href="/stickers" className="text-base text-muted underline">
-          ‹ กลับรายการสต็อก
-        </Link>
+        <BackLink href="/stickers">กลับรายการสต็อก</BackLink>
       </div>
 
       {error ? <p className="rounded-[10px] bg-red-50 px-3 py-2 text-base text-red-700">{error}</p> : null}

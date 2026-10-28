@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { notFound } from "next/navigation";
 import { pool } from "@/lib/db";
 import { confirmImportAction, cancelImportAction } from "../actions";
@@ -27,9 +28,7 @@ export default async function ImportPreviewPage({ params }: { params: Promise<{ 
     <main className="mx-auto flex max-w-[640px] flex-col gap-6 px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">ตัวอย่างก่อนนำเข้า</h1>
-        <Link href="/admin/products" className="text-base text-muted underline">
-          ‹ กลับรายการสินค้า
-        </Link>
+        <BackLink href="/admin/products">กลับรายการสินค้า</BackLink>
       </div>
 
       <p className="text-base text-muted">ไฟล์: {batch.filename}</p>

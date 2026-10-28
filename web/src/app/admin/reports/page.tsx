@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { pool } from "@/lib/db";
 import { countReportsByStatus } from "@/lib/reports";
 
@@ -46,9 +47,7 @@ export default async function AdminReportsPage({ searchParams }: ReportsPageProp
     <main className="mx-auto flex max-w-[880px] flex-col gap-4 px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">รายงานความต่าง</h1>
-        <Link href="/admin" className="text-base text-muted underline">
-          ‹ กลับหน้าแรกผู้ดูแล
-        </Link>
+        <BackLink href="/admin">กลับหน้าแรกผู้ดูแล</BackLink>
       </div>
 
       <div className="flex gap-2">
