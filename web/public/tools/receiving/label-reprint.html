@@ -1,0 +1,111 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>พิมพ์ใบแปะลัง ฝั่งรับเข้า</title>
+<style>
+:root{--ink:#18232b;--navy:#18364c;--navy-ink:#aebfcc;--lime:#cdeb03;--green:#185c45;--soft:#e8f2ed;--bg:#f7f8fa;--card:#fff;--line:#e5e9ed;--muted:#64748b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Sarabun,"Noto Sans Thai","Segoe UI",system-ui,sans-serif}
+.top{background:var(--navy);padding:0 20px 4px}header{background:var(--navy);color:#fff;padding:2px 20px 18px;border-radius:0 0 16px 16px}
+header h1{margin:0;font-size:20px}header p{margin:0;color:var(--navy-ink);font-size:14px}
+.tag{display:inline-block;background:var(--lime);color:var(--navy);font-weight:700;font-size:12px;padding:1px 10px;border-radius:99px;margin-left:8px;vertical-align:middle}
+.wrap{display:grid;grid-template-columns:minmax(0,520px) 1fr;gap:20px;max-width:1180px;margin:0 auto;padding:16px 20px 90px}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}}
+.back{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px 0 12px;margin:10px 0 8px;border-radius:999px;background:#fff;border:1.5px solid #fff;font-weight:700;color:var(--navy);text-decoration:none}
+.back i{width:26px;height:26px;border-radius:50%;background:var(--navy);color:var(--lime);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:17px;display:flex;align-items:center;gap:8px}
+.n{width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+label{display:block;font-size:14px;color:var(--muted);margin:8px 0 2px}
+input,select{width:100%;min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff}
+input:focus,select:focus{outline:3px solid var(--soft);border-color:var(--green)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{min-height:44px;padding:0 16px;border:1.5px solid var(--green);color:var(--green);border-radius:999px;background:#fff;font:700 15px inherit;font-family:inherit;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--green);color:#fff}
+.hint{font-size:13px;color:var(--muted);margin:4px 0 0}
+.sum{background:var(--soft);border:1px solid #c5ddd2;border-radius:10px;padding:10px 14px;font-weight:700}
+.sum small{font-weight:400;color:var(--green)}
+.preview{position:sticky;top:12px}
+.reprint{position:absolute;right:6px;top:6px;background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;z-index:2}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:12px;align-items:center;justify-content:center}
+.go{min-height:52px;padding:0 28px;border:0;border-radius:12px;background:var(--green);color:#fff;font:700 17px inherit;font-family:inherit;cursor:pointer}
+.go:hover{background:#134a38}.go:disabled{opacity:.4}
+.pager{display:flex;gap:10px;align-items:center;justify-content:center;margin:10px 0}
+.pager button{min-width:44px;min-height:44px;border-radius:50%;border:1.5px solid var(--green);color:var(--green);background:#fff;font-size:18px;cursor:pointer}
+</style>
+<style>.carton-label{display:grid!important;grid-template-rows:29mm 40mm 40mm 1fr!important;padding:0!important;border:1px solid #111!important;border-radius:0!important;color:#111!important}
+.carton-label>*{min-width:0}
+.label-title{display:grid;place-items:center;text-align:center;border-bottom:1px solid #111;padding:2mm 4mm;font-weight:900}
+.label-model{font-size:31pt;font-weight:900;text-align:center;line-height:1.05;max-width:100%;padding:0 1mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.label-location{display:grid;grid-template-columns:minmax(0,1fr) 36mm;padding:5mm 5mm 4mm;gap:3mm;border-bottom:1px solid #111;min-width:0}
+.label-location-copy{min-width:0}
+.label-k{font-size:16pt;font-weight:400;line-height:1.1}
+.label-location-value{font-size:22pt;line-height:1.1;margin-top:7mm;overflow:hidden;overflow-wrap:anywhere}
+.location-qr{width:32mm;height:32mm;align-self:center;justify-self:end;display:grid;place-items:center;min-width:0;min-height:0;overflow:hidden;border:0}
+.location-qr:before{content:none!important;display:none!important}
+.location-qr svg{width:32mm;height:32mm;display:block;shape-rendering:crispEdges}
+.label-qty{display:grid;grid-template-columns:1.1fr 1fr;border-bottom:1px solid #111;min-width:0;background:linear-gradient(90deg,transparent calc(52.381% - .5px),#111 calc(52.381% - .5px),#111 calc(52.381% + .5px),transparent calc(52.381% + .5px))}
+.qty-box,.ctn-box{padding:5mm 5mm;min-width:0}
+.ctn-box{border-left:0;text-align:center}
+.label-big{font-size:38pt;line-height:1;margin-top:8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label-unit{font-size:20pt;text-align:center;margin-top:-1mm}
+.label-footer{display:grid;grid-template-columns:1fr 1.45fr;min-width:0;background:linear-gradient(90deg,transparent calc(40.816% - .5px),#111 calc(40.816% - .5px),#111 calc(40.816% + .5px),transparent calc(40.816% + .5px))}
+.label-ref{display:grid;place-items:center;padding:4mm;font-size:18pt;line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.label-barcode{border-left:0;box-shadow:none;margin-top:0;padding:4mm 4mm 3mm;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden}
+.label-barcode .bc{width:100%;height:18mm;margin:0;display:block}
+.label-barcode .bc-number{text-align:center;font-size:14pt;line-height:1.05;margin-top:2mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bc-missing{height:18mm;display:grid;place-items:center;color:#b63e36;font-size:11pt;font-weight:700}</style>
+<style>.pv-wrap{position:relative;width:100%;max-width:100mm;margin:0 auto}.pv{width:100mm;transform-origin:top left}
+@page{size:100mm 150mm;margin:0}
+#printDoc{display:none}
+@media print{html,body{width:100mm!important;margin:0!important;padding:0!important;background:#fff!important}body>*:not(#printDoc){display:none!important}#printDoc{display:block!important}#printDoc .carton-label{width:100mm!important;height:150mm!important;margin:0!important;border:0!important;border-radius:0!important;page-break-after:always;break-after:page}#printDoc .carton-label:last-child{page-break-after:auto;break-after:auto}}
+.carton-label{width:100mm;height:150mm;background:#fff;box-sizing:border-box;overflow:hidden;font-family:Arial,sans-serif}
+</style>
+<script src="qrcode.browser.js"></script>
+</head><body>
+<div class="top"><a class="back" href="/"><i>‹</i>กลับหน้าหลัก</a></div>
+<header><h1>พิมพ์ใบแปะลัง · ฝั่งรับเข้า <span class="tag">ใหม่</span></h1><p>กรอกเองเพื่อพิมพ์เพิ่ม / แก้ใบแปะลัง แยกจากหน้าแปลง Packing List</p></header>
+<div class="wrap"><div>
+<section class="card"><h2><span class="n">1</span>สินค้า</h2>
+<label>รหัสสินค้า (SKU / รุ่น)</label><input id="sku" value="" placeholder="เช่น 35501">
+<div class="row2"><div><label>ตำแหน่งจัดเก็บ (Location)</label><input id="loc" value="" placeholder="เช่น A-12-03"></div><div><label>เลข Lot / ตู้</label><input id="lot" value="---" placeholder="เช่น GTE190826"></div></div>
+<label>บาร์โค้ดสินค้า (GTIN)</label><input id="gt" value="" placeholder="ตัวเลขใต้บาร์โค้ด">
+<p class="hint">QR ตำแหน่งสร้างจากรหัสสินค้าอัตโนมัติ</p></section>
+<section class="card"><h2><span class="n">2</span>จำนวนและเลขลัง</h2>
+<div class="row2"><div><label>จำนวนต่อลัง (QTY)</label><input id="qty" type="number" value="" placeholder="เช่น 20"></div><div><label>หน่วย</label><input id="unit" value="PCS"></div></div>
+<label>ลังที่จะพิมพ์</label>
+<div class="chips" id="mode"><button class="chip" data-m="range" aria-pressed="false">ช่วงลัง</button><button class="chip" data-m="list" aria-pressed="true">ระบุเลขลัง</button></div>
+<div id="rg" hidden class="row2"><div><label>ตั้งแต่ลังที่</label><input id="r1" type="number" value=""></div><div><label>ถึงลังที่</label><input id="r2" type="number" value=""></div></div>
+<div id="ls"><input id="lst" value="" placeholder="เช่น 903, 907, 910-911" style="margin-top:8px"><p class="hint">เลขลัง CTN No. จริงตาม Packing List · คั่นด้วยจุลภาค ใช้ขีดแทนช่วง เช่น 903, 907, 910-911</p></div>
+<label>ป้ายมุมใบ (ไม่ใส่ก็ได้)</label><select id="why"><option value="">ไม่ใส่</option><option>พิมพ์ซ้ำ</option><option>แก้ไขจำนวน</option><option>ลังเพิ่ม</option></select>
+</section>
+<section class="card"><h2><span class="n">3</span>เครื่องพิมพ์</h2>
+<select id="prn"><option>TSC TE210 · 100×150 มม.</option><option>Birch DP-4432B · 100×150 มม.</option></select>
+<p class="hint">ใช้กระดาษ 100×150 มม. เหมือนหน้าแปลง Packing List</p></section></div>
+<aside class="preview"><div class="card"><h2>ตัวอย่างใบแปะ 100 × 150 มม.</h2>
+<div class="pv-wrap"><span class="reprint" id="badge" hidden></span><div class="pv" id="pv-host"></div></div>
+<div class="pager"><button id="pv">‹</button><span id="pc"></span><button id="nx">›</button></div>
+<div class="sum" id="sum"></div></div></aside></div>
+<div class="bar"><span id="barinfo"></span><button class="go" id="go">พิมพ์</button></div>
+<script>const text=v=>String(v??"").trim();
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const C128=['212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'];
+function barcodeSvg(value){const s=text(value);if(!s)return`<div class="bc-missing">ไม่มีบาร์โค้ด</div>`;const codes=[104,...Array.from(s).map(ch=>Math.max(0,Math.min(95,ch.charCodeAt(0)-32)))];let sum=104;Array.from(s).forEach((ch,i)=>sum+=(ch.charCodeAt(0)-32)*(i+1));codes.push(sum%103,106);let x=0,rects="";codes.forEach(code=>{let black=true;for(const n of C128[code]){const w=Number(n);if(black)rects+=`<rect x="${x}" y="0" width="${w}" height="100"/>`;x+=w;black=!black}});return`<svg class="bc" viewBox="0 0 ${x} 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-label="${esc(s)}"><g fill="#000">${rects}</g></svg>`}
+function skuQrSvg(value){const s=text(value);if(!s||!globalThis.GVQRCode)return`<div class="bc-missing">ไม่มี QR ของ SKU</div>`;try{const qr=GVQRCode.create(s,{errorCorrectionLevel:"M"}),n=qr.modules.size,d=qr.modules.data,margin=2,size=n+margin*2,rects=[];for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(d[y*n+x])rects.push(`<rect x="${x+margin}" y="${y+margin}" width="1" height="1"/>`);return`<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-label="SKU QR ${esc(s)}"><rect width="${size}" height="${size}" fill="#fff"/><g fill="#000">${rects.join("")}</g></svg>`}catch(e){return`<div class="bc-missing">สร้าง QR ไม่สำเร็จ</div>`}}
+function fitTextStyle(value,maxChars,base=13,min=8){const n=text(value).length;return`font-size:${Math.max(min,Math.min(base,base*maxChars/Math.max(maxChars,n))).toFixed(2)}pt`}
+const $=id=>document.getElementById(id);let mode='list',idx=0,pages=[];
+function parse(s){const o=new Set;s.split(/[,\s]+/).forEach(t=>{const m=t.match(/^(\d+)(?:-(\d+))?$/);if(!m)return;let a=+m[1],b=+(m[2]||m[1]);if(a>b)[a,b]=[b,a];if(b-a>999)return;for(let i=a;i<=b;i++)o.add(i)});return[...o].sort((a,b)=>a-b)}
+function labelHtml(n){const sku=text($('sku').value),loc=text($('loc').value),lot=text($('lot').value),gt=text($('gt').value),qty=text($('qty').value),unit=text($('unit').value)||'PCS',ctn=String(n??'');
+ return `<div class="carton-label"><div class="label-title"><div class="label-model" title="${esc(sku)}" style="${fitTextStyle(sku,10,34,9)}">${esc(sku||"—")}</div></div><div class="label-location"><div class="label-location-copy"><div class="label-k">Location</div><div class="label-location-value" style="${fitTextStyle(loc,12,22,14)}">${esc(loc)}</div></div><div class="location-qr" aria-label="QR SKU ${esc(sku)}">${skuQrSvg(sku)}</div></div><div class="label-qty"><div class="qty-box"><div class="label-k">QTY:</div><div class="label-big" style="${fitTextStyle(qty,5,38,20)}">${esc(qty)}</div><div class="label-unit">${esc(unit)}</div></div><div class="ctn-box"><div class="label-k">CTN No.</div><div class="label-big" style="${fitTextStyle(ctn,5,38,20)}">${esc(ctn)}</div></div></div><div class="label-footer"><div class="label-ref" title="${esc(lot)}" style="${fitTextStyle(lot,14,18,11)}">${esc(lot)}</div><div class="label-barcode">${barcodeSvg(gt)}<div class="bc-number">${esc(gt)}</div></div></div></div>`}
+function calc(){pages=mode==='range'?parse(($('r1').value||0)+'-'+($('r2').value||0)):parse($('lst').value);if(idx>=pages.length)idx=Math.max(0,pages.length-1);draw()}
+function fitPreview(){const wrap=$('pv-host').parentElement,k=Math.min(1,wrap.clientWidth/378);$('pv-host').style.transform='scale('+k+')';wrap.style.height=(150*3.7795*k)+'px'}
+function draw(){const why=$('why').value,c=pages.length,sku=text($('sku').value),qty=+$('qty').value||0;
+ $('pv-host').innerHTML=labelHtml(pages[idx]);fitPreview();
+ $('badge').hidden=!why;$('badge').textContent=why;$('pc').textContent=c?'ใบที่ '+(idx+1)+' จาก '+c:'ยังไม่ได้ระบุลัง';
+ const miss=[];if(!sku)miss.push('รหัสสินค้า');if(!qty)miss.push('จำนวนต่อลัง');
+ $('sum').innerHTML=miss.length?'ยังขาด: '+miss.join(', '):c?'จะพิมพ์ <b>'+c+' ใบ</b> · CTN '+pages.join(', ')+'<br><small>รวม '+(c*qty)+' '+(text($('unit').value)||'PCS')+' · '+$('prn').value+'</small>':'ใส่เลขลังอย่างน้อย 1 ลัง';
+ const ok=c&&!miss.length;$('go').textContent=ok?'พิมพ์ '+c+' ใบ':'พิมพ์';$('go').disabled=!ok;$('barinfo').textContent=ok?'100×150 มม. · '+c+' ใบ':''}
+document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{mode=b.dataset.m;document.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',x===b));$('rg').hidden=mode!=='range';$('ls').hidden=mode!=='list';idx=0;calc()});
+['sku','loc','lot','gt','qty','unit','r1','r2','lst','why','prn'].forEach(i=>$(i).addEventListener('input',calc));
+$('pv').onclick=()=>{if(idx>0){idx--;draw()}};$('nx').onclick=()=>{if(idx<pages.length-1){idx++;draw()}};
+$('go').onclick=()=>{if($('go').disabled)return;document.getElementById('printDoc')?.remove();const d=document.createElement('div');d.id='printDoc';d.innerHTML=pages.map(labelHtml).join('');document.body.append(d);const clean=()=>{d.remove();removeEventListener('afterprint',clean)};addEventListener('afterprint',clean);requestAnimationFrame(()=>requestAnimationFrame(()=>print()))};
+addEventListener('resize',fitPreview);calc();
+</script><script src="/tools/shared/back-link.js"></script></body></html>

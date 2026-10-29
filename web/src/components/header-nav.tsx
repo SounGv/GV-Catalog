@@ -45,6 +45,7 @@ const STATIC_TOOLS = [
 /** Receiving department (ฝ่ายรับเข้า) tools — its own menu, separate from the PO converters. */
 const RECEIVING_TOOLS = [
   { href: "/tools/receiving/packinglist-converter.html", label: "แปลง Packing List · ใบแปะลัง", external: true },
+  { href: "/tools/receiving/label-reprint.html", label: "พิมพ์ใบแปะลัง · พิมพ์เพิ่ม/แก้งาน", external: true },
   { href: "/receiving/pick-locations", label: "ตำแหน่งหยิบ · ซิงค์จาก BigSeller", external: false },
 ];
 
