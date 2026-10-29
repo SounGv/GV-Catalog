@@ -13,14 +13,16 @@ header h1{margin:0;font-size:20px}header p{margin:0;color:var(--navy-ink);font-s
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
 .card h2{margin:0 0 10px;font-size:17px;display:flex;align-items:center;gap:8px}
 .n{width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
-label{display:block;font-size:14px;color:var(--muted);margin:8px 0 2px}
-input,select{width:100%;min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff}
+label{display:block;font-size:15px;font-weight:700;color:var(--ink);margin:10px 0 4px}
+input,select{width:100%;min-height:44px;padding:0 12px;border:2px solid #7d8b99;border-radius:10px;font:inherit;font-size:17px;font-weight:600;color:var(--ink);background:#fff}
+input::placeholder{color:#7d8b99;font-weight:400}
+input:hover,select:hover{border-color:var(--green)}
 input:focus,select:focus{outline:3px solid var(--soft);border-color:var(--green)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{min-height:44px;padding:0 16px;border:1.5px solid var(--green);color:var(--green);border-radius:999px;background:#fff;font:700 15px inherit;font-family:inherit;cursor:pointer}
 .chip[aria-pressed=true]{background:var(--green);color:#fff}
-.hint{font-size:13px;color:var(--muted);margin:4px 0 0}
+.hint{font-size:13px;color:#475569;margin:4px 0 0}
 .sum{background:var(--soft);border:1px solid #c5ddd2;border-radius:10px;padding:10px 14px;font-weight:700}
 .sum small{font-weight:400;color:var(--green)}
 .preview{position:sticky;top:12px}
