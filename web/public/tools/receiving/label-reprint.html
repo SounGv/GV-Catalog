@@ -65,10 +65,11 @@ input:focus,select:focus{outline:3px solid var(--soft);border-color:var(--green)
 <header><h1>พิมพ์ใบแปะลัง · ฝั่งรับเข้า <span class="tag">ใหม่</span></h1><p>กรอกเองเพื่อพิมพ์เพิ่ม / แก้ใบแปะลัง แยกจากหน้าแปลง Packing List</p></header>
 <div class="wrap"><div>
 <section class="card"><h2><span class="n">1</span>สินค้า</h2>
-<label>รหัสสินค้า (SKU / รุ่น)</label><input id="sku" value="" placeholder="เช่น 35501">
+<label>รหัสสินค้า (SKU / รุ่น)</label><input id="sku" value="" placeholder="เช่น 35501" list="skus" autocomplete="off"><datalist id="skus"></datalist>
+<p class="hint" id="skuInfo">พิมพ์รหัสสินค้า ระบบเติมตำแหน่ง บาร์โค้ด และจำนวนต่อลังให้จากข้อมูลล่าสุด</p>
 <div class="row2"><div><label>ตำแหน่งจัดเก็บ (Location)</label><input id="loc" value="" placeholder="เช่น A-12-03"></div><div><label>เลข Lot / ตู้</label><input id="lot" value="---" placeholder="เช่น GTE190826"></div></div>
 <label>บาร์โค้ดสินค้า (GTIN)</label><input id="gt" value="" placeholder="ตัวเลขใต้บาร์โค้ด">
-<p class="hint">QR ตำแหน่งสร้างจากรหัสสินค้าอัตโนมัติ</p></section>
+<p class="hint">ค่าที่เติมให้แก้เองได้ · QR สร้างจากรหัสสินค้าอัตโนมัติ</p></section>
 <section class="card"><h2><span class="n">2</span>จำนวนและเลขลัง</h2>
 <div class="row2"><div><label>จำนวนต่อลัง (QTY)</label><input id="qty" type="number" value="" placeholder="เช่น 20"></div><div><label>หน่วย</label><input id="unit" value="PCS"></div></div>
 <label>ลังที่จะพิมพ์</label>
@@ -107,5 +108,24 @@ document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{mode=b.dataset.m;do
 ['sku','loc','lot','gt','qty','unit','r1','r2','lst','why','prn'].forEach(i=>$(i).addEventListener('input',calc));
 $('pv').onclick=()=>{if(idx>0){idx--;draw()}};$('nx').onclick=()=>{if(idx<pages.length-1){idx++;draw()}};
 $('go').onclick=()=>{if($('go').disabled)return;document.getElementById('printDoc')?.remove();const d=document.createElement('div');d.id='printDoc';d.innerHTML=pages.map(labelHtml).join('');document.body.append(d);const clean=()=>{d.remove();removeEventListener('afterprint',clean)};addEventListener('afterprint',clean);requestAnimationFrame(()=>requestAnimationFrame(()=>print()))};
+/* Auto-fill from live data: GTIN + pieces per carton from the catalog, pick location synced from BigSeller (same feeds the other tools use).
+   Fields stay editable; an unknown SKU just leaves them for typing. */
+const live={map:new Map(),loc:new Map(),ok:false};
+const skuKey=v=>text(v).toUpperCase();
+function setAuto(id,v){const e=$(id);e.value=v;e.dataset.auto='1'}
+function lookup(){const k=skuKey($('sku').value),info=$('skuInfo');if(!k){info.textContent='พิมพ์รหัสสินค้า ระบบเติมตำแหน่ง บาร์โค้ด และจำนวนต่อลังให้จากข้อมูลล่าสุด';return}
+ if(!live.ok){info.textContent='ยังโหลดข้อมูลสินค้าไม่ได้ — กรอกเอง';return}
+ const p=live.map.get(k),pos=live.loc.get(k);
+ if(!p&&!pos){for(const id of['loc','gt','qty'])if($(id).dataset.auto==='1'){$(id).value='';$(id).dataset.auto=''}info.innerHTML='<b style="color:#9b7400">ไม่พบรหัสนี้ในข้อมูล</b> — กรอกตำแหน่งและบาร์โค้ดเอง';calc();return}
+ setAuto('loc',pos||'');setAuto('gt',p?.gtin||'');if(p?.perCarton>0)setAuto('qty',String(p.perCarton));else if($('qty').dataset.auto==='1'){$('qty').value='';$('qty').dataset.auto=''}
+ const miss=[];if(!pos)miss.push('ตำแหน่ง');if(!p?.gtin)miss.push('บาร์โค้ด');if(!(p?.perCarton>0))miss.push('จำนวนต่อลัง');
+ info.innerHTML='พบ: <b>'+esc(p?.name||k)+'</b>'+(miss.length?' · <b style="color:#9b7400">ยังไม่มี'+miss.join(', ')+' กรอกเอง</b>':'');calc()}
+for(const id of['loc','gt','qty'])$(id).addEventListener('input',e=>{if(e.isTrusted)e.target.dataset.auto=''});
+$('sku').addEventListener('change',lookup);$('sku').addEventListener('input',()=>{if(live.map.has(skuKey($('sku').value))||live.loc.has(skuKey($('sku').value)))lookup()});
+(async()=>{if(!/^https?:$/.test(location.protocol))return;try{
+ const [a,b]=await Promise.all([fetch('/api/catalog/barcodes?all=1',{cache:'no-store'}).then(r=>r.json()),fetch('/api/receiving/pick-locations',{cache:'no-store'}).then(r=>r.json())]);
+ for(const r of a.rows||[])live.map.set(skuKey(r.sku),r);for(const r of b.rows||[])live.loc.set(skuKey(r.sku),text(r.position));
+ live.ok=live.map.size>0||live.loc.size>0;$('skus').innerHTML=[...live.map.keys()].slice(0,5000).map(k=>'<option value="'+esc(live.map.get(k).sku)+'">'+esc(live.map.get(k).name)+'</option>').join('');lookup()
+}catch(e){}})();
 addEventListener('resize',fitPreview);calc();
 </script><script src="/tools/shared/back-link.js"></script></body></html>
