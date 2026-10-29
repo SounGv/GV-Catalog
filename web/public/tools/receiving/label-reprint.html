@@ -2,7 +2,7 @@
 <title>พิมพ์ใบแปะลัง ฝั่งรับเข้า</title>
 <style>
 :root{--ink:#18232b;--navy:#18364c;--navy-ink:#aebfcc;--lime:#cdeb03;--green:#185c45;--soft:#e8f2ed;--bg:#f7f8fa;--card:#fff;--line:#e5e9ed;--muted:#64748b}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Sarabun,"Noto Sans Thai","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Sarabun,"Noto Sans Thai","Segoe UI",system-ui,sans-serif}
 .top{background:var(--navy);padding:0 20px 4px}header{background:var(--navy);color:#fff;padding:2px 20px 18px;border-radius:0 0 16px 16px}
 header h1{margin:0;font-size:20px}header p{margin:0;color:var(--navy-ink);font-size:14px}
 .tag{display:inline-block;background:var(--lime);color:var(--navy);font-weight:700;font-size:12px;padding:1px 10px;border-radius:99px;margin-left:8px;vertical-align:middle}
@@ -80,13 +80,12 @@ input:focus,select:focus{outline:3px solid var(--soft);border-color:var(--green)
 <div id="rg" hidden class="row2"><div><label>ตั้งแต่ลังที่</label><input id="r1" type="number" value=""></div><div><label>ถึงลังที่</label><input id="r2" type="number" value=""></div></div>
 <div id="ls" hidden><input id="lst" value="" placeholder="เช่น 903, 907, 910-911" style="margin-top:8px"><p class="hint">เลขลัง CTN No. จริงตาม Packing List · คั่นด้วยจุลภาค ใช้ขีดแทนช่วง เช่น 903, 907, 910-911</p></div>
 <label>พิมพ์ลังละกี่ใบ</label><input id="cp" type="number" min="1" max="10" value="2" inputmode="numeric"><p class="hint">ค่าเริ่มต้น 2 ใบต่อลัง (ติดซ้าย + ขวา) ใบของลังเดียวกันออกติดกัน</p>
-<label>ป้ายมุมใบ (ไม่ใส่ก็ได้)</label><select id="why"><option value="">ไม่ใส่</option><option>พิมพ์ซ้ำ</option><option>แก้ไขจำนวน</option><option>ลังเพิ่ม</option></select>
 </section>
 <section class="card"><h2><span class="n">3</span>เครื่องพิมพ์</h2>
 <select id="prn"><option>TSC TE210 · 100×150 มม.</option><option>Birch DP-4432B · 100×150 มม.</option></select>
 <p class="hint">ใช้กระดาษ 100×150 มม. เหมือนหน้าแปลง Packing List</p></section></div>
 <aside class="preview"><div class="card"><h2>ตัวอย่างใบแปะ 100 × 150 มม.</h2>
-<div class="pv-wrap"><span class="reprint" id="badge" hidden></span><div class="pv" id="pv-host"></div></div>
+<div class="pv-wrap"><div class="pv" id="pv-host"></div></div>
 <div class="pager"><button id="pv">‹</button><span id="pc"></span><button id="nx">›</button></div>
 <div class="sum" id="sum"></div></div></aside></div>
 <div class="bar"><span id="barinfo"></span><button class="go" id="go">พิมพ์</button></div>
@@ -104,14 +103,14 @@ const copies=()=>Math.max(1,Math.min(10,Math.floor(+$('cp').value)||1));
 const printList=()=>{const l=pages.flatMap(n=>Array(copies()).fill(n));return mode==='count'?l.slice(0,Math.max(0,Math.min(999,Math.floor(+$('cn').value)||0))):l};
 function calc(){pages=mode==='count'?Array.from({length:Math.ceil(Math.max(0,Math.min(999,Math.floor(+$('cn').value)||0))/copies())},(_,i)=>Math.max(1,Math.floor(+$('c1').value)||1)+i):mode==='range'?parse(($('r1').value||0)+'-'+($('r2').value||0)):parse($('lst').value);if(idx>=pages.length)idx=Math.max(0,pages.length-1);draw()}
 function fitPreview(){const wrap=$('pv-host').parentElement,k=Math.min(1,wrap.clientWidth/378);$('pv-host').style.transform='scale('+k+')';wrap.style.height=(150*3.7795*k)+'px'}
-function draw(){const why=$('why').value,c=pages.length,sku=text($('sku').value),qty=+$('qty').value||0;
+function draw(){const c=pages.length,sku=text($('sku').value),qty=+$('qty').value||0;
  $('pv-host').innerHTML=labelHtml(pages[idx]);fitPreview();
- $('badge').hidden=!why;$('badge').textContent=why;$('pc').textContent=c?'ใบที่ '+(idx+1)+' จาก '+c:'ยังไม่ได้ระบุลัง';
+ $('pc').textContent=c?'ใบที่ '+(idx+1)+' จาก '+c:'ยังไม่ได้ระบุลัง';
  const miss=[];if(!sku)miss.push('รหัสสินค้า');if(!qty)miss.push('จำนวนต่อลัง');
  $('sum').innerHTML=miss.length?'ยังขาด: '+miss.join(', '):c?'จะพิมพ์ <b>'+printList().length+' ใบ</b> · '+c+' ลัง (ลังละ '+copies()+' ใบ) · CTN '+pages.join(', ')+'<br><small>รวมสินค้า '+(c*qty)+' '+(text($('unit').value)||'PCS')+' · '+$('prn').value+'</small>':'ใส่เลขลังอย่างน้อย 1 ลัง';
  const cp=copies(),tot=printList().length,ok=c&&!miss.length;$('go').textContent=ok?'พิมพ์ '+tot+' ใบ':'พิมพ์';$('go').disabled=!ok;$('barinfo').textContent=ok?'100×150 มม. · '+tot+' ใบ ('+c+' ลัง)':''}
 document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{mode=b.dataset.m;document.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',x===b));$('ct').hidden=mode!=='count';$('rg').hidden=mode!=='range';$('ls').hidden=mode!=='list';idx=0;calc()});
-['sku','loc','lot','gt','qty','unit','r1','r2','lst','why','prn','cp','cn','c1'].forEach(i=>$(i).addEventListener('input',calc));
+['sku','loc','lot','gt','qty','unit','r1','r2','lst','prn','cp','cn','c1'].forEach(i=>$(i).addEventListener('input',calc));
 $('pv').onclick=()=>{if(idx>0){idx--;draw()}};$('nx').onclick=()=>{if(idx<pages.length-1){idx++;draw()}};
 $('go').onclick=()=>{if($('go').disabled)return;document.getElementById('printDoc')?.remove();const d=document.createElement('div');d.id='printDoc';d.innerHTML=printList().map(labelHtml).join('');document.body.append(d);const clean=()=>{d.remove();removeEventListener('afterprint',clean)};addEventListener('afterprint',clean);requestAnimationFrame(()=>requestAnimationFrame(()=>print()))};
 /* Auto-fill from live data: GTIN + pieces per carton from the catalog, pick location synced from BigSeller (same feeds the other tools use).
