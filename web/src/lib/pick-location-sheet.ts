@@ -23,6 +23,9 @@ export type PickLocationPreview = {
   not_in_sheet: number;
   no_location_skus: number;
   latest_source_update: string | null;
+  /** The sheet's date is earlier than the newest date already stored: writing would put older positions over newer ones. */
+  sheet_older_than_web: boolean;
+  web_latest_source_update: string | null;
 };
 
 type SheetPosition = { position: string; positionType: string | null; area: string | null; warehouse: string | null };
@@ -114,9 +117,16 @@ async function currentPositions(): Promise<Map<string, string[]>> {
   return map;
 }
 
+/** Leading yyyy-mm-dd of a source label such as "2026-10-10 (BigSeller export)"; null when there is none. */
+const sourceDate = (label: string | null) => label?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+
 async function plan() {
   const sheet = await readSheet();
   const db = await currentPositions();
+  const webLatest = (await pool.query<{ latest: string | null }>("SELECT max(source_updated_at) AS latest FROM pick_locations")).rows[0]?.latest ?? null;
+  const sheetDate = sourceDate(sheet.latest);
+  const webDate = sourceDate(webLatest);
+  const sheetOlder = Boolean(sheetDate && webDate && sheetDate < webDate);
   if (db.size > 0 && sheet.bySku.size < db.size / 2) {
     throw new Error(`ชีตมี ${sheet.bySku.size} SKU น้อยกว่าครึ่งหนึ่งของที่มีในเว็บ (${db.size}) — น่าจะดึงข้อมูลมาไม่ครบ ไม่ซิงค์`);
   }
@@ -145,6 +155,8 @@ async function plan() {
     not_in_sheet: notInSheet,
     no_location_skus: sheet.noLocation,
     latest_source_update: sheet.latest,
+    sheet_older_than_web: sheetOlder,
+    web_latest_source_update: webLatest,
   };
   return { preview, sheet, changed: [...inserts, ...updates] };
 }
@@ -155,6 +167,9 @@ export async function previewPickLocationSync(): Promise<PickLocationPreview> {
 
 export async function applyPickLocationSync(): Promise<PickLocationPreview> {
   const { preview, sheet, changed } = await plan();
+  if (preview.sheet_older_than_web) {
+    throw new Error(`ชีตเก่ากว่าข้อมูลในเว็บ (ชีต ${preview.latest_source_update ?? "ไม่ระบุ"} · เว็บ ${preview.web_latest_source_update}) ไม่ซิงค์เพื่อไม่ให้ทับตำแหน่งที่ใหม่กว่า — รอให้ชีตอัปเดตก่อน`);
+  }
   if (changed.length === 0) return preview;
   const client = await pool.connect();
   try {

@@ -47,6 +47,11 @@ export function PickLocationSync() {
           <div className="flex max-h-[85vh] w-full max-w-2xl flex-col gap-3 overflow-hidden rounded-xl bg-surface p-5 text-left shadow-xl">
             <h2 className="text-lg font-semibold">ตรวจก่อนซิงค์ตำแหน่งหยิบ</h2>
             <p className="text-sm text-muted">ข้อมูลในชีตอัปเดตล่าสุด: {preview.latest_source_update ?? "ไม่ระบุ"}</p>
+            {preview.sheet_older_than_web ? (
+              <p className="rounded-[8px] bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+                ชีตเก่ากว่าข้อมูลในเว็บ (เว็บ: {preview.web_latest_source_update}) — ซิงค์ตอนนี้จะทับตำแหน่งที่ใหม่กว่า จึงปิดปุ่มยืนยันไว้ รอให้ชีตอัปเดตก่อน
+              </p>
+            ) : null}
             <dl className="grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-sm sm:grid-cols-4">
               {(
                 [
@@ -83,7 +88,7 @@ export function PickLocationSync() {
             </div>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setPreview(null)} className="h-10 rounded-[10px] border border-line px-4 text-base">ยกเลิก</button>
-              <button type="button" disabled={isBusy || changes === 0} onClick={() => void run(false)} className="h-10 rounded-[10px] bg-accent px-5 text-base font-medium text-white disabled:opacity-50">
+              <button type="button" disabled={isBusy || changes === 0 || preview.sheet_older_than_web} onClick={() => void run(false)} className="h-10 rounded-[10px] bg-accent px-5 text-base font-medium text-white disabled:opacity-50">
                 {isBusy ? "กำลังซิงค์…" : `ยืนยันซิงค์ ${changes} SKU`}
               </button>
             </div>
