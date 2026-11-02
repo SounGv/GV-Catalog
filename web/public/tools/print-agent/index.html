@@ -1,0 +1,27 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ติดตั้งโปรแกรมพิมพ์ TSC</title>
+<style>
+:root{--ink:#18232b;--navy:#18364c;--green:#185c45;--soft:#e8f2ed;--bg:#f7f8fa;--line:#e5e9ed}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 Sarabun,"Noto Sans Thai",system-ui,sans-serif}
+header{background:var(--navy);color:#fff;padding:18px 20px;border-radius:0 0 16px 16px}header h1{margin:0;font-size:22px}header p{margin:4px 0 0;color:#aebfcc}
+main{max-width:760px;margin:0 auto;padding:16px 20px 60px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.card h2{margin:0 0 6px;font-size:18px}
+.dl{display:inline-flex;align-items:center;min-height:48px;padding:0 24px;border-radius:12px;background:var(--green);color:#fff;font-weight:700;text-decoration:none}
+.st{padding:10px 14px;border-radius:10px;font-weight:700}.ok{background:var(--soft);color:var(--green)}.no{background:#fff4d6;color:#7a5a00}
+ol{padding-left:22px}code{background:#eef1f4;padding:1px 6px;border-radius:6px}
+</style></head><body>
+<header><h1>ติดตั้งโปรแกรมพิมพ์ (TSC TE210)</h1><p>ให้หน้าพิมพ์สติกเกอร์ส่งขนาดสติกเกอร์ตรงเข้าเครื่องพิมพ์ ไม่เลื่อน ไม่ต้องเลือกกระดาษใน Chrome</p></header>
+<main>
+<div class="card"><div id="st" class="st no">กำลังตรวจโปรแกรมพิมพ์บนเครื่องนี้…</div></div>
+<div class="card"><h2>1. ติดตั้ง Node.js (ครั้งเดียว)</h2><p>ดาวน์โหลดรุ่น <b>LTS</b> จาก <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a> แล้วติดตั้งตามขั้นตอนปกติ</p></div>
+<div class="card"><h2>2. ดาวน์โหลดโปรแกรมพิมพ์</h2><p><a class="dl" href="gv-print-agent.zip" download>ดาวน์โหลด gv-print-agent.zip</a></p><p>คลายซิปไว้ที่ไหนก็ได้บนคอมที่ต่อเครื่อง TSC TE210 (เช่น <code>C:\gv-print-agent</code>)</p></div>
+<div class="card"><h2>3. เปิดใช้งาน</h2><ol><li>ดับเบิลคลิก <code>start-agent.bat</code> ต้องเปิดหน้าต่างดำค้างไว้ตอนพิมพ์</li><li>กลับไปหน้าพิมพ์สติกเกอร์ / หน้า AIS เลือกเครื่องพิมพ์ <b>TSC TE210</b> หน้าจะขึ้นว่า "โปรแกรมพิมพ์เปิดอยู่"</li><li>พิมพ์ครั้งแรก เครื่องจะวัดช่องว่างสติกเกอร์โดยเลื่อนสติกเกอร์เปล่าออกมา 2–3 ดวง ซึ่งปกติ</li></ol>
+<p>ให้เปิดอัตโนมัติทุกครั้งที่เปิดเครื่อง: กด <code>Win + R</code> พิมพ์ <code>shell:startup</code> แล้วนำทางลัด (shortcut) ของ <code>start-agent.bat</code> ไปวาง</p></div>
+<div class="card"><h2>ถ้าสีกลับด้าน (ดำเป็นขาว)</h2><p>เปิดหน้าต่าง Command Prompt แล้วรัน <code>set GV_PRINT_INVERT=0</code> ก่อนเปิดโปรแกรม หรือแจ้งผู้ดูแลระบบ</p></div>
+</main>
+<script>
+(async()=>{const e=document.getElementById('st');try{const r=await fetch('http://127.0.0.1:9101/ping',{signal:AbortSignal.timeout(1500)});const d=await r.json();e.className='st ok';e.textContent='✓ โปรแกรมพิมพ์เปิดอยู่บนเครื่องนี้ · รองรับ: '+(d.printers||[]).join(', ')}catch{e.className='st no';e.textContent='ยังไม่ได้เปิดโปรแกรมพิมพ์บนเครื่องนี้ ทำตามขั้นตอนด้านล่าง'}})();
+</script>
+<script src="/tools/shared/back-link.js"></script>
+</body></html>
