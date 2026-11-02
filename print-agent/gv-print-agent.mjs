@@ -15,6 +15,8 @@ const escRe = o => [...o].map(c => '.*+?^${}()|[]'.includes(c) || c === String.f
 const ORIGINS = [/^http:\/\/localhost(:\d+)?$/, /^https:\/\/gv-catalog[a-z0-9-]*\.vercel\.app$/, ...(process.env.GV_PRINT_ORIGINS || '').split(',').filter(Boolean).map(o => new RegExp('^' + escRe(o) + '$'))];
 // BITMAP: some TSC firmware reads 0 as a printed dot (default), set GV_PRINT_INVERT=0 if a test print comes out inverted
 const INVERT = process.env.GV_PRINT_INVERT !== '0';
+// DIRECTION: a real test print on the TSC TE210 came out turned 180 degrees with 0,0, so 1,0 is the default; set GV_PRINT_DIRECTION=0,0 to turn it back
+const DIRECTION = /^[01],[01]$/.test(process.env.GV_PRINT_DIRECTION ?? '') ? process.env.GV_PRINT_DIRECTION : '1,0';
 
 const RAW_PS = `
 param([string]$Printer,[string]$File)
@@ -59,7 +61,7 @@ const calibrated = new Map();
 function tspl(job, widthMm, heightMm, gapMm, printer) {
   const key = `${printer}|${widthMm}x${heightMm}|${gapMm}`, cal = process.env.GV_PRINT_AUTOCAL !== '0' && !calibrated.has(key);
   if (cal) calibrated.set(key, Date.now());
-  const parts = [Buffer.from(`SIZE ${widthMm} mm,${heightMm} mm\r\nGAP ${gapMm} mm,0 mm\r\n${cal ? 'GAPDETECT\r\n' : ''}DIRECTION 0,0\r\nREFERENCE 0,0\r\nSET TEAR ON\r\n`)];
+  const parts = [Buffer.from(`SIZE ${widthMm} mm,${heightMm} mm\r\nGAP ${gapMm} mm,0 mm\r\n${cal ? 'GAPDETECT\r\n' : ''}DIRECTION ${DIRECTION}\r\nREFERENCE 0,0\r\nSET TEAR ON\r\n`)];
   for (const j of job) {
     const bits = Buffer.from(j.data, 'base64'), wb = j.w / 8;
     if (j.w % 8 || bits.length !== wb * j.h) throw new Error('bad bitmap');
