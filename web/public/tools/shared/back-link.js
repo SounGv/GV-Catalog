@@ -14,12 +14,14 @@
     var as = document.querySelectorAll('a');
     for (var i = 0; i < as.length; i++) {
       var a = as[i];
-      if (a.textContent.indexOf('กลับหน้าหลัก') < 0) continue;
+      var label = a.textContent.replace(/^[\s‹]+/, '').trim();
+      if (label.indexOf('กลับหน้าหลัก') !== 0 && label.indexOf('กลับเครื่องมือ') !== 0) continue;
       var left = parseFloat(getComputedStyle(a).paddingLeft) || 0;
       a.className = 'gv-back'; a.removeAttribute('style');
       if (left > 0) a.style.marginLeft = left + 'px';
-      a.innerHTML = '<span class="gv-back-ic" aria-hidden="true">&lsaquo;</span>กลับหน้าหลัก';
-      a.setAttribute('aria-label', 'กลับหน้าหลัก');
+      a.innerHTML = '<span class="gv-back-ic" aria-hidden="true">&lsaquo;</span>';
+      a.appendChild(document.createTextNode(label));
+      a.setAttribute('aria-label', label);
     }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();

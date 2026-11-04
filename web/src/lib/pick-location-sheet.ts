@@ -126,7 +126,8 @@ async function plan() {
   const webLatest = (await pool.query<{ latest: string | null }>("SELECT max(source_updated_at) AS latest FROM pick_locations")).rows[0]?.latest ?? null;
   const sheetDate = sourceDate(sheet.latest);
   const webDate = sourceDate(webLatest);
-  const sheetOlder = Boolean(sheetDate && webDate && sheetDate < webDate);
+  // The website already carries a dated import: a sheet that is older, or has no readable date, cannot be shown to be newer
+  const sheetOlder = Boolean(webDate && (!sheetDate || sheetDate < webDate));
   if (db.size > 0 && sheet.bySku.size < db.size / 2) {
     throw new Error(`ชีตมี ${sheet.bySku.size} SKU น้อยกว่าครึ่งหนึ่งของที่มีในเว็บ (${db.size}) — น่าจะดึงข้อมูลมาไม่ครบ ไม่ซิงค์`);
   }
@@ -168,7 +169,7 @@ export async function previewPickLocationSync(): Promise<PickLocationPreview> {
 export async function applyPickLocationSync(): Promise<PickLocationPreview> {
   const { preview, sheet, changed } = await plan();
   if (preview.sheet_older_than_web) {
-    throw new Error(`ชีตเก่ากว่าข้อมูลในเว็บ (ชีต ${preview.latest_source_update ?? "ไม่ระบุ"} · เว็บ ${preview.web_latest_source_update}) ไม่ซิงค์เพื่อไม่ให้ทับตำแหน่งที่ใหม่กว่า — รอให้ชีตอัปเดตก่อน`);
+    throw new Error(`ชีตเก่ากว่าหรือไม่มีวันที่ให้เทียบกับข้อมูลในเว็บ (ชีต ${preview.latest_source_update ?? "ไม่ระบุ"} · เว็บ ${preview.web_latest_source_update}) ไม่ซิงค์เพื่อไม่ให้ทับตำแหน่งที่ใหม่กว่า — รอให้ชีตอัปเดตก่อน`);
   }
   if (changed.length === 0) return preview;
   const client = await pool.connect();
