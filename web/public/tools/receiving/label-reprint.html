@@ -35,25 +35,7 @@ input:focus,select:focus{outline:3px solid var(--soft);border-color:var(--green)
 </style>
 <style>.carton-label{display:grid!important;grid-template-rows:29mm 40mm 40mm 1fr!important;padding:0!important;border:1px solid #111!important;border-radius:0!important;color:#111!important}
 .carton-label>*{min-width:0}
-.label-title{display:grid;place-items:center;text-align:center;border-bottom:1px solid #111;padding:2mm 4mm;font-weight:900}
-.label-model{font-size:31pt;font-weight:900;text-align:center;line-height:1.05;max-width:100%;padding:0 1mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.label-location{display:grid;grid-template-columns:minmax(0,1fr) 36mm;padding:5mm 5mm 4mm;gap:3mm;border-bottom:1px solid #111;min-width:0}
-.label-location-copy{min-width:0}
-.label-k{font-size:16pt;font-weight:400;line-height:1.1}
-.label-location-value{font-size:22pt;line-height:1.1;margin-top:7mm;overflow:hidden;overflow-wrap:anywhere}
-.location-qr{width:32mm;height:32mm;align-self:center;justify-self:end;display:grid;place-items:center;min-width:0;min-height:0;overflow:hidden;border:0}
-.location-qr:before{content:none!important;display:none!important}
-.location-qr svg{width:32mm;height:32mm;display:block;shape-rendering:crispEdges}
-.label-qty{display:grid;grid-template-columns:1.1fr 1fr;border-bottom:1px solid #111;min-width:0;background:linear-gradient(90deg,transparent calc(52.381% - .5px),#111 calc(52.381% - .5px),#111 calc(52.381% + .5px),transparent calc(52.381% + .5px))}
-.qty-box,.ctn-box{padding:5mm 5mm;min-width:0}
-.ctn-box{border-left:0;text-align:center}
-.label-big{font-size:38pt;line-height:1;margin-top:8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.label-unit{font-size:20pt;text-align:center;margin-top:-1mm}
-.label-footer{display:grid;grid-template-columns:1fr 1.45fr;min-width:0;background:linear-gradient(90deg,transparent calc(40.816% - .5px),#111 calc(40.816% - .5px),#111 calc(40.816% + .5px),transparent calc(40.816% + .5px))}
-.label-ref{display:grid;place-items:center;padding:4mm;font-size:18pt;line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.label-barcode{border-left:0;box-shadow:none;margin-top:0;padding:4mm 4mm 3mm;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden}
-.label-barcode .bc{width:100%;height:18mm;margin:0;display:block}
-.label-barcode .bc-number{text-align:center;font-size:14pt;line-height:1.05;margin-top:2mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style><link rel="stylesheet" href="carton-label.css"><style>
 .bc-missing{height:18mm;display:grid;place-items:center;color:#b63e36;font-size:11pt;font-weight:700}</style>
 <style>.pv-wrap{position:relative;width:100%;max-width:100mm;margin:0 auto}.pv{width:100mm;transform-origin:top left}
 @page{size:100mm 150mm;margin:0}
@@ -61,7 +43,7 @@ input:focus,select:focus{outline:3px solid var(--soft);border-color:var(--green)
 @media print{html,body{width:100mm!important;margin:0!important;padding:0!important;background:#fff!important}body>*:not(#printDoc){display:none!important}#printDoc{display:block!important}#printDoc .carton-label{width:100mm!important;height:150mm!important;margin:0!important;border:0!important;border-radius:0!important;page-break-after:always;break-after:page}#printDoc .carton-label:last-child{page-break-after:auto;break-after:auto}}
 .carton-label{width:100mm;height:150mm;background:#fff;box-sizing:border-box;overflow:hidden;font-family:Arial,sans-serif}
 </style>
-<script src="qrcode.browser.js"></script>
+<script src="qrcode.browser.js"></script><script src="carton-label.js"></script>
 </head><body>
 <div class="top"><a class="back" href="/"><i>‹</i>กลับหน้าหลัก</a></div>
 <header><h1>พิมพ์ใบแปะลัง · ฝั่งรับเข้า <span class="tag">ใหม่</span></h1><p>กรอกเองเพื่อพิมพ์เพิ่ม / แก้ใบแปะลัง แยกจากหน้าแปลง Packing List</p></header>
@@ -91,10 +73,6 @@ input:focus,select:focus{outline:3px solid var(--soft);border-color:var(--green)
 <div class="bar"><span id="barinfo"></span><button class="go" id="go">พิมพ์</button></div>
 <script>const text=v=>String(v??"").trim();
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const C128=['212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'];
-function barcodeSvg(value){const s=text(value);if(!s)return`<div class="bc-missing">ไม่มีบาร์โค้ด</div>`;const codes=[104,...Array.from(s).map(ch=>Math.max(0,Math.min(95,ch.charCodeAt(0)-32)))];let sum=104;Array.from(s).forEach((ch,i)=>sum+=(ch.charCodeAt(0)-32)*(i+1));codes.push(sum%103,106);let x=0,rects="";codes.forEach(code=>{let black=true;for(const n of C128[code]){const w=Number(n);if(black)rects+=`<rect x="${x}" y="0" width="${w}" height="100"/>`;x+=w;black=!black}});return`<svg class="bc" viewBox="0 0 ${x} 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-label="${esc(s)}"><g fill="#000">${rects}</g></svg>`}
-function skuQrSvg(value){const s=text(value);if(!s||!globalThis.GVQRCode)return`<div class="bc-missing">ไม่มี QR ของ SKU</div>`;try{const qr=GVQRCode.create(s,{errorCorrectionLevel:"M"}),n=qr.modules.size,d=qr.modules.data,margin=2,size=n+margin*2,rects=[];for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(d[y*n+x])rects.push(`<rect x="${x+margin}" y="${y+margin}" width="1" height="1"/>`);return`<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-label="SKU QR ${esc(s)}"><rect width="${size}" height="${size}" fill="#fff"/><g fill="#000">${rects.join("")}</g></svg>`}catch(e){return`<div class="bc-missing">สร้าง QR ไม่สำเร็จ</div>`}}
-function fitTextStyle(value,maxChars,base=13,min=8){const n=text(value).length;return`font-size:${Math.max(min,Math.min(base,base*maxChars/Math.max(maxChars,n))).toFixed(2)}pt`}
 const $=id=>document.getElementById(id);let mode='count',idx=0,pages=[];
 function parse(s){const o=new Set;s.split(/[,\s]+/).forEach(t=>{const m=t.match(/^(\d+)(?:-(\d+))?$/);if(!m)return;let a=+m[1],b=+(m[2]||m[1]);if(a>b)[a,b]=[b,a];if(b-a>999)return;for(let i=Math.max(a,1);i<=b;i++)o.add(i)});return[...o].sort((a,b)=>a-b)}
 function labelHtml(n){const sku=text($('sku').value),loc=text($('loc').value),lot=text($('lot').value),gt=text($('gt').value),qty=text($('qty').value),unit=text($('unit').value)||'PCS',ctn=String(n??'');
@@ -115,22 +93,23 @@ $('pv').onclick=()=>{if(idx>0){idx--;draw()}};$('nx').onclick=()=>{if(idx<pages.
 $('go').onclick=()=>{if($('go').disabled)return;document.getElementById('printDoc')?.remove();const d=document.createElement('div');d.id='printDoc';d.innerHTML=printList().map(labelHtml).join('');document.body.append(d);const clean=()=>{d.remove();removeEventListener('afterprint',clean)};addEventListener('afterprint',clean);requestAnimationFrame(()=>requestAnimationFrame(()=>print()))};
 /* Auto-fill from live data: GTIN + pieces per carton from the catalog, pick location synced from BigSeller (same feeds the other tools use).
    Fields stay editable; an unknown SKU just leaves them for typing. */
-const live={map:new Map(),loc:new Map(),ok:false};
+const live={map:new Map(),loc:new Map(),done:new Set()};
 const skuKey=v=>text(v).toUpperCase();
 function setAuto(id,v){const e=$(id);e.value=v;e.dataset.auto='1'}
-function lookup(){const k=skuKey($('sku').value),info=$('skuInfo');if(!k){info.textContent='พิมพ์รหัสสินค้า ระบบเติมตำแหน่ง บาร์โค้ด และจำนวนต่อลังให้จากข้อมูลล่าสุด';return}
- if(!live.ok){info.textContent='ยังโหลดข้อมูลสินค้าไม่ได้ — กรอกเอง';return}
+// one SKU at a time (?sku=) instead of the whole product list
+async function load(k){if(live.done.has(k))return;const q=encodeURIComponent(k);
+ const [a,b]=await Promise.all([fetch('/api/catalog/barcodes?all=1&sku='+q,{cache:'no-store'}).then(r=>r.json()),fetch('/api/receiving/pick-locations?sku='+q,{cache:'no-store'}).then(r=>r.json())]);
+ for(const r of a.rows||[])live.map.set(skuKey(r.sku),r);for(const r of b.rows||[])live.loc.set(skuKey(r.sku),text(r.position));live.done.add(k)}
+async function lookup(){const k=skuKey($('sku').value),info=$('skuInfo');if(!k){info.textContent='พิมพ์รหัสสินค้า ระบบเติมตำแหน่ง บาร์โค้ด และจำนวนต่อลังให้จากข้อมูลล่าสุด';return}
+ if(!live.done.has(k)){info.textContent='กำลังค้นหา…';try{await load(k)}catch(e){info.textContent='ยังโหลดข้อมูลสินค้าไม่ได้ — กรอกเอง';return}if(skuKey($('sku').value)!==k)return}
  const p=live.map.get(k),pos=live.loc.get(k);
  if(!p&&!pos){for(const id of['loc','gt','qty'])if($(id).dataset.auto==='1'){$(id).value='';$(id).dataset.auto=''}info.innerHTML='<b style="color:#9b7400">ไม่พบรหัสนี้ในข้อมูล</b> — กรอกตำแหน่งและบาร์โค้ดเอง';calc();return}
  setAuto('loc',pos||'');setAuto('gt',p?.gtin||'');if(p?.perCarton>0)setAuto('qty',String(p.perCarton));else if($('qty').dataset.auto==='1'){$('qty').value='';$('qty').dataset.auto=''}
  const miss=[];if(!pos)miss.push('ตำแหน่ง');if(!p?.gtin)miss.push('บาร์โค้ด');if(!(p?.perCarton>0))miss.push('จำนวนต่อลัง');
  info.innerHTML='พบ: <b>'+esc(p?.name||k)+'</b>'+(miss.length?' · <b style="color:#9b7400">ยังไม่มี'+miss.join(', ')+' กรอกเอง</b>':'');calc()}
 for(const id of['loc','gt','qty'])$(id).addEventListener('input',e=>{if(e.isTrusted)e.target.dataset.auto=''});
-$('sku').addEventListener('change',lookup);$('sku').addEventListener('input',()=>{if(live.map.has(skuKey($('sku').value))||live.loc.has(skuKey($('sku').value)))lookup()});
-(async()=>{if(!/^https?:$/.test(location.protocol))return;try{
- const [a,b]=await Promise.all([fetch('/api/catalog/barcodes?all=1',{cache:'no-store'}).then(r=>r.json()),fetch('/api/receiving/pick-locations',{cache:'no-store'}).then(r=>r.json())]);
- for(const r of a.rows||[])live.map.set(skuKey(r.sku),r);for(const r of b.rows||[])live.loc.set(skuKey(r.sku),text(r.position));
- live.ok=live.map.size>0||live.loc.size>0;$('skus').innerHTML=[...live.map.keys()].slice(0,5000).map(k=>'<option value="'+esc(live.map.get(k).sku)+'">'+esc(live.map.get(k).name)+'</option>').join('');lookup()
-}catch(e){}})();
+$('sku').addEventListener('change',lookup);let typing;$('sku').addEventListener('input',()=>{clearTimeout(typing);typing=setTimeout(()=>{suggest();lookup()},350)});
+async function suggest(){const q=text($('sku').value);if(q.length<2||!/^https?:$/.test(location.protocol))return;try{const d=await fetch('/api/catalog/search?q='+encodeURIComponent(q)).then(r=>r.json());$('skus').innerHTML=(d.products||[]).map(p=>'<option value="'+esc(p.sku)+'">'+esc(p.name)+'</option>').join('')}catch(e){}}
+
 addEventListener('resize',fitPreview);calc();
 </script><script src="/tools/shared/back-link.js"></script></body></html>

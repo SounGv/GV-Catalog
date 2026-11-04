@@ -1,0 +1,19 @@
+.label-title{display:grid;place-items:center;text-align:center;border-bottom:1px solid #111;padding:2mm 4mm;font-weight:900}
+.label-model{font-size:31pt;font-weight:900;text-align:center;line-height:1.05;max-width:100%;padding:0 1mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.label-location{display:grid;grid-template-columns:minmax(0,1fr) 36mm;padding:5mm 5mm 4mm;gap:3mm;border-bottom:1px solid #111;min-width:0}
+.label-location-copy{min-width:0}
+.label-k{font-size:16pt;font-weight:400;line-height:1.1}
+.label-location-value{font-size:22pt;line-height:1.1;margin-top:7mm;overflow:hidden;overflow-wrap:anywhere}
+.location-qr{width:32mm;height:32mm;align-self:center;justify-self:end;display:grid;place-items:center;min-width:0;min-height:0;overflow:hidden;border:0}
+.location-qr:before{content:none!important;display:none!important}
+.location-qr svg{width:32mm;height:32mm;display:block;shape-rendering:crispEdges}
+.label-qty{display:grid;grid-template-columns:1.1fr 1fr;border-bottom:1px solid #111;min-width:0;background:linear-gradient(90deg,transparent calc(52.381% - .5px),#111 calc(52.381% - .5px),#111 calc(52.381% + .5px),transparent calc(52.381% + .5px))}
+.qty-box,.ctn-box{padding:5mm 5mm;min-width:0}
+.ctn-box{border-left:0;text-align:center}
+.label-big{font-size:38pt;line-height:1;margin-top:8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.label-unit{font-size:20pt;text-align:center;margin-top:-1mm}
+.label-footer{display:grid;grid-template-columns:1fr 1.45fr;min-width:0;background:linear-gradient(90deg,transparent calc(40.816% - .5px),#111 calc(40.816% - .5px),#111 calc(40.816% + .5px),transparent calc(40.816% + .5px))}
+.label-ref{display:grid;place-items:center;padding:4mm;font-size:18pt;line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.label-barcode{border-left:0;box-shadow:none;margin-top:0;padding:4mm 4mm 3mm;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden}
+.label-barcode .bc{width:100%;height:18mm;margin:0;display:block}
+.label-barcode .bc-number{text-align:center;font-size:14pt;line-height:1.05;margin-top:2mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

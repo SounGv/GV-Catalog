@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+/** Same look as public/tools/shared/back-link.js (static tools); keep the two in step. */
 export function BackLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link

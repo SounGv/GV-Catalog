@@ -9,7 +9,9 @@
     "lint": "eslint",
     "db:migrate": "node db/migrate.mjs",
     "db:seed:products": "node db/seed-products.mjs",
-    "db:seed:products:dry-run": "node db/seed-products.mjs --dry-run"
+    "db:seed:products:dry-run": "node db/seed-products.mjs --dry-run",
+    "prebuild": "node scripts/build-print-agent-zip.mjs",
+    "predev": "node scripts/build-print-agent-zip.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
@@ -28,6 +30,7 @@
     "dotenv": "^18.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "jszip": "^3.10.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

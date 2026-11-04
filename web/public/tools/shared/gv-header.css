@@ -2,10 +2,7 @@
    Loaded last in each page. Same look as the site header (src/components/site-header.tsx). */
 :root{--gv-navy:#18364c;--gv-navy-ink:#aebfcc;--gv-lime:#cdeb03}
 
-/* "Back to main" row: the top edge of the band */
-a[href="/"],a.back{display:flex!important;align-items:center;gap:4px;margin:0!important;padding:10px 22px 2px!important;min-height:44px;background:var(--gv-navy);color:var(--gv-navy-ink)!important;font-size:13px!important;font-weight:600;text-decoration:none}
-a[href="/"]:hover,a.back:hover{color:#fff!important}
-a[href="/"]:focus-visible,a.back:focus-visible{outline:3px solid var(--gv-lime);outline-offset:-3px}
+/* The back link itself is styled by shared/back-link.js (the single definition of the pill button for the static tools) */
 
 /* Jaymart, AIS, OfficeMate: header.top directly under the link, inside the page container */
 a[href="/"]+header.top{background:var(--gv-navy)!important;color:#fff!important;margin:0 0 20px!important;padding:4px 22px 18px!important;border:0!important;border-radius:0 0 16px 16px;position:static!important;backdrop-filter:none!important;box-shadow:none!important}

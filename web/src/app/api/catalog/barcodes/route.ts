@@ -10,12 +10,21 @@ import { pool } from "@/lib/db";
  */
 export async function GET(request: Request) {
   // `?all=1` also lists products that have no main barcode yet (the sticker page lets staff type one in)
-  const all = new URL(request.url).searchParams.get("all") === "1";
+  const params = new URL(request.url).searchParams;
+  const all = params.get("all") === "1";
+  // `?sku=` looks up one product (case-insensitive) so a page that needs a single row does not download the whole list
+  const only = (params.get("sku") ?? "").trim().slice(0, 60);
   const { rows: products } = await pool.query<{ sku: string; name: string; gtin: string | null; brand: string; qty_per_carton: number | null }>(
-    all ? "SELECT sku, name, gtin, brand, qty_per_carton FROM products ORDER BY sku" : "SELECT sku, name, gtin, brand, qty_per_carton FROM products WHERE gtin IS NOT NULL AND gtin <> '' ORDER BY sku",
+    only
+      ? "SELECT sku, name, gtin, brand, qty_per_carton FROM products WHERE upper(sku) = upper($1)"
+      : all ? "SELECT sku, name, gtin, brand, qty_per_carton FROM products ORDER BY sku" : "SELECT sku, name, gtin, brand, qty_per_carton FROM products WHERE gtin IS NOT NULL AND gtin <> '' ORDER BY sku",
+    only ? [only] : [],
   );
   const { rows: retailerBarcodes } = await pool.query<{ sku: string; retailer: string; barcode: string }>(
-    "SELECT sku, retailer, barcode FROM product_barcodes ORDER BY sku, retailer",
+    only
+      ? "SELECT sku, retailer, barcode FROM product_barcodes WHERE upper(sku) = upper($1) ORDER BY sku, retailer"
+      : "SELECT sku, retailer, barcode FROM product_barcodes ORDER BY sku, retailer",
+    only ? [only] : [],
   );
 
   const byRetailerBySku: Record<string, Record<string, string>> = {};

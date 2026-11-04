@@ -1,4 +1,5 @@
-// Turns every "กลับหน้าหลัก" link on the tool pages into one clear, touch-sized button.
+// Turns every "กลับหน้าหลัก" / "กลับเครื่องมือ" link on the static tool pages into one clear, touch-sized button.
+// Single style definition for public/tools/**; the Next pages use src/components/back-link.tsx (same look in Tailwind).
 (function () {
   var css = 'a.gv-back{display:inline-flex!important;align-items:center;gap:8px;min-height:44px;padding:0 18px 0 12px!important;'
     + 'border-radius:999px;background:#fff!important;color:#131516!important;border:1.5px solid #131516;'
