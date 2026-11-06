@@ -285,7 +285,8 @@
    // clamped so nothing leaves the label; the person at the printer can move things only as far as the label allows.
    const txMax=((p.dieW-2*margin)-.7*(p.dieW-F.pad*2))/2,clampedTX=Math.max(-txMax,Math.min(txMax,rawTX));
    const effW=Math.max(6,Math.min(p.dieW-F.pad*2,p.dieW-margin*2-2*Math.abs(clampedTX)));
-   const downMax=Math.max(0,roomFor(barH)-(it.text?2*minFont*1.2*.3528:0)),txY=Math.max(-(F.pad+down-margin),Math.min(downMax,rawTY)),room=Math.max(0,roomFor(barH)-Math.max(0,txY));
+   const downMax=Math.max(0,roomFor(barH)-(it.text?2*minFont*1.2*.3528:0)),txY=Math.max(-(F.pad+down-margin),Math.min(downMax,rawTY)),room=Math.max(0,roomFor(barH)-Math.max(0,txY)-Math.max(0,-rawBY)); // moving the barcode up takes room from the name: a long name gets smaller instead of blocking the move
+  
    // FANTECH's own label shows only the part number, in bold, with no 'P/N:' or 'Model:' words
    const line1=/^fantech$/i.test(it.brand||'')?it.model:it.mc?`Model: ${it.mc} | P/N: ${it.model}`:`P/N: ${it.model}`,f=fit(line1,effW*PX*.9,F.line,4.5),q={...p,eanBarH:barH,bcH:barH,digits:F.digits};
    const barSvg=useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:${F.digits}pt">${esc(it.code)}</div>`;
