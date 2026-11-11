@@ -283,7 +283,7 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
     <details>
       <summary>ตัวเลือกอื่น: สร้างช่องว่างตามจำนวนรุ่น</summary>
       <div class="sku-bulk-row">
-        <input id="sku-want" type="number" min="1" max="50" step="1" inputmode="numeric" placeholder="เช่น 15" aria-label="จำนวนรุ่นสินค้า"
+        <input id="sku-want" type="number" min="1" max="300" step="1" inputmode="numeric" placeholder="เช่น 15" aria-label="จำนวนรุ่นสินค้า"
                onkeydown="if(event.key==='Enter'){event.preventDefault();makeSkuRows()}">
         <button type="button" onclick="makeSkuRows()">สร้างช่องว่าง</button>
       </div>
@@ -601,9 +601,9 @@ function addSku(noFocus) {
   if (!noFocus) document.getElementById('sn-' + id).focus();
 }
 
-/* Creates SKU entry rows up to the number typed (max 50). Filled rows are never removed:
+/* Creates SKU entry rows up to the number typed (max 300). Filled rows are never removed:
    asking for fewer than exist only drops empty rows from the end. */
-const SKU_MAX = 50;
+const SKU_MAX = 300;
 function skuRowIsEmpty(row) {
   return ['sn-', 'sq-', 'sc-', 'sp-', 'sf-', 'st-'].every(p => !document.getElementById(p + row.dataset.uid).value.trim());
 }
