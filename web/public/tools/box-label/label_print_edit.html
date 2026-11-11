@@ -319,6 +319,10 @@ body { font-family: 'Segoe UI', 'Noto Sans Thai', Arial, sans-serif;
         <input id="f-unit" type="text" value="PCS" tabindex="4">
       </div>
     </div>
+    <div class="field" style="max-width:240px">
+      <label>พิมพ์ลังละกี่ใบ <span style="font-weight:400;color:#9ca3af">(1–999)</span></label>
+      <input id="f-copies" type="number" min="1" max="999" value="1" inputmode="numeric">
+    </div>
 
     <div class="sec-title">
       📦 รายการ SKU
@@ -932,6 +936,7 @@ function generateLabels() {
   const pr      = document.getElementById('f-pr').value.trim();
   const dateVal = isoDate(document.getElementById('f-date').value);
   const unit    = document.getElementById('f-unit').value.trim() || 'PCS';
+  const copies  = clamp(parseIntSafe(document.getElementById('f-copies').value) || 1, 1, 999);
 
   recalcAll();
 
@@ -959,8 +964,8 @@ function generateLabels() {
       let qty = qtyPerCtn || '—';
       const split = cartonQtys(qtyTotal, qtyPerCtn, ctnCount);
       if (split) qty = split[ctnNo - ctnStart];
-      grid.appendChild(buildCard({ company, pr, dateVal, unit, skuName, qty, ctnNo, grandTotal }));
-      totalCards++;
+      for (let c = 0; c < copies; c++) grid.appendChild(buildCard({ company, pr, dateVal, unit, skuName, qty, ctnNo, grandTotal }));
+      totalCards += copies;
     }
   });
 
