@@ -35,5 +35,11 @@
   if(!sku)return{state:'new',sku:''};
   return{state:base(sku)===base(model)?'ok':'other',sku};
  }
- window.GVBarcodeCheck={load,status,skuOf,retailerStatus,rowClass,tagHtml,isLoaded:()=>!!map};
+ // The first valid main barcode (GTIN) of a Catalog SKU, '' when none / not loaded.
+ function gtinOf(model){
+  if(!map)return'';
+  let key=norm(model);if(/^\d{4,6}BOX$/.test(key))key=key.replace(/BOX$/,'-BOX');
+  return String(map.get(key)??'').split(/[\s,;|/]+/).find(g=>/^\d{8,14}$/.test(g))||'';
+ }
+ window.GVBarcodeCheck={load,status,gtinOf,skuOf,retailerStatus,rowClass,tagHtml,isLoaded:()=>!!map};
 })();
