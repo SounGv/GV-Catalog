@@ -41,5 +41,12 @@
   let key=norm(model);if(/^\d{4,6}BOX$/.test(key))key=key.replace(/BOX$/,'-BOX');
   return String(map.get(key)??'').split(/[\s,;|/]+/).find(g=>/^\d{8,14}$/.test(g))||'';
  }
- window.GVBarcodeCheck={load,status,gtinOf,skuOf,retailerStatus,rowClass,tagHtml,isLoaded:()=>!!map};
+ // The shop's own item code saved in the Catalog for a SKU (e.g. Jaymart 1020205629100117 for 45091B), '' when none.
+ function retailerCodeOf(shop,model){
+  if(!map)return'';
+  let key=norm(model);if(/^\d{4,6}BOX$/.test(key))key=key.replace(/BOX$/,'-BOX');
+  for(const [k,sku] of byRetailer)if(norm(sku)===key&&k.startsWith(norm(shop)+'|'))return k.slice(norm(shop).length+1);
+  return'';
+ }
+ window.GVBarcodeCheck={load,status,gtinOf,retailerCodeOf,skuOf,retailerStatus,rowClass,tagHtml,isLoaded:()=>!!map};
 })();

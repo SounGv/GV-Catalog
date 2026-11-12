@@ -44,7 +44,7 @@
   return {title:sku?`UGREEN ${sku.toUpperCase().replace(/-?BOX$/,'-BOX')}`:'',detail:[kind,color].filter(Boolean).join(' ').replace(/\s+/g,' ').trim()};
  }
  function rebuild(){
-  const map=new Map();for(const b of report.branches){if($('labelBranch').value&&b.id!==$('labelBranch').value)continue;for(const r of b.rows){if(!map.has(r.item))map.set(r.item,{code:String(r.item),desc:r.desc,qty:0,selected:true,...shortName(r.desc),conflict:false});const x=map.get(r.item);x.qty+=Number(r.unit);if(x.desc!==r.desc)x.conflict=true;}}
+  const map=new Map();for(const b of report.branches){if($('labelBranch').value&&b.id!==$('labelBranch').value)continue;for(const r of b.rows){const k=/^\d+$/.test(String(r.item))?r.item:`${r.item} ${modelOf(r.desc)}`;if(!map.has(k))map.set(k,{code:String(r.item),desc:r.desc,qty:0,selected:true,...shortName(r.desc),conflict:false});const x=map.get(k);x.qty+=Number(r.unit);if(x.desc!==r.desc)x.conflict=true;}}
   items=[...map.values()].map(x=>Object.assign(x,overrides.get(`${$('labelBranch').value}:${x.code}`)||{}));$('labelPreview').replaceChildren();draw();
  }
  function draw(){const tbody=$('labelItems');let changed=0;tbody.replaceChildren();const q=$('labelSearch').value.toLowerCase();for(const x of items){if(!`${x.code} ${x.desc} ${x.title}`.toLowerCase().includes(q))continue;const row=document.createElement('tr');const cell=()=>{const td=document.createElement('td');row.append(td);return td;};const check=document.createElement('input');check.type='checkbox';check.checked=x.selected;check.setAttribute('aria-label',`พิมพ์ ${x.code}`);cell().append(check);check.onchange=()=>{x.selected=check.checked;save(x);};{const td=cell();td.textContent=x.code;const st=GVBarcodeCheck.status(GVBarcodeCheck.skuOf('Jaymart',x.code)||modelOf(x.desc),x.code);if(st==="change")changed++;row.className=GVBarcodeCheck.rowClass(st);td.insertAdjacentHTML("beforeend",GVBarcodeCheck.tagHtml(st));}
@@ -54,8 +54,8 @@
  function config(){const read=id=>{const e=$(id);if(!e.checkValidity()||e.value==='')throw Error('ตรวจสอบค่าระยะกระดาษ');return Number(e.value);};return {gap:read('labelGap'),left:read('labelLeft'),right:read('labelRight'),y:read('labelY'),pitch:Number($('labelPitch').value)||30};}
  function build(test=false){
   const selected=items.filter(x=>x.selected&&x.qty!==0);if(!selected.length)throw Error('เลือกรุ่นและจำนวนก่อนพิมพ์');
-  // A placeholder item code such as "Addnew" is not a barcode: print the Catalog main barcode of the model instead
-  for(const x of selected){if(!/^\d+$/.test(x.code)){const g=GVBarcodeCheck.gtinOf(modelOf(x.desc)||modelOf(x.title));if(!g)throw Error(`รหัส ${x.code} ไม่ใช่บาร์โค้ด และหาบาร์โค้ดหลักของรุ่น ${x.title} ใน Catalog ไม่ได้ - ใส่ตัวเลขบาร์โค้ดในช่อง ITEM_CODE หรือเอาออกจากการเลือก`);x.barcode=g;}else x.barcode=x.code;}
+  // A placeholder item code such as "Addnew" is not a barcode: print the model's Jaymart code saved in the Catalog, else its main barcode (GTIN)
+  for(const x of selected){if(!/^\d+$/.test(x.code)){const m=modelOf(x.desc)||modelOf(x.title),g=GVBarcodeCheck.retailerCodeOf('Jaymart',m)||GVBarcodeCheck.gtinOf(m);if(!g)throw Error(`รหัส ${x.code} ไม่ใช่บาร์โค้ด และหาบาร์โค้ดหลักของรุ่น ${x.title} ใน Catalog ไม่ได้ - ใส่ตัวเลขบาร์โค้ดในช่อง ITEM_CODE หรือเอาออกจากการเลือก`);x.barcode=g;}else x.barcode=x.code;}
   for(const x of selected){if(!Number.isSafeInteger(x.qty)||!Number.isSafeInteger(x.qty)||x.qty<0||!x.title)throw Error(`ตรวจสอบชื่อรุ่นหรือจำนวนของรหัส ${x.code} (ช่องชื่อรุ่นว่าง หรือจำนวนไม่ถูกต้อง)`);}
   const total=selected.reduce((n,x)=>n+x.qty,0);if(total>20000)throw Error('จำนวนเกิน 20,000 ดวง กรุณาแบ่งพิมพ์');
   const cfg=config(),roll=document.createElement('div');roll.className='jm-roll';roll.style.width=`${100+cfg.gap+cfg.left+cfg.right}mm`;roll.style.padding=`0 ${cfg.right}mm 0 ${cfg.left}mm`;

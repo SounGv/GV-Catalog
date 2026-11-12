@@ -54,7 +54,17 @@
   if(!report)return msg('ยังไม่มีรายการ — เลือกไฟล์ออเดอร์แล้วกด "ตรวจสอบและเติมข้อมูล" ก่อน',true);
   const sourceFile=$('orderFile').files[0]?.name||'Jaymart order';
   let createdBy='';try{createdBy=localStorage.getItem('gv-pack-scanner-name')||''}catch{}
-  const lines=report.branches.flatMap(b=>b.rows.map(r=>({branch:String(b.id),branchName:String(b.inputName||'').trim()||b.master?.name||'',po:r.po||'',part:String(r.item),description:r.desc||'',customerBarcode:String(r.item),qty:Number(r.unit)})));
+  // A placeholder ITEM_CODE such as "Addnew" (a model new to Jaymart) is resolved per row from the description's
+  // model number: the Jaymart code saved in the Catalog (what the printed sticker carries) plus the model's GTIN,
+  // so different new models in one branch stay separate lines instead of merging under "Addnew".
+  const modelOf=d=>(String(d||'').match(/\b\d{5}(?:-?BOX|[A-Z])?\b/i)||[])[0]||'';
+  if(window.GVBarcodeCheck)await GVBarcodeCheck.load();
+  const resolve=r=>{
+   const item=String(r.item).trim();if(/^\d+$/.test(item)||!window.GVBarcodeCheck)return{part:item,codes:item};
+   const m=modelOf(r.desc),code=GVBarcodeCheck.retailerCodeOf('Jaymart',m),gtin=GVBarcodeCheck.gtinOf(m);
+   return{part:code||(m?`${item} ${m}`:item),codes:[code,gtin].filter(Boolean).join(',')||item};
+  };
+  const lines=report.branches.flatMap(b=>b.rows.map(r=>{const x=resolve(r);return{branch:String(b.id),branchName:String(b.inputName||'').trim()||b.master?.name||'',po:r.po||'',part:x.part,description:r.desc||'',customerBarcode:x.codes,qty:Number(r.unit)}}));
   if(!lines.length)return msg('ไฟล์นี้ไม่มีรายการสินค้าให้ยิง',true);
   const button=$('packJobButton');button.disabled=true;msg('');
   const send=async dryRun=>{const res=await fetch('/api/pack/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:'Jaymart',sourceFile,createdBy,dryRun,lines})});const data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.error||('HTTP '+res.status));return data};
