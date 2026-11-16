@@ -474,19 +474,18 @@ const SCENES = {
       paint(449, 114, 827, 135, 0xffe600, .04); label('ขายดีลองลงมา', px(638), 1.0, px(124), 'hot');
       paint(425, 385, 449, 405, 0xffe600, .04); label('ขายดี', px(437), 1.0, px(396), 'hot');
       /* upper ghost row: 9 cells x 2 numbered columns = 18, no codes in the stock file */
-      const cells = [[312, 385], [385, 449], [449, 520], [520, 608], [608, 679], [679, 750], [750, 827], [827, 897], [897, 967]];
-      /* upper row numbers 1-18 continue into 01U-20/21 on the right, so they are read as 01U-01..18 (to confirm on site).
-         Each cell has a rack on both edges facing the orange aisle arrow; bay = 11 positions (2 levels x 6). */
-      let ub = 0;
-      cells.forEach(([a, b]) => [[a + 12, 1], [b - 12, -1]].forEach(([x, face]) => { const bay = ++ub;
+      /* Upper row 01U-01..19 runs the whole back wall, from the stair/lift block to the right end wall (checked on site):
+         10 equal cells; cells 1-9 hold a rack on both edges facing the cell's aisle (bays 1-18), the last cell holds
+         01U-19 alone against the right end wall, facing back into that cell. Bay = 11 positions (2 levels x 6). */
+      const UX0 = 312, UX1 = 1246, UCELL = (UX1 - UX0) / 10;
+      const upper = [];
+      for (let c = 0; c < 9; c++) upper.push([UX0 + UCELL * c + 12, 1], [UX0 + UCELL * (c + 1) - 12, -1]);
+      upper.push([UX1 - 12, -1]);
+      upper.forEach(([x, face], i) => { const bay = i + 1;
         addBay({ cx: px(x), cz: px(186), len: px(100), dep: px(20), axis: 'z', face, levels: 2, per: 6, levelH: .8, tag: '01U-' + bay,
           codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `01U|${bay}|${k}`, code: `01U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` }; } });
-        label(String(bay), px(x), 2.2, px(135), 'small'); }));
-      /* 01U-19 continues right after 01U-18, back to back with it, facing the open floor on the right */
-      { const bay = 19; addBay({ cx: px(980), cz: px(186), len: px(100), dep: px(20), axis: 'z', face: 1, levels: 2, per: 6, levelH: .8, tag: '01U-19',
-          codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `01U|19|${k}`, code: `01U-19-${String(k).padStart(2, '0')}` }; } });
-        label('19', px(980), 2.2, px(135), 'small'); }
-      label('แถวบน = 01U-01…19 (19 ต่อจาก 18)', px(640), 3.0, px(135), 'warn');
+        label(String(bay), px(x), 2.2, px(135), 'small'); });
+      label('แถวบน = 01U-01…19 (เต็มผนังหลัง 19 ชิดผนังขวา)', px((UX0 + UX1) / 2), 3.0, px(135), 'warn');
       /* 3B: 7 columns x 5 bays, back-to-back pairs with aisles */
       /* Each column is one rack run along z (5 bays). Faces open onto the aisles (orange arrows on the map);
          even/odd runs sit back to back: 2|11, 12|21, 22|31. Bay = 4 levels (first digit of the code) x 4 positions (second digit). */
@@ -515,8 +514,8 @@ const SCENES = {
       [[1143, 1178, 20], [1178, 1214, 21]].forEach(([a, b, bay]) => {
         addBay({ cx: px((a + b) / 2), cz: px(327.5), len: px(115), dep: px(b - a), axis: 'z', levels: 2, per: 11, levelH: .8, tag: '01U-' + bay,
           codeAt: (l, p) => l === 0 ? { key: `01U|${bay}|${p + 1}`, code: `01U-${bay}-${String(p + 1).padStart(2, '0')}` } : null });
-        label('01U-' + bay, px((a + b) / 2), 2.6, px(265), 'zone');
       });
+      label('01U-20 · 21', px(1178), 2.6, px(265), 'zone');   // one sign for the two narrow racks (two signs overlapped)
       /* 02U, next to the goods lift where the map draws U01/U02: not a rack but a floor stacking area. Yellow tape
          marks the spots (spot number taped on the floor, e.g. 01-04) and a sign over each row (02U-01, 02U-02 ...) lists
          spots 1-11. Rows run along the wall of the stair/lift room: 02U-01 is a single row on that wall (next to the
@@ -537,7 +536,7 @@ const SCENES = {
       return [
         ['ok', 'โซน 3B', `ผังมี <b>35</b> bay (7 คอลัมน์ × 5) · ข้อมูลมี <b>${F['3B'].bays}</b> bay ตรงกัน`, `ผัง 4 ชั้น × 4 ช่อง = <b>560</b> ช่อง · ข้อมูลมีรหัส <b>${F['3B'].codes}</b> (ไม่มีรหัส ${miss3b} ช่อง = ยังไม่ผูก SKU)`],
         ['ok', 'แถว CW / CB / CR / CY', 'ผังมี <b>4</b> แถว · ข้อมูลมี <b>4</b> โซน ตรงกัน', `เลขรหัสขาด: CW ${F.CW.missing.join(',')} · CB ${F.CB.missing.join(',')} · CR ${F.CR.missing.join(',')} · CY ${F.CY.missing.join(',')}`],
-        ['ask', '01U-01…18 = แถวบน 1–18 ?', `ข้อมูลมี 01U <b>21</b> bay · ผังเขียนรหัสเฉพาะ 01U-20, 01U-21 ส่วนแถวบนมีเลข 1–18 ต่อเนื่องกัน`, `สันนิษฐานว่าแถวบนคือ 01U-01…18 (${F['01U_1_19'].codes} ตำแหน่ง รวม bay 19) · 01U-19 วางต่อจาก 01U-18 ปลายแถวบน`],
+        ['ok', '01U-01…19 = แถวบน 1–19', `ข้อมูลมี 01U <b>21</b> bay · ผังเขียนรหัสเฉพาะ 01U-20, 01U-21 ส่วนแถวบนมีเลข 1–18 ต่อเนื่องกัน`, `สันนิษฐานว่าแถวบนคือ 01U-01…18 (${F['01U_1_19'].codes} ตำแหน่ง รวม bay 19) · แถวบนเต็มผนังหลัง 01U-19 ชิดผนังขวา (ยืนยันหน้างาน 16/11/69)`],
         ['ask', '02U = บล็อก U02-1 / U02-2', `พื้นวางกองใกล้ลิฟท์ ตีเส้นเทปเหลือง · <b>3</b> แถว (02U-01…03) × 11 ช่อง`, `02U สต็อก <b>${nf(F['02U'].qty)}</b> ชิ้น ใน ${F['02U'].codes} ตำแหน่ง · ทิศของแถวและลำดับเลขช่องในผังเป็นการประมาณจากรูปหน้างาน`],
         ['diff', 'สต็อกที่ไม่มีตำแหน่งหยิบ', `<b>${nf(F.noloc3.qty)}</b> ชิ้น ใน ${F.noloc3.rows} แถว SKU`, 'รหัส “001 ( ไม่มีตำแหน่งหยิบ )” ไม่อยู่ในผัง ควรจัดตำแหน่งให้ครบ'],
       ];
