@@ -63,7 +63,7 @@ main{flex:1;display:flex;min-height:0}
 aside{width:340px;max-width:42vw;background:var(--surface);border-left:1px solid var(--border);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
 aside h2{font-size:16px;margin:0;font-weight:700}
 .side-head .note{margin-top:2px}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--surface-sunken);border-radius:var(--radius-control);padding:4px;position:sticky;top:-16px;z-index:2}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface-sunken);border-radius:var(--radius-control);padding:4px;position:sticky;top:-16px;z-index:2}
 .seg button{min-height:40px;border:0;border-radius:8px;background:transparent;color:var(--muted-foreground);font-weight:600;font-size:14px;position:relative}
 .seg button[aria-selected=true]{background:var(--surface);color:var(--navy);box-shadow:0 1px 3px rgba(24,54,76,.18)}
 .seg .dot{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--lime);border:1.5px solid var(--navy)}
@@ -146,6 +146,20 @@ header a.gv-back{margin:0!important}
 .addname{display:flex;gap:6px;margin-top:8px}
 .addname[hidden]{display:none}
 .addname input{flex:1;min-width:0;min-height:40px;padding:0 10px;border:1px solid var(--border-strong);border-radius:var(--radius-control);font:inherit}
+.who-pick{display:flex;flex-wrap:wrap;gap:6px}
+.who-pick button{min-height:40px;padding:0 14px;border-radius:var(--radius-chip);border:1px solid var(--border-strong);background:var(--surface);font-weight:600}
+.who-pick button[aria-pressed=true]{background:var(--primary);color:#fff;border-color:var(--primary)}
+.prog{height:8px;border-radius:99px;background:var(--surface-sunken);overflow:hidden;margin:6px 0 2px}
+.prog i{display:block;height:100%;background:var(--primary)}
+.tasks{display:flex;flex-direction:column;gap:6px}
+.task{border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.task.done{background:var(--success-soft);border-color:#bfe3cd}
+.task .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.task .code{font-weight:700;color:var(--navy);background:none;border:0;padding:0;min-height:32px;font-size:15px;text-decoration:underline;text-underline-offset:3px}
+.task .info{font-size:12px;color:var(--muted-foreground)}
+.task form{display:flex;gap:6px}
+.task input{width:90px;min-height:40px;padding:0 8px;border:1px solid var(--border-strong);border-radius:8px;font:inherit;font-variant-numeric:tabular-nums}
+.task .res{font-size:13px;font-weight:600}
 .msg{font-size:13px}.msg.bad{color:var(--danger)}.msg.ok{color:var(--success)}
 #empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:4;background:rgba(245,246,247,.9);padding:16px;text-align:center}
 #empty .box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:20px 24px;max-width:440px}
@@ -209,7 +223,8 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
     <div class="side-head"><h2 id="sceneTitle"></h2><button type="button" class="hide-side" id="hideSide" aria-label="ซ่อนแถบด้านข้าง">ซ่อน ›</button></div>
     <div class="seg" role="tablist" aria-label="แถบข้อมูล">
       <button type="button" role="tab" data-pane="over" aria-selected="true">ภาพรวม</button>
-      <button type="button" role="tab" data-pane="slot" aria-selected="false">ช่อง / ค้นหา<span class="dot" id="slotDot" hidden></span></button>
+      <button type="button" role="tab" data-pane="slot" aria-selected="false">ช่อง<span class="dot" id="slotDot" hidden></span></button>
+      <button type="button" role="tab" data-pane="work" aria-selected="false">งานวันนี้</button>
       <button type="button" role="tab" data-pane="check" aria-selected="false">ตรวจผัง</button>
     </div>
     <section class="pane" data-pane="over">
@@ -219,6 +234,10 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
     <section class="pane" data-pane="slot" hidden>
       <div id="searchBox" hidden><h3 class="sub" id="resTitle">ผลค้นหา</h3><div class="results" id="results"></div></div>
       <div><h3 class="sub">ช่องที่เลือก</h3><div class="sel" id="sel"><span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span></div></div>
+    </section>
+    <section class="pane" data-pane="work" hidden>
+      <div><h3 class="sub">ฉันคือ</h3><div class="who-pick" id="whoPick"></div></div>
+      <div id="workBody"><p class="note">เลือกชื่อตัวเองก่อน ระบบจะจัดงานเติมของและสุ่มนับของชั้นที่ดูแล เรียงตามทางเดิน</p></div>
     </section>
     <section class="pane" data-pane="check" hidden>
       <div class="note" id="sceneNote"></div>
@@ -890,7 +909,92 @@ function renderSide() {
     `<div class="find"><div class="t"><span class="pill ${k}">${lab[k]}</span>${t}</div><div class="d">${a}</div><div class="d">${b}</div></div>`).join('');
   document.getElementById('foot').innerHTML = (DATA.locs.length ? `ข้อมูลสต็อก ณ ${esc(DATA.asof)} จากไฟล์ ${esc(DATA.file)} · ${nf(F.rows)} แถว · ${nf(F.locations)} ตำแหน่ง` : 'ยังไม่มีข้อมูลสต็อก — กด อัปไฟล์สต็อกตำแหน่ง') + ' · ขนาดและตำแหน่งในผัง 3D ประมาณจากภาพผัง ไม่ใช่สเกลหน้างาน';
 }
+/* ---------- งานวันนี้: refill + cycle count (สุ่มนับ 20 ช่อง/คน/วัน) in walking order ---------- */
+let worker = (() => { try { return localStorage.getItem('gv-wh-worker') || ''; } catch { return ''; } })();
+let TASKLOG = [];
+const COUNT_PER_DAY = 20, RECOUNT_DAYS = 14;
+const ZONE_ORDER = { ugreen: ['01U', '02U', '3B', 'CW', 'CB', 'CR', 'CY'], fantech: ['F01', 'F02', 'F03', 'F07'] };
+const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
+function seeded(str) { let h = 1779033703 ^ str.length; for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  return () => { h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; }; }
+function routeKey(scene, code) {                 // walking order: zone, then bay, then slot
+  const k = (byCode.get(code)?.key || '').split('|'), z = (ZONE_ORDER[scene] || []).indexOf(k[0]);
+  return [z < 0 ? 99 : z, +k[1] || 0, +k[2] || 0];
+}
+const byRoute = scene => (a, b) => { const x = routeKey(scene, a.code), y = routeKey(scene, b.code); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; };
+async function loadTaskLog() { try { const j = await fetch('/api/warehouse/tasks', { cache: 'no-store' }).then(r => r.json()); TASKLOG = j.rows || []; } catch { TASKLOG = []; } }
+function workerScene() { return STAFF.find(x => x.name === worker)?.scene || ''; }
+function buildTasks() {
+  const scene = workerScene(); if (!scene) return null;
+  const locs = slotsOfScene(scene).filter(x => !x.orphan).map(x => byCode.get(x.code)).filter(Boolean);
+  const d = today(), mine = TASKLOG.filter(r => r.day === d);
+  const doneRefill = new Map(mine.filter(r => r.kind === 'refill').map(r => [r.position, r]));
+  const refill = locs.filter(l => l.items?.some(it => it.min > 0 && it.qty < it.min) || (l.qty === 0 && l.items?.length))
+    .map(l => { const it = l.items.find(i => i.min > 0 && i.qty < i.min) || l.items[0];
+      return { code: l.code, sku: it.sku, name: it.name, qty: it.qty, min: it.min, max: it.max, need: it.max != null ? Math.max(0, it.max - it.qty) : null, done: doneRefill.get(l.code) }; })
+    .sort(byRoute(scene));
+  // cycle count: 20 slots with stock, not counted in the last 14 days, drawn the same way all day for this person
+  const cutoff = new Date(Date.now() - RECOUNT_DAYS * 864e5).toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
+  const recent = new Set(TASKLOG.filter(r => r.kind === 'count' && r.day >= cutoff && r.day < d).map(r => r.position));
+  const doneCount = new Map(mine.filter(r => r.kind === 'count' && r.staff === worker).map(r => [r.position, r]));
+  const rnd = seeded(d + '|' + worker), pool = locs.filter(l => l.qty > 0 && !recent.has(l.code)).map(l => [rnd(), l]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+  const count = pool.slice(0, COUNT_PER_DAY).map(l => ({ code: l.code, sku: l.items?.[0]?.sku || l.sku, name: l.items?.[0]?.name || l.name, qty: l.qty, done: doneCount.get(l.code) }))
+    .sort(byRoute(scene));
+  return { scene, refill, count };
+}
+function renderWork() {
+  const pick = document.getElementById('whoPick'); if (!pick) return;
+  pick.innerHTML = STAFF.length ? STAFF.map(x => `<button type="button" aria-pressed="${x.name === worker}" data-who="${esc(x.name)}">${esc(x.name)}</button>`).join('')
+    : '<span class="note">ยังไม่มีรายชื่อ — ใส่ชื่อในแท็บ ภาพรวม</span>';
+  pick.querySelectorAll('[data-who]').forEach(b => b.onclick = () => { worker = b.dataset.who; try { localStorage.setItem('gv-wh-worker', worker); } catch {} renderWork(); });
+  const body = document.getElementById('workBody'), t = buildTasks();
+  if (!t) { body.innerHTML = '<p class="note">เลือกชื่อตัวเองก่อน ระบบจะจัดงานเติมของและสุ่มนับของชั้นที่ดูแล เรียงตามทางเดิน</p>'; return; }
+  const title = { ugreen: 'ชั้น 3 Ugreen', fantech: 'FANTECH' }[t.scene];
+  const low = t.refill.filter(x => x.qty > 0), out = t.refill.filter(x => x.qty <= 0);   // progress counts the walk: below-minimum refills + counts
+  const fd = low.filter(x => x.done).length, cd = t.count.filter(x => x.done).length, all = low.length + t.count.length;
+  const row = (x, kind) => {
+    const r = x.done, diff = kind === 'count' && r ? r.counted_qty - r.system_qty : 0;
+    const info = kind === 'refill' ? `เหลือ ${nf(x.qty)}${x.min ? ' · ขั้นต่ำ ' + nf(x.min) : ''}${x.need != null ? ' · <b>เติมถึงสูงสุด ' + nf(x.need) + '</b>' : ''}` : `ในระบบ ${nf(x.qty)} ชิ้น`;
+    const res = !r ? '' : kind === 'refill' ? `<div class="res">✓ เติมแล้ว ${nf(r.filled_qty)} ชิ้น · ${esc(r.staff)}</div>`
+      : `<div class="res" style="color:${diff ? 'var(--danger)' : 'var(--success)'}">${diff ? '✗ ต่าง ' + (diff > 0 ? '+' : '') + nf(diff) : '✓ ตรง'} · นับได้ ${nf(r.counted_qty)}</div>`;
+    return `<div class="task${r ? ' done' : ''}"><div class="top"><button type="button" class="code" data-go="${esc(x.code)}">${esc(x.code)}</button><span class="info">${esc(x.sku)}</span></div>
+      <div class="info">${esc(x.name).slice(0, 70)}</div><div class="info">${info}</div>${res}
+      ${r ? `<button type="button" class="linkbtn" data-undo="${esc(r.id)}">แก้ / ลบรายการนี้</button>` : `<form data-kind="${kind}" data-code="${esc(x.code)}"><input name="n" type="number" min="0" step="1" inputmode="numeric" placeholder="${kind === 'refill' ? 'เติมกี่ชิ้น' : 'นับได้'}" value="${kind === 'refill' && x.need ? x.need : ''}" aria-label="${kind === 'refill' ? 'จำนวนที่เติม' : 'จำนวนที่นับได้'} ${esc(x.code)}"><button class="btn sm dark" type="submit">${kind === 'refill' ? 'เติมแล้ว' : 'บันทึกนับ'}</button></form>`}</div>`;
+  };
+  body.innerHTML = `<div class="floor"><div class="hd"><span>${title} · ${today()}</span><span class="note">${nf(fd + cd)} / ${nf(all)}</span></div>
+      <div class="prog"><i style="width:${all ? Math.round((fd + cd) / all * 100) : 0}%"></i></div><div class="note">เดินตามลำดับรายการ กดรหัสช่องเพื่อดูในผัง · บันทึกเก็บในเว็บ ไม่แก้สต็อก BigSeller</div></div>
+    <div><h3 class="sub">! เติมของ (ต่ำกว่าขั้นต่ำ) · ${nf(low.filter(x => x.done).length)}/${nf(low.length)} ช่อง</h3><div class="tasks">${low.map(x => row(x, 'refill')).join('') || '<p class="note">ไม่มีช่องที่ต่ำกว่าขั้นต่ำ</p>'}</div></div>
+    <details><summary class="sub" style="cursor:pointer">✗ ช่องที่หมด (0 ชิ้น) · ${nf(out.filter(x => x.done).length)}/${nf(out.length)} ช่อง — เติมเมื่อมีของสำรอง</summary><div class="tasks" style="margin-top:8px">${out.map(x => row(x, 'refill')).join('') || '<p class="note">ไม่มีช่องที่หมด</p>'}</div></details>
+    <div><h3 class="sub">สุ่มนับ · ${nf(cd)}/${nf(t.count.length)} ช่อง</h3><div class="tasks">${t.count.map(x => row(x, 'count')).join('') || '<p class="note">ไม่มีช่องให้สุ่มนับ</p>'}</div></div>
+    <button type="button" class="btn" id="workExport">ส่งออกผลนับ/เติม 30 วัน (.xlsx)</button>`;
+  body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const l = byCode.get(b.dataset.go); if (l) { goTo(l); showPane('work'); } });
+  body.querySelectorAll('form[data-kind]').forEach(f => f.onsubmit = async e => {
+    e.preventDefault(); const n = f.n.value.trim(); if (n === '') { f.n.focus(); return; }
+    const l = byCode.get(f.dataset.code), it = l?.items?.[0];
+    const res = await fetch('/api/warehouse/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staff: worker, scene: t.scene, kind: f.dataset.kind, position: f.dataset.code, sku: it?.sku || l?.sku, systemQty: l?.qty ?? null, [f.dataset.kind === 'count' ? 'countedQty' : 'filledQty']: Number(n) }) });
+    const j = await res.json().catch(() => ({})); if (!res.ok) { alert(j.error || 'บันทึกไม่สำเร็จ'); return; }
+    await loadTaskLog(); renderWork();
+  });
+  body.querySelectorAll('[data-undo]').forEach(b => b.onclick = async () => {
+    if (!confirm('ลบรายการนี้แล้วบันทึกใหม่?')) return;
+    await fetch('/api/warehouse/tasks?id=' + encodeURIComponent(b.dataset.undo), { method: 'DELETE' }); await loadTaskLog(); renderWork();
+  });
+  body.querySelector('#workExport').onclick = async () => {
+    await loadXlsx(); await loadTaskLog();
+    const kindTh = { count: 'สุ่มนับ', refill: 'เติมของ' };
+    const rows = TASKLOG.map(r => ({ วันที่: r.day, พนักงาน: r.staff, ชั้น: { ugreen: 'ชั้น 3 Ugreen', fantech: 'FANTECH', mezz: 'ชั้นลอย' }[r.scene] || r.scene, งาน: kindTh[r.kind], ตำแหน่ง: r.position, SKU: r.sku || '',
+      ยอดในระบบ: r.system_qty ?? '', นับได้: r.counted_qty ?? '', ส่วนต่าง: r.kind === 'count' && r.system_qty != null ? r.counted_qty - r.system_qty : '', เติม: r.filled_qty ?? '',
+      เวลา: new Date(r.created_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }) }));
+    const counts = TASKLOG.filter(r => r.kind === 'count'), ok = counts.filter(r => r.counted_qty === r.system_qty).length;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ หมายเหตุ: 'ยังไม่มีบันทึก' }]), 'บันทึก');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ 'ช่องที่สุ่มนับ': counts.length, 'ตรงกับระบบ': ok, 'ความแม่นยำสต็อก %': counts.length ? Math.round(ok / counts.length * 1000) / 10 : '' }]), 'สรุป');
+    XLSX.writeFile(wb, `ผลเดินตรวจคลัง_${today()}.xlsx`);
+  };
+}
 function showPane(id) {
+  if (id === 'work') loadTaskLog().then(renderWork);
   document.querySelectorAll('.seg [data-pane]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.pane === id)));
   document.querySelectorAll('section.pane').forEach(p => { p.hidden = p.dataset.pane !== id; });
   if (id === 'slot') document.getElementById('slotDot').hidden = true;

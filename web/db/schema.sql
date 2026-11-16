@@ -342,3 +342,22 @@ CREATE TABLE IF NOT EXISTS warehouse_staff (
   name text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Warehouse walk log from the map's "งานวันนี้" tab: refills and cycle counts (สุ่มนับ) per staff member.
+-- Records only; BigSeller stock is not changed from here.
+CREATE TABLE IF NOT EXISTS warehouse_task_log (
+  id bigserial PRIMARY KEY,
+  day date NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Bangkok')::date,
+  staff text NOT NULL,
+  scene text NOT NULL,
+  kind text NOT NULL CHECK (kind IN ('count', 'refill')),
+  position text NOT NULL,
+  sku text,
+  system_qty integer,
+  counted_qty integer,
+  filled_qty integer,
+  note text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS warehouse_task_log_day_idx ON warehouse_task_log (day);
+CREATE INDEX IF NOT EXISTS warehouse_task_log_position_idx ON warehouse_task_log (position, day);
