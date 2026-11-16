@@ -544,6 +544,22 @@ function packRoom(stations, title, tx, tz) {
 const deskRow = (n, along, from, pitch, fixed, rot) =>
   Array.from({ length: n }, (_, i) => along === 'x' ? [from + i * pitch, fixed, rot] : [fixed, from + i * pitch, rot]);
 
+/* yellow-and-black hazard floor tape (like 3M 766): a flat strip with diagonal stripes, sheet px coordinates */
+let tapeTex = null;
+function hazardTexture() {
+  if (tapeTex) return tapeTex;
+  const c = document.createElement('canvas'); c.width = 128; c.height = 32; const g = c.getContext('2d');
+  g.fillStyle = '#f5c400'; g.fillRect(0, 0, 128, 32); g.fillStyle = '#16181a';
+  for (let x = -32; x < 160; x += 32) { g.beginPath(); g.moveTo(x, 32); g.lineTo(x + 16, 32); g.lineTo(x + 48, 0); g.lineTo(x + 32, 0); g.closePath(); g.fill(); }
+  tapeTex = new THREE.CanvasTexture(c); tapeTex.wrapS = THREE.RepeatWrapping; tapeTex.colorSpace = THREE.SRGBColorSpace; tapeTex.anisotropy = 8;
+  return tapeTex;
+}
+function hazardTape(x0, z0, x1, z1, wide = 4) {
+  const len = Math.hypot(px(x1 - x0), px(z1 - z0)), w = px(wide), tex = hazardTexture().clone(); tex.needsUpdate = true; tex.repeat.set(len / (w * 4), 1);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(len, w), new THREE.MeshStandardMaterial({ map: tex, roughness: .55 }));
+  m.rotation.x = -Math.PI / 2; m.rotation.z = -Math.atan2(px(z1 - z0), px(x1 - x0));
+  m.position.set(px((x0 + x1) / 2), .045, px((z0 + z1) / 2)); m.receiveShadow = true; S.scene.add(m);
+}
 function aisleLine(x0, y0, x1, y1) { paint(Math.min(x0, x1) - 1.5, Math.min(y0, y1) - 1.5, Math.max(x0, x1) + 1.5, Math.max(y0, y1) + 1.5, 0xe8b800, 0.035); }
 
 const GHOST = 0xb9c1c8, ORPHAN = 0xe0702a, UP = 0x18364c, BEAM = 0x9fb0bf;   // site navy uprights, steel-grey beams
@@ -624,7 +640,7 @@ const SCENES = {
       walls(171, 135, 312, 238, 1.2); paint(171, 135, 241, 238, 0xefe3cf, .02); paint(241, 135, 312, 238, 0xdde8d3, .02);
       label('รถเข็น', px(206), 1.8, px(190), 'small'); label('ตะกร้า', px(276), 1.8, px(190), 'small');
       /* best-seller banner + marks */
-      paint(449, 192, 827, 200, 0xffe600, .04); label('ขายดีลองลงมา', px(638), 1.0, px(196), 'hot');
+      label('ขายดีลองลงมา', px(638), 1.0, px(196), 'hot');
       paint(425, 300, 449, 316, 0xffe600, .04); label('ขายดี', px(437), 1.0, px(308), 'hot');
       /* Upper row 01U-01..19 runs the whole back wall, from the stair/lift block to the right end wall (checked on site):
          10 equal cells; cells 1-9 hold a rack on both edges facing the cell's aisle (bays 1-18), the last cell holds
@@ -638,6 +654,7 @@ const SCENES = {
         addBay({ cx: px(x), cz: px(UZ), len: px(100), dep: px(20), axis: 'z', face, levels: 2, per: 6, levelH: .8, tag: '01U-' + bay,
           codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `01U|${bay}|${k}`, code: `01U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` }; } });
         label('01U-' + String(bay).padStart(2, '0'), px(x), bay % 2 ? 2.2 : 4.5, px(UZ + 56), 'row'); });   // neighbours hang at two heights so their signs do not overlap
+      hazardTape(UX0 + 4, UZ + 60, UX1 - 4, UZ + 60);            // tape along the front of the upper row (replaces the plain yellow band)
       label('แถวบน = 01U-01…19 (ชิดผนังหลัง · 19 ชิดผนังขวา)', px((UX0 + UX1) / 2), 3.0, px(UZ + 66), 'warn');
       /* 3B: 7 columns x 5 bays, back-to-back pairs with aisles */
       /* Each column is one rack run along z (5 bays). Faces open onto the aisles (orange arrows on the map);
@@ -659,6 +676,7 @@ const SCENES = {
       label('3B', px(640), 3.1, px(Z0 - 18), 'zone');
       /* C-zones: 4 tall racks along z, flush on the front wall like 3B (z 340-455) */
       const CZ = 397.5;
+      hazardTape(420, 306, 1240, 306);                            // tape along the front of 3B and the C zones
       [['CW', 861, 897], ['CB', 932, 968], ['CR', 1002, 1038], ['CY', 1073, 1108]].forEach(([z, a, b]) => {
         addBay({ cx: px((a + b) / 2), cz: px(CZ), len: px(115), dep: px(b - a), axis: 'z', levels: 4, per: 24, levelH: .55, tag: z,
           codeAt: (l, p) => { const n = l * 24 + p + 1; return { key: `${z}|0|${n}`, code: `${z}-${String(n).padStart(3, '0')}` }; } });
@@ -711,7 +729,7 @@ const SCENES = {
       walls(311, 327, 483, 454, 1.2); stairs(311, 327, 397, 454, 'บันได'); lift(397, 327, 483, 454, 'ลิฟท์ขนของ');
       stairs(225, 122, 269, 148, 'บันได'); stairs(1041, 339, 1084, 454, 'บันได');
       /* main corridor between F02 and F01: yellow edge lines; the map's colour bars become thin zone stripes */
-      aisleLine(311, 278, 1084, 278); aisleLine(311, 299, 1084, 299);
+      hazardTape(311, 276, 1084, 276); hazardTape(311, 301, 1084, 301);   // hazard tape on both edges of the main corridor
       paint(483, 250, 1084, 256, 0x00b0f0, .04); label('F02', px(783), 3.1, px(186), 'zone'); label('ตำแหน่งหยิบ', px(783), 1.1, px(262), 'small');
       paint(483, 321, 869, 327, 0x92d050, .04); label('F01', px(655), 3.1, px(390), 'zone'); label('ตำแหน่งหยิบ', px(676), 1.1, px(312), 'small');
       paint(869, 321, 1041, 327, 0xf3a07a, .04); label('PA', px(955), 3.1, px(390), 'zone'); label('ตำแหน่งเก็บ', px(955), 1.1, px(312), 'small');
