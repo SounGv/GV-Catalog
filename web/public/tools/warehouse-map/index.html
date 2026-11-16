@@ -60,7 +60,7 @@ main{flex:1;display:flex;min-height:0}
 #tip b{color:var(--lime);font-variant-numeric:tabular-nums}
 #tip .n{color:var(--on-inverse-muted);font-size:12px}
 #hint{position:absolute;right:12px;bottom:12px;font-size:12px;color:#39424a;background:rgba(255,255,255,.8);padding:2px 10px;border-radius:var(--radius-chip);z-index:2}
-aside{width:380px;max-width:42vw;background:var(--surface);border-left:1px solid var(--border);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+aside{width:340px;max-width:42vw;background:var(--surface);border-left:1px solid var(--border);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
 aside h2{font-size:16px;margin:0;font-weight:700}
 .side-head .note{margin-top:2px}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--surface-sunken);border-radius:var(--radius-control);padding:4px;position:sticky;top:-16px;z-index:2}
@@ -72,7 +72,24 @@ aside h2{font-size:16px;margin:0;font-weight:700}
 .sub{font-size:14px;font-weight:700;margin:0 0 8px;color:var(--navy)}
 .finds{display:flex;flex-direction:column;gap:8px}
 .linkbtn{border:0;background:none;color:var(--primary);font-weight:600;font-size:13px;padding:0;min-height:32px;text-decoration:underline;text-underline-offset:3px}
-.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:var(--radius-card);overflow:hidden}
+.stat{padding:10px 12px;border-bottom:1px solid var(--border)}
+.stat:nth-child(odd){border-right:1px solid var(--border)}
+.stat:nth-last-child(-n+2){border-bottom:0}
+.stat .v{font-size:20px;font-weight:700;line-height:1.25;color:var(--navy);font-variant-numeric:tabular-nums}
+.stat .l{font-size:12px;color:var(--muted-foreground)}
+.side-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hide-side{border:1px solid var(--border-strong);background:var(--surface);border-radius:var(--radius-chip);min-height:32px;padding:0 12px;font-size:13px;font-weight:600;color:var(--muted-foreground)}
+.show-side{position:absolute;right:12px;top:64px;z-index:3;min-height:40px;padding:0 14px;border-radius:var(--radius-chip);border:1px solid var(--border-strong);background:var(--surface);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+body.side-off aside{display:none}
+.work{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.work div{border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.3}
+.work b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.work .w-low{background:var(--warning-soft);color:var(--warning)}
+.work .w-out{background:var(--danger-soft);color:var(--danger)}
+.work .w-free{background:var(--info-soft);color:var(--info)}
+.crew{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;font-size:13px}
+.crew .who{color:var(--muted-foreground)}
 .kpi{border:1px solid var(--border);border-radius:var(--radius-card);padding:8px 12px;background:var(--surface)}
 .kpi.dark{background:var(--navy);color:#fff;border-color:var(--navy)}
 .kpi.dark .v{color:var(--lime)}
@@ -118,7 +135,7 @@ header a.gv-back{margin:0!important}
 .edit .row{display:flex;gap:8px;flex-wrap:wrap}
 .team{display:flex;flex-direction:column;gap:8px}
 .floor{border:1px solid var(--border);border-radius:var(--radius-card);padding:10px 12px;background:var(--surface)}
-.floor.busy{border-color:var(--warning-dot);background:var(--warning-soft)}
+.floor.busy{border-color:var(--warning-dot);box-shadow:inset 3px 0 0 var(--warning-dot)}
 .floor .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:600}
 .floor .ct{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;margin-top:4px;font-variant-numeric:tabular-nums}
 .floor .ct b{font-size:15px}
@@ -189,7 +206,7 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
     <div id="empty"><div class="box"><h2>ยังไม่มีข้อมูลสต็อก</h2><p>กด <b>ซิงค์สต็อกจาก BigSeller</b> ด้านบน (ดึงจาก Google Sheet ที่อัปเดตจาก BigSeller) หรืออัปไฟล์ “สต็อกตำแหน่ง” ที่ส่งออกจาก BigSeller</p></div></div>
   </section>
   <aside>
-    <div class="side-head"><h2 id="sceneTitle"></h2><div class="note" id="sceneNote"></div></div>
+    <div class="side-head"><h2 id="sceneTitle"></h2><button type="button" class="hide-side" id="hideSide" aria-label="ซ่อนแถบด้านข้าง">ซ่อน ›</button></div>
     <div class="seg" role="tablist" aria-label="แถบข้อมูล">
       <button type="button" role="tab" data-pane="over" aria-selected="true">ภาพรวม</button>
       <button type="button" role="tab" data-pane="slot" aria-selected="false">ช่อง / ค้นหา<span class="dot" id="slotDot" hidden></span></button>
@@ -204,6 +221,7 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
       <div><h3 class="sub">ช่องที่เลือก</h3><div class="sel" id="sel"><span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span></div></div>
     </section>
     <section class="pane" data-pane="check" hidden>
+      <div class="note" id="sceneNote"></div>
       <div id="finds" class="finds"></div>
       <div class="note" id="foot"></div>
     </section>
@@ -328,7 +346,7 @@ function newScene(bounds) {
 }
 
 function label(text, x, y, z, cls = '') {
-  if (cls === 'row') return hangSign(text, x, z);          // row names are real hanging boards, like the signs on site
+  if (cls === 'row') return hangSign(text, x, z, y >= 4 ? 1.7 : 0);   // y >= 4: hang one step higher (signs of back-to-back rows)          // row names are real hanging boards, like the signs on site
   S.labels.push({ text, cls, pos: new THREE.Vector3(x, y, z) });
 }
 /* ---------- hanging row sign: white board with the row code, hung on two wires from the ceiling ---------- */
@@ -345,15 +363,14 @@ function signTexture(text) {
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
   const v = { tex, aspect: W / H }; signTex.set(text, v); return v;
 }
-const SIGN_Y = 3.15, CEIL = 4.3, wireMat = new THREE.MeshStandardMaterial({ color: 0x6b7178, roughness: .6 });
-function hangSign(text, x, z) {
-  const { tex, aspect } = signTexture(text), h = .42, w = h * aspect;
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
-  sp.scale.set(w, h, 1); sp.position.set(x, SIGN_Y, z); sp.userData.sign = true; S.scene.add(sp);
-  for (const dx of [-w * .35, w * .35]) {                    // the two wires the board hangs on
-    const wire = new THREE.Mesh(box, wireMat); wire.scale.set(.012, CEIL - SIGN_Y - h / 2, .012);
-    wire.position.set(x + dx, (CEIL + SIGN_Y + h / 2) / 2, z); S.scene.add(wire);
-  }
+const SIGN_Y = 3.55, CEIL = 5.8, wireMat = new THREE.MeshStandardMaterial({ color: 0x6b7178, roughness: .6 });
+function hangSign(text, x, z, lift = 0) {
+  /* the board keeps the same size on screen (readable from the overview and up close); it hangs on one wire from the ceiling */
+  const { tex, aspect } = signTexture(text), h = .025;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, depthTest: false, sizeAttenuation: false }));
+  sp.scale.set(h * aspect, h, 1); sp.center.set(.5, 0); sp.renderOrder = 5;
+  const y = SIGN_Y + lift; sp.position.set(x, y, z); sp.userData.sign = true; S.scene.add(sp);
+  const wire = new THREE.Mesh(box, wireMat); wire.scale.set(.015, CEIL - y, .015); wire.position.set(x, (CEIL + y) / 2, z); S.scene.add(wire);
 }
 function paint(x0, y0, x1, y1, color, h = 0.03) { S.patch.add(mat4(px((x0 + x1) / 2), h / 2, px((y0 + y1) / 2), px(x1 - x0), h, px(y1 - y0)), color); }
 function solid(x0, y0, x1, y1, h, color, y = 0, mat) {
@@ -551,7 +568,7 @@ const SCENES = {
       upper.forEach(([x, face], i) => { const bay = i + 1;
         addBay({ cx: px(x), cz: px(UZ), len: px(100), dep: px(20), axis: 'z', face, levels: 2, per: 6, levelH: .8, tag: '01U-' + bay,
           codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `01U|${bay}|${k}`, code: `01U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` }; } });
-        label('01U-' + String(bay).padStart(2, '0'), px(x), 2.2, px(UZ + 56), 'row'); });
+        label('01U-' + String(bay).padStart(2, '0'), px(x), bay % 2 ? 2.2 : 4.5, px(UZ + 56), 'row'); });   // neighbours hang at two heights so their signs do not overlap
       label('แถวบน = 01U-01…19 (ชิดผนังหลัง · 19 ชิดผนังขวา)', px((UX0 + UX1) / 2), 3.0, px(UZ + 66), 'warn');
       /* 3B: 7 columns x 5 bays, back-to-back pairs with aisles */
       /* Each column is one rack run along z (5 bays). Faces open onto the aisles (orange arrows on the map);
@@ -569,7 +586,7 @@ const SCENES = {
       })));
       const zEnd = Z0 + PITCH * 5;
       [[484, 533], [593, 649], [709, 756]].forEach(([a, b]) => { paint(a, Z0, b, zEnd, 0xd8dbde, 0.012); aisleLine((a + b) / 2, Z0, (a + b) / 2, zEnd); });
-      blocks.forEach((b, i) => label('3B · ' + ['01·03·05·07·09', '02·04·06·08·10', '11·13·15·17·19', '12·14·16·18·20', '21·23·25·27·29', '22·24·26·28·30', '31–35'][i], px(b.back + b.face * DEP / 2), 2.6, px(Z0 - 4), 'row'));
+      blocks.forEach((b, i) => label(['3B-01…09', '3B-02…10', '3B-11…19', '3B-12…20', '3B-21…29', '3B-22…30', '3B-31…35'][i], px(b.back + b.face * DEP / 2), b.face === -1 ? 4.5 : 2.6, px(Z0 - 4), 'row'));
       label('3B', px(640), 3.1, px(Z0 - 18), 'zone');
       /* C-zones: 4 tall racks along z, flush on the front wall like 3B (z 340-455) */
       const CZ = 397.5;
@@ -589,15 +606,15 @@ const SCENES = {
          spots 1-11. Rows run along the wall of the stair/lift room: 02U-01 is a single row on that wall (next to the
          lift), then a walkway, then 02U-02 and 02U-03 back to back as a double row; the open floor up to the first 3B
          rack stays a walkway. 11 spots per row. Cartons stack on the floor, height follows the quantity. */
-      const ROW_W = 14, SZ0 = 282, SZ1 = 382, SL = (SZ1 - SZ0) / 11;
+      const ROW_W = 14, SZ0 = 355, SZ1 = 453, SL = (SZ1 - SZ0) / 11;   // rows end flush on the front wall, like 3B
       const ROW_X = { 1: 314, 2: 352, 3: 352 + ROW_W };            // 02U-01 on the wall · aisle · 02U-02|02U-03 back to back
       paint(314 + ROW_W, SZ0, 352, SZ1, 0xd8dbde, .012); aisleLine(333, SZ0, 333, SZ1);
       [1, 2, 3].forEach((bay, r) => {
         const xa = ROW_X[bay], xb = xa + ROW_W - 1.5;
         for (let k = 1; k <= 11; k++) floorSpot(xa, SZ0 + (k - 1) * SL, xb, SZ0 + k * SL - 1.2, `02U|${bay}|${k}`, `02U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}`);
-        label('02U-' + String(bay).padStart(2, '0'), px((xa + xb) / 2), 2.4, px(bay === 3 ? SZ0 - 6 : SZ1 + 8), 'row');   // 02U-02 and 02U-03 sit back to back: their signs hang at opposite ends
+        label('02U-' + String(bay).padStart(2, '0'), px((xa + xb) / 2), 2.4, px(bay === 3 ? SZ0 + 45 : SZ0 - 6), 'row');   // 02U-02 and 02U-03 sit back to back: 02U-03's sign hangs further along its row
       });
-      label('02U · พื้นวางกองชิดกำแพง ใกล้ลิฟท์', px(352), 3.3, px(SZ0 - 10), 'zone');
+      label('02U · พื้นวางกองชิดกำแพง ใกล้ลิฟท์', px(352), 4.6, px(SZ0 - 22), 'zone');
     },
     finds() {
       const miss3b = 560 - F['3B'].codes;
@@ -838,12 +855,11 @@ function renderTeam() {
   const busiest = work('ugreen') === work('fantech') ? '' : work('ugreen') > work('fantech') ? 'ugreen' : 'fantech';
   el.innerHTML = floors.map(([id, title, planned]) => {
     const names = STAFF.filter(x => x.scene === id);
-    return `<div class="floor${busiest === id ? ' busy' : ''}"><div class="hd"><span>${title}${busiest === id ? ' <span class="pill ask">! งานเยอะ ช่วยกันที่นี่</span>' : ''}</span><span class="note">ดูแล ${names.length || planned} คน</span></div>
-      <div class="ct"><span>! ต้องเติม <b>${nf(w[id].low)}</b></span><span>✗ หมด <b>${nf(w[id].out)}</b></span><span>○ ว่าง <b>${nf(w[id].free)}</b> ช่อง</span></div>
-      <div class="names">${names.length ? names.map(n => `<span class="name">${esc(n.name)}<button type="button" data-del="${esc(n.id)}" aria-label="เอา ${esc(n.name)} ออก">×</button></span>`).join('') : `<span class="note">ยังไม่ใส่ชื่อ (วางไว้ ${planned} คน)</span>`}</div>
-      <button type="button" class="linkbtn" data-open="${id}">+ เพิ่มชื่อ</button>
+    return `<div class="floor${busiest === id ? ' busy' : ''}"><div class="hd"><span>${title}</span>${busiest === id ? '<span class="pill ask">! งานเยอะ ช่วยกันที่นี่</span>' : ''}</div>
+      <div class="work"><div class="w-low">! ต้องเติม<b>${nf(w[id].low)}</b></div><div class="w-out">✗ หมด<b>${nf(w[id].out)}</b></div><div class="w-free">○ ว่าง<b>${nf(w[id].free)}</b></div></div>
+      <div class="crew"><span class="who">ทีมดูแล</span>${names.length ? names.map(n => `<span class="name">${esc(n.name)}<button type="button" data-del="${esc(n.id)}" aria-label="เอา ${esc(n.name)} ออก">×</button></span>`).join('') : `<span class="note">ยังไม่ใส่ชื่อ (${planned} คน)</span>`}<button type="button" class="linkbtn" data-open="${id}">+ เพิ่ม</button></div>
       <form class="addname" data-add="${id}" hidden><input name="n" maxlength="40" placeholder="ชื่อพนักงานที่ดูแลชั้นนี้" aria-label="ชื่อพนักงานที่ดูแล ${title}"><button class="btn sm" type="submit">เพิ่ม</button></form></div>`;
-  }).join('') + '<div class="note">ทีมคลัง 3 คน ตรวจนับและเติมของให้เต็มช่อง ชั้นไหนงานเยอะลงช่วยกัน · ชื่อที่ใส่ ทุกคนที่เปิดหน้านี้เห็น</div>';
+  }).join('') + '<div class="note">ชั้นไหนงานเยอะ ทีมลงช่วยกัน · ชื่อที่ใส่ ทุกคนที่เปิดหน้านี้เห็น</div>';
   el.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { const f = el.querySelector(`[data-add=${b.dataset.open}]`); f.hidden = false; b.hidden = true; f.n.focus(); });
   el.querySelectorAll('[data-add]').forEach(f => f.onsubmit = async e => {
     e.preventDefault(); const name = f.n.value.trim(); if (!name) return;
@@ -863,11 +879,11 @@ function renderSide() {
   const inMap = S.slots.filter(s => !s.orphan), st = inMap.filter(s => s.status === 'stock'), qty = st.reduce((a, s) => a + s.loc.qty, 0);
   const orph = S.slots.filter(s => s.orphan), oq = orph.reduce((a, s) => a + (s.loc ? s.loc.qty : 0), 0);
   document.getElementById('kpis').innerHTML = [
-    ['dark', nf(inMap.length), 'ช่องในผังที่ผูกรหัสแล้ว'],
-    ['', inMap.length ? Math.round(st.length / inMap.length * 100) + '%' : '–', `ช่องที่มีสต็อก (${nf(st.length)} ช่อง)`],
-    ['', nf(qty), 'ชิ้นในช่องที่อยู่ในผัง'],
-    ['', nf(oq), `ชิ้นนอกผัง (${nf(orph.length)} ช่อง)`],
-  ].map(([c, v, l]) => `<div class="kpi ${c}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+    [nf(inMap.length), 'ช่องในผัง'],
+    [inMap.length ? Math.round(st.length / inMap.length * 100) + '%' : '–', `มีสต็อก (${nf(st.length)} ช่อง)`],
+    [nf(qty), 'ชิ้นในผัง'],
+    [nf(oq), `ชิ้นนอกผัง (${nf(orph.length)} ช่อง)`],
+  ].map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
   renderTeam();
   const lab = { ok: 'ตรงผัง', diff: 'ไม่ตรง', ask: 'ต้องยืนยัน', na: 'ไม่มีข้อมูล' };
   document.getElementById('finds').innerHTML = d.finds().map(([k, t, a, b]) =>
@@ -880,6 +896,11 @@ function showPane(id) {
   if (id === 'slot') document.getElementById('slotDot').hidden = true;
 }
 document.querySelectorAll('.seg [data-pane]').forEach(b => b.onclick = () => showPane(b.dataset.pane));
+{ const show = document.createElement('button'); show.type = 'button'; show.className = 'show-side'; show.textContent = '‹ แสดงแถบข้อมูล'; show.hidden = true;
+  document.getElementById('stage').append(show);
+  const setSide = off => { document.body.classList.toggle('side-off', off); show.hidden = !off; try { localStorage.setItem('gv-wh-side-off', off ? '1' : ''); } catch {} };
+  document.getElementById('hideSide').onclick = () => setSide(true); show.onclick = () => setSide(false);
+  try { if (localStorage.getItem('gv-wh-side-off')) setSide(true); } catch {} }
 function renderSel() {
   const el = document.getElementById('sel');
   if (!selected) { el.innerHTML = '<span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span>'; return; }
@@ -949,7 +970,7 @@ renderer.domElement.addEventListener('pointerleave', () => { pointer = null; });
 renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', e => { if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 5) select(pick()); });
 function select(s, focus = false) {
-  if (s) showPane('slot');
+  if (s) { showPane('slot'); if (document.body.classList.contains('side-off')) document.querySelector('.show-side').click(); }
   selected = s; renderSel();
   if (!s) { selBox.visible = false; return; }
   const h = Math.max(s.h, .06);
