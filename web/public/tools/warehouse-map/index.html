@@ -971,14 +971,25 @@ function slotStyle(s) {
     return s.status === 'empty' ? [s.ih * .35, '#c62828'] : [s.ih * .25, '#5aa9e6'];
   }
   if (mode === 'heat') return [s.status === 'stock' ? s.ih * (.4 + .6 * sz) : .03, heatCol(q)];
-  if (s.status === 'stock') return [s.ih * (.45 + .55 * sz), cardboard[hash(s.code) % cardboard.length]];
-  return s.status === 'empty' ? plate : [.02, '#e4e7ea'];
+  if (s.status === 'stock') return [s.ih * (.45 + .55 * sz), showMarks && isLow(s) ? '#f0a020' : cardboard[hash(s.code) % cardboard.length]];
+  return s.status === 'empty' ? (showMarks ? [.04, '#c62828'] : plate) : [.02, '#e4e7ea'];
 }
 
 /* ---------- build / switch ---------- */
 let sceneId = 'ugreen', slotMesh = null, extraMesh = null, markMesh = null, hoverBox = null, selBox = null, selected = null;
-let showMarks = true;                            // red tag = หมด (SKU, 0 pieces) · blue tag = ว่าง (no SKU in the slot)
-const MARK = { empty: '#c62828', nodata: '#1d5fd1' };
+let showMarks = true, warnIcons = [];
+const warnTex = {};
+function warnTexture(kind) {                     // amber triangle "!" = near empty · red circle "✗" = sold out
+  if (warnTex[kind]) return warnTex[kind];
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.lineJoin = 'round'; g.lineWidth = 10; g.strokeStyle = '#ffffff';
+  if (kind === 'low') { g.fillStyle = '#f0a020'; g.beginPath(); g.moveTo(64, 10); g.lineTo(120, 112); g.lineTo(8, 112); g.closePath(); g.fill(); g.stroke(); }
+  else { g.fillStyle = '#c62828'; g.beginPath(); g.arc(64, 64, 54, 0, Math.PI * 2); g.fill(); g.stroke(); }
+  g.fillStyle = '#ffffff'; g.font = '900 72px "Segoe UI", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(kind === 'low' ? '!' : '✗', 64, kind === 'low' ? 76 : 66);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return (warnTex[kind] = t);
+}                            // red tag = หมด (SKU, 0 pieces) · blue tag = ว่าง (no SKU in the slot)
+const MARK = { low: '#f0a020', empty: '#c62828', nodata: '#1d5fd1' };
 function buildActive() {
   if (S) S.scene.traverse(o => { if (o.isMesh) { o.geometry !== box && !o.geometry.userData.keep && o.geometry.dispose(); } });
   labelsEl.innerHTML = '';
@@ -995,6 +1006,15 @@ function buildActive() {
   markMesh = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ roughness: .5, metalness: 0, emissive: 0x222222 }), Math.max(1, S.slots.length));
   markMesh.count = S.slots.length; markMesh.frustumCulled = false;
   S.scene.add(slotMesh, extraMesh, markMesh);
+  warnIcons = [];
+  S.slots.forEach(s => {                          // one icon per near-empty / sold-out slot, shown with the warnings
+    if (s.orphan || !s.loc) return;
+    const kind = s.status === 'empty' ? 'out' : isLow(s) ? 'low' : ''; if (!kind) return;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: warnTexture(kind), depthWrite: false }));
+    const out = s.ext ? s.ext / 2 + .02 : 0;
+    sp.position.set(s.x + s.nx * out, s.y + Math.min(s.ih, .9) + .12, s.z + s.nz * out); sp.scale.set(.32, .32, 1); sp.renderOrder = 4;
+    S.scene.add(sp); warnIcons.push(sp);
+  });
   hoverBox = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0x18364c }));
   hoverBox.visible = false; S.scene.add(hoverBox);
   selBox = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0xcdeb03 }));
@@ -1023,21 +1043,23 @@ function applyMode() {
     } else { extraMesh.setMatrixAt(i, ZERO); extraMesh.setColorAt(i, tmpC.set('#c79a62')); }
     s.rx = x; s.rz = z; s.rw = w; s.rd = d; s.h = h;
     /* marker tag: a plate on the shelf's front edge, or a short post in the middle of a floor spot */
-    const mk = showMarks && !s.orphan && (s.status === 'empty' || s.status === 'nodata');
+    const kind = s.status === 'stock' ? (isLow(s) ? 'low' : '') : s.status;
+    const mk = showMarks && !s.orphan && !!MARK[kind];
     if (!mk) { markMesh.setMatrixAt(i, ZERO); markMesh.setColorAt(i, tmpC.set('#ffffff')); }
     else {
       if (s.ext) { const f = s.ext / 2 + .03, fx = s.x + s.nx * f, fz = s.z + s.nz * f, wide = Math.min(s.along * .7, .24);
         markMesh.setMatrixAt(i, mat4(fx, s.y + .13, fz, s.nx ? .025 : wide, .16, s.nz ? .025 : wide)); }
       else markMesh.setMatrixAt(i, mat4(s.x, s.y + .22, s.z, Math.min(s.w, .3), .44, Math.min(s.d, .3)));
-      markMesh.setColorAt(i, tmpC.set(MARK[s.status]));
+      markMesh.setColorAt(i, tmpC.set(MARK[kind]));
     }
   });
   markMesh.instanceMatrix.needsUpdate = true; if (markMesh.instanceColor) markMesh.instanceColor.needsUpdate = true;
+  warnIcons.forEach(sp => { sp.visible = showMarks; });
   slotMesh.instanceMatrix.needsUpdate = true; if (slotMesh.instanceColor) slotMesh.instanceColor.needsUpdate = true;
   extraMesh.instanceMatrix.needsUpdate = true; if (extraMesh.instanceColor) extraMesh.instanceColor.needsUpdate = true;
   const lg = document.getElementById('legend');
   lg.innerHTML = `<b>${MODES[mode].name}</b>` + MODES[mode].legend.map(([c, t]) => `<div class="row"><i style="background:${c}"></i>${t}</div>`).join('')
-    + (showMarks ? `<b style="margin-top:4px">ป้ายบนช่อง</b><div class="row"><i style="background:${MARK.empty}"></i>✗ หมด · มี SKU แต่ 0 ชิ้น</div><div class="row"><i style="background:${MARK.nodata}"></i>○ ว่าง · ไม่มี SKU วางของใหม่ได้</div>` : '');
+    + (showMarks ? `<b style="margin-top:4px">ป้ายเตือนบนช่อง</b><div class="row"><i style="background:${MARK.low}"></i>! ใกล้หมด · ต่ำกว่าขั้นต่ำ ต้องเติม</div><div class="row"><i style="background:${MARK.empty}"></i>✗ หมด · มี SKU แต่ 0 ชิ้น</div><div class="row"><i style="background:${MARK.nodata}"></i>○ ว่าง · ไม่มี SKU วางของใหม่ได้</div>` : '');
 }
 function setView(v) {
   const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
@@ -1063,7 +1085,7 @@ Object.entries(MODES).forEach(([id, m]) => {
 });
 const viewsEl = document.getElementById('views');
 [['iso', 'มุมเฉียง'], ['top', 'มุมบน']].forEach(([id, t]) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = t; b.onclick = () => setView(id); viewsEl.appendChild(b); });
-{ const b = document.createElement('button'); b.className = 'chip'; b.textContent = 'ป้าย ว่าง/หมด'; b.setAttribute('aria-pressed', 'true');
+{ const b = document.createElement('button'); b.className = 'chip'; b.textContent = 'ป้ายเตือน ใกล้หมด/หมด'; b.setAttribute('aria-pressed', 'true');
   b.onclick = () => { showMarks = !showMarks; b.setAttribute('aria-pressed', String(showMarks)); applyMode(); }; viewsEl.prepend(b); }
 
 /* ---------- team per floor + refill workload (which floor the 3 staff should help on) ---------- */
