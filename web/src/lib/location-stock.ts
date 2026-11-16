@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { pool } from "@/lib/db";
+import { parseCsv } from "@/lib/pick-location-sheet";
 
 /**
  * Stock per pick location for the warehouse map (ผังคลังและสต็อก). Source: BigSeller's "สต็อกตำแหน่ง_*.xlsx"
@@ -123,11 +124,10 @@ async function current() {
   return { meta: meta ?? null, qty: total == null ? null : Number(total) };
 }
 
-async function plan(buffer: Buffer, fileName: string) {
-  const all = await readFile(buffer);
-  if (!all.length) throw new Error("ไฟล์ไม่มีแถวสต็อก");
+/** Rows from either source -> DryRun numbers. `fileDate` is when BigSeller produced the data. */
+async function plan(all: StockRow[], fileDate: Date | null) {
+  if (!all.length) throw new Error("ไม่มีแถวสต็อก");
   const now = await current();
-  const fileDate = exportTime(fileName);
   const curDate = now.meta?.file_date ?? null;
   // a repeated SKU x position row is kept once, so a slot's stock is never counted twice
   const seen = new Set<string>();
@@ -155,17 +155,13 @@ async function plan(buffer: Buffer, fileName: string) {
     duplicate_count: duplicates,
     areas,
   };
-  return { preview, rows, fileDate };
-}
-
-export async function previewStockImport(buffer: Buffer, fileName: string) {
-  return (await plan(buffer, fileName)).preview;
+  return { preview, rows };
 }
 
 /** Replaces the snapshot in one transaction, then checks the stored row count and quantity total. */
-export async function applyStockImport(buffer: Buffer, fileName: string) {
-  const { preview, rows, fileDate } = await plan(buffer, fileName);
-  if (preview.older_than_current) throw new Error("ไฟล์นี้เก่ากว่าข้อมูลในผัง หรือชื่อไฟล์ไม่มีเวลาส่งออก — ส่งออกไฟล์สต็อกตำแหน่งใหม่จาก BigSeller แล้วอัปโดยไม่เปลี่ยนชื่อไฟล์");
+async function apply(all: StockRow[], fileDate: Date | null, source: string) {
+  const { preview, rows } = await plan(all, fileDate);
+  if (preview.older_than_current) throw new Error("ข้อมูลนี้เก่ากว่าที่อยู่ในผัง หรือไม่มีเวลาส่งออก — ใช้ข้อมูลที่ใหม่กว่า (อัปไฟล์โดยไม่เปลี่ยนชื่อไฟล์)");
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -180,7 +176,7 @@ export async function applyStockImport(buffer: Buffer, fileName: string) {
       });
       await client.query(`INSERT INTO location_stock (${cols.join(",")}) VALUES ${tuples.join(",")}`, values);
     }
-    await client.query("INSERT INTO location_stock_imports (file_name, file_date, rows) VALUES ($1, $2, $3)", [fileName.slice(0, 200), fileDate, rows.length]);
+    await client.query("INSERT INTO location_stock_imports (file_name, file_date, rows) VALUES ($1, $2, $3)", [source.slice(0, 200), fileDate, rows.length]);
     const check = (await client.query<{ n: number; q: string | null }>("SELECT count(*)::int AS n, sum(qty)::text AS q FROM location_stock")).rows[0];
     if (check.n !== rows.length || Number(check.q ?? 0) !== preview.qty_total) throw new Error("บันทึกแล้วจำนวนไม่ตรงกับไฟล์ — ยกเลิกการนำเข้า");
     await client.query("COMMIT");
@@ -191,6 +187,62 @@ export async function applyStockImport(buffer: Buffer, fileName: string) {
     client.release();
   }
   return preview;
+}
+
+export async function previewStockImport(buffer: Buffer, fileName: string) {
+  return (await plan(await readFile(buffer), exportTime(fileName))).preview;
+}
+export async function applyStockImport(buffer: Buffer, fileName: string) {
+  return apply(await readFile(buffer), exportTime(fileName), fileName);
+}
+
+/* ---------- Google Sheet DB_LOCATION_CURRENT (BigSeller-Inventory scrapes BigSeller's shelf page into it) ---------- */
+
+const SHEET_SOURCE = "Google Sheet DB_LOCATION_CURRENT";
+
+async function readSheet(): Promise<{ rows: StockRow[]; date: Date | null }> {
+  const url = process.env.PICK_LOCATION_SHEET_CSV_URL;
+  if (!url) throw new Error("ยังไม่ได้ตั้งค่าลิงก์ Google Sheet (PICK_LOCATION_SHEET_CSV_URL)");
+  const res = await fetch(url, { cache: "no-store", redirect: "follow" });
+  if (!res.ok) throw new Error(`อ่านชีตไม่สำเร็จ (HTTP ${res.status})`);
+  const table = parseCsv(await res.text());
+  const head = (table[0] ?? []).map((h) => h.trim());
+  const col = (n: string) => head.indexOf(n);
+  const c = {
+    sku: col("sku"), warehouse: col("warehouse"), area: col("area"), position: col("position"), type: col("positionType"),
+    qty: col("stockAtPosition"), locked: col("lockedStock"), avail: col("availableStock"), unshelved: col("unshelvedStock"),
+    max: col("maxStock"), min: col("minStock"), updated: col("sourceUpdatedAt"),
+  };
+  if (c.sku < 0 || c.position < 0 || c.qty < 0) throw new Error("ชีตไม่มีคอลัมน์ sku / position / stockAtPosition — ลิงก์ต้องชี้ไปที่แท็บ DB_LOCATION_CURRENT");
+  // the sheet carries no product names: take them (and the barcode) from the Catalog
+  const products = new Map((await pool.query<{ sku: string; name: string; gtin: string | null }>("SELECT sku, name, gtin FROM products")).rows.map((p) => [p.sku, p]));
+  let latest = "";
+  const rows: StockRow[] = [];
+  for (const r of table.slice(1)) {
+    const get = (i: number) => (i >= 0 ? (r[i] ?? "").trim() : "");
+    const sku = get(c.sku);
+    const position = get(c.position);
+    if (!sku || !position) continue;
+    const u = get(c.updated);
+    if (u > latest) latest = u;
+    const p = products.get(sku);
+    rows.push({
+      sku, gtin: p?.gtin ?? null, name: p?.name ?? "", warehouse: get(c.warehouse) || null, area: get(c.area) || null, position,
+      positionType: get(c.type) || null, qty: int(get(c.qty)), locked: int(get(c.locked)), avail: int(get(c.avail)),
+      unshelved: int(get(c.unshelved)), max: intOrNull(get(c.max)), min: intOrNull(get(c.min)),
+    });
+  }
+  const date = latest ? new Date(latest) : null;
+  return { rows, date: date && !Number.isNaN(date.getTime()) ? date : null };
+}
+
+export async function previewStockSheet() {
+  const { rows, date } = await readSheet();
+  return (await plan(rows, date)).preview;
+}
+export async function applyStockSheet() {
+  const { rows, date } = await readSheet();
+  return apply(rows, date, SHEET_SOURCE);
 }
 
 /* ---------- the map's data: one entry per position, plus the zone facts the map's notes are written from ---------- */

@@ -148,7 +148,8 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
   </form>
   <div class="tools">
     <input id="stockFile" type="file" accept=".xlsx" hidden>
-    <button type="button" class="btn dark" id="uploadBtn">อัปไฟล์สต็อกตำแหน่ง</button>
+    <button type="button" class="btn dark" id="syncBtn">ซิงค์สต็อกจาก BigSeller</button>
+    <button type="button" class="btn" id="uploadBtn">อัปไฟล์สต็อกตำแหน่ง</button>
     <button type="button" class="btn" id="exportBtn">ส่งออกรายการช่อง (.xlsx)</button>
   </div>
 </div>
@@ -160,7 +161,7 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
     <div id="legend"></div>
     <div id="tip"></div>
     <div id="hint">ลากหมุน · ล้อเมาส์ซูม · คลิกช่องเพื่อดูรายละเอียด</div>
-    <div id="empty"><div class="box"><h2>ยังไม่มีข้อมูลสต็อก</h2><p>ส่งออกไฟล์ “สต็อกตำแหน่ง” จาก BigSeller แล้วกด <b>อัปไฟล์สต็อกตำแหน่ง</b> ด้านบน</p></div></div>
+    <div id="empty"><div class="box"><h2>ยังไม่มีข้อมูลสต็อก</h2><p>กด <b>ซิงค์สต็อกจาก BigSeller</b> ด้านบน (ดึงจาก Google Sheet ที่อัปเดตจาก BigSeller) หรืออัปไฟล์ “สต็อกตำแหน่ง” ที่ส่งออกจาก BigSeller</p></div></div>
   </section>
   <aside>
     <div id="searchBox" hidden><h2 id="resTitle">ผลค้นหา</h2><div class="results" id="results"></div></div>
@@ -834,37 +835,40 @@ function goTo(l) {
 }
 document.getElementById('searchForm').onsubmit = e => { e.preventDefault(); search(document.getElementById('q').value); };
 
-/* ---------- upload BigSeller สต็อกตำแหน่ง export: DryRun -> confirm -> replace snapshot -> redraw ---------- */
+/* ---------- stock in: Google Sheet DB_LOCATION_CURRENT (main) or an uploaded สต็อกตำแหน่ง export (fallback).
+   Both: DryRun -> confirm -> replace snapshot -> redraw ---------- */
 const dlg = document.getElementById('importDlg'), fileIn = document.getElementById('stockFile');
-let pendingFile = null;
+let pending = null;                              // { file } for an upload, { sheet: true } for the sheet
 const when = iso => iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : 'ไม่ระบุ';
-async function sendStock(file, dryRun) {
-  const form = new FormData(); form.set('file', file); form.set('dryRun', String(dryRun));
-  const res = await fetch('/api/warehouse/stock/import', { method: 'POST', body: form });
+async function sendStock(src, dryRun) {
+  let res;
+  if (src.sheet) res = await fetch('/api/warehouse/stock/sheet-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dryRun }) });
+  else { const form = new FormData(); form.set('file', src.file); form.set('dryRun', String(dryRun)); res = await fetch('/api/warehouse/stock/import', { method: 'POST', body: form }); }
   const j = await res.json().catch(() => ({})); if (!res.ok || !j.preview) throw Error(j.error || 'HTTP ' + res.status); return j.preview;
 }
 document.getElementById('uploadBtn').onclick = () => fileIn.click();
-fileIn.onchange = async () => {
-  const f = fileIn.files[0]; fileIn.value = ''; if (!f) return;
-  const btn = document.getElementById('uploadBtn'); btn.disabled = true; btn.textContent = 'กำลังอ่านไฟล์…';
+document.getElementById('syncBtn').onclick = () => review({ sheet: true }, document.getElementById('syncBtn'), 'ซิงค์สต็อกจาก BigSeller', 'กำลังอ่านชีต…');
+fileIn.onchange = () => { const f = fileIn.files[0]; fileIn.value = ''; if (f) review({ file: f }, document.getElementById('uploadBtn'), 'อัปไฟล์สต็อกตำแหน่ง', 'กำลังอ่านไฟล์…'); };
+async function review(src, btn, label, busy) {
+  btn.disabled = true; btn.textContent = busy;
   try {
-    const p = await sendStock(f, true); pendingFile = f;
-    document.getElementById('importFile').textContent = `${f.name} · ส่งออกเมื่อ ${when(p.file_date)}`;
+    const p = await sendStock(src, true); pending = src;
+    document.getElementById('importFile').textContent = src.sheet ? `Google Sheet · DB_LOCATION_CURRENT · อัปเดตเมื่อ ${when(p.file_date)}` : `${src.file.name} · ส่งออกเมื่อ ${when(p.file_date)}`;
     const diff = p.current_qty_total == null ? '' : ` (เดิม ${nf(p.current_qty_total)})`;
     document.getElementById('importStats').innerHTML = [['แถว (SKU × ตำแหน่ง)', nf(p.rows_in) + (p.current_rows == null ? '' : ` (เดิม ${nf(p.current_rows)})`)], ['ตำแหน่ง', nf(p.positions)], ['SKU', nf(p.skus)], ['รวมชิ้น', nf(p.qty_total) + diff], ['แถวซ้ำ', nf(p.duplicate_count)], ['ข้อมูลในผังตอนนี้', when(p.current_file_date)]]
       .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
     const m = document.getElementById('importMsg');
-    m.className = 'msg' + (p.older_than_current ? ' bad' : ''); m.textContent = p.older_than_current ? '✗ ไฟล์นี้เก่ากว่าข้อมูลที่อยู่ในผัง — ส่งออกไฟล์ใหม่จาก BigSeller' : 'ยืนยันแล้วข้อมูลสต็อกในผังจะถูกแทนด้วยไฟล์นี้ทั้งหมด';
+    m.className = 'msg' + (p.older_than_current ? ' bad' : ''); m.textContent = p.older_than_current ? '✗ ข้อมูลนี้เก่ากว่าที่อยู่ในผัง — ไม่ต้องอัปเดต' : 'ยืนยันแล้วข้อมูลสต็อกในผังจะถูกแทนด้วยข้อมูลชุดนี้ทั้งหมด';
     document.getElementById('importOk').disabled = p.older_than_current;
     dlg.showModal();
-  } catch (e) { alert('อ่านไฟล์ไม่สำเร็จ: ' + e.message); }
-  finally { btn.disabled = false; btn.textContent = 'อัปไฟล์สต็อกตำแหน่ง'; }
-};
-document.getElementById('importCancel').onclick = () => { pendingFile = null; dlg.close(); };
+  } catch (e) { alert('อ่านข้อมูลไม่สำเร็จ: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+document.getElementById('importCancel').onclick = () => { pending = null; dlg.close(); };
 document.getElementById('importOk').onclick = async () => {
-  const ok = document.getElementById('importOk'), m = document.getElementById('importMsg'); if (!pendingFile) return;
-  ok.disabled = true; m.className = 'msg'; m.textContent = 'กำลังอัปสต็อก…';
-  try { await sendStock(pendingFile, false); pendingFile = null; dlg.close(); await loadData(); buildActive(); }
+  const ok = document.getElementById('importOk'), m = document.getElementById('importMsg'); if (!pending) return;
+  ok.disabled = true; m.className = 'msg'; m.textContent = 'กำลังอัปเดตสต็อก…';
+  try { await sendStock(pending, false); pending = null; dlg.close(); await loadData(); buildActive(); }
   catch (e) { m.className = 'msg bad'; m.textContent = e.message; ok.disabled = false; }
 };
 

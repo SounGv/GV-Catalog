@@ -32,7 +32,7 @@ type SheetPosition = { position: string; positionType: string | null; area: stri
 
 const NO_LOCATION = "ไม่มีตำแหน่งหยิบ";
 
-function parseCsv(text: string): string[][] {
+export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -89,6 +89,12 @@ async function readSheet() {
     if (updated && (!latest || updated > latest)) latest = updated;
     if (!sku || !position) {
       nullCount++;
+      skipped++;
+      continue;
+    }
+    // the tab also lists storage positions (Storage Area, Pallet ...): only pick positions belong here
+    const type = idx.type >= 0 ? (r[idx.type] ?? "").trim() : "";
+    if (type && type !== "ตำแหน่งหยิบสินค้า") {
       skipped++;
       continue;
     }
