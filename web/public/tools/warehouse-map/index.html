@@ -519,15 +519,18 @@ const SCENES = {
       });
       /* 02U, next to the goods lift where the map draws U01/U02: not a rack but a floor stacking area. Yellow tape
          marks the spots (spot number taped on the floor, e.g. 01-04) and a sign over each row (02U-01, 02U-02 ...) lists
-         spots 1-11. 3 rows run along the wall of the stair/lift room, 02U-01 on the wall (its sign hangs deepest in the
-         photo), 02U-02 and 02U-03 in front; 11 spots per row. Cartons stack on the floor, height follows the quantity. */
-      const WALL_X = 314, ROW_W = 16, SZ0 = 282, SZ1 = 382, SL = (SZ1 - SZ0) / 11;
+         spots 1-11. Rows run along the wall of the stair/lift room: 02U-01 is a single row on that wall (next to the
+         lift), then a walkway, then 02U-02 and 02U-03 back to back as a double row; the open floor up to the first 3B
+         rack stays a walkway. 11 spots per row. Cartons stack on the floor, height follows the quantity. */
+      const ROW_W = 14, SZ0 = 282, SZ1 = 382, SL = (SZ1 - SZ0) / 11;
+      const ROW_X = { 1: 314, 2: 352, 3: 352 + ROW_W };            // 02U-01 on the wall · aisle · 02U-02|02U-03 back to back
+      paint(314 + ROW_W, SZ0, 352, SZ1, 0xd8dbde, .012); aisleLine(333, SZ0, 333, SZ1);
       [1, 2, 3].forEach((bay, r) => {
-        const xa = WALL_X + r * ROW_W, xb = xa + ROW_W - 2.5;
+        const xa = ROW_X[bay], xb = xa + ROW_W - 1.5;
         for (let k = 1; k <= 11; k++) floorSpot(xa, SZ0 + (k - 1) * SL, xb, SZ0 + k * SL - 1.2, `02U|${bay}|${k}`, `02U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}`);
-        label('02U-' + String(bay).padStart(2, '0'), px((xa + xb) / 2), 2.4, px(SZ1 + 8 + r * 7), 'small');
+        label('02U-' + String(bay).padStart(2, '0'), px((xa + xb) / 2), 2.4, px(SZ1 + 8 + (bay === 3 ? 7 : 0)), 'small');
       });
-      label('02U · พื้นวางกองชิดกำแพง ใกล้ลิฟท์', px(WALL_X + ROW_W * 1.5), 3.3, px(SZ0 - 10), 'zone');
+      label('02U · พื้นวางกองชิดกำแพง ใกล้ลิฟท์', px(352), 3.3, px(SZ0 - 10), 'zone');
     },
     finds() {
       const miss3b = 560 - F['3B'].codes;
