@@ -37,7 +37,7 @@ header{background:var(--navy);border-bottom:1px solid var(--navy-line);box-shado
 .tab[aria-selected=true]{color:var(--lime);border-bottom-color:var(--lime);font-weight:600}
 .badge-sample{font-size:12px;background:rgba(255,255,255,.08);color:var(--navy-ink);border:1px solid #2c4a60;padding:2px 10px;border-radius:var(--radius-chip);font-weight:500}
 main{flex:1;display:flex;min-height:0}
-#stage{position:relative;flex:1;min-width:0;background:linear-gradient(#dfe4e9,#cfd6dd)}
+#stage{position:relative;flex:1;min-width:0;background:linear-gradient(#eef2f5,#dfe5ea)}
 #stage canvas{display:block;width:100%;height:100%}
 #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .lbl{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-size:12px;font-weight:600;padding:1px 8px;border-radius:6px;background:rgba(255,255,255,.88);color:#20262b;box-shadow:0 1px 3px rgba(0,0,0,.2)}
@@ -225,7 +225,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.12;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 stage.prepend(renderer.domElement);
 const camera = new THREE.PerspectiveCamera(38, 1, 0.5, 600);
@@ -254,8 +254,8 @@ class Inst {                           // collects boxes, then becomes one Insta
 
 function concreteTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
-  g.fillStyle = '#b9bdc1'; g.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 9000; i++) { const v = 150 + Math.random() * 60 | 0; g.fillStyle = `rgba(${v},${v},${v + 3},.22)`; g.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 3, 2 + Math.random() * 3); }
+  g.fillStyle = '#d3d8dc'; g.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 4000; i++) { const v = 185 + Math.random() * 40 | 0; g.fillStyle = `rgba(${v},${v},${v + 3},.14)`; g.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 3, 2 + Math.random() * 3); }
   g.strokeStyle = 'rgba(70,75,80,.18)'; g.lineWidth = 2; g.strokeRect(1, 1, 510, 510);
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
@@ -266,10 +266,10 @@ let S = null;                          // the active scene object
 
 function newScene(bounds) {
   const sc = new THREE.Scene();
-  sc.background = new THREE.Color(0xd6dce2);
-  sc.fog = new THREE.Fog(0xd6dce2, 120, 320);
-  sc.add(new THREE.HemisphereLight(0xffffff, 0x7d848c, 1.05));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.7);
+  sc.background = new THREE.Color(0xe7ecf0);
+  sc.fog = new THREE.Fog(0xe7ecf0, 140, 340);
+  sc.add(new THREE.HemisphereLight(0xffffff, 0x9aa6b1, 1.25));
+  const sun = new THREE.DirectionalLight(0xfff8ef, 1.45);
   const cx = (bounds.x0 + bounds.x1) / 2 * U, cz = (bounds.y0 + bounds.y1) / 2 * U;
   const w = (bounds.x1 - bounds.x0) * U, d = (bounds.y1 - bounds.y0) * U, R = Math.max(w, d) * 0.62;
   sun.position.set(cx - w * 0.25, 60, cz + d * 0.7); sun.target.position.set(cx, 0, cz);
@@ -395,7 +395,7 @@ const deskRow = (n, along, from, pitch, fixed, rot) =>
 
 function aisleLine(x0, y0, x1, y1) { paint(Math.min(x0, x1) - 1.5, Math.min(y0, y1) - 1.5, Math.max(x0, x1) + 1.5, Math.max(y0, y1) + 1.5, 0xe8b800, 0.035); }
 
-const GHOST = 0xa9b0b7, ORPHAN = 0xe0702a, UP = 0x2f6fb5, BEAM = 0xe8742a;
+const GHOST = 0xb9c1c8, ORPHAN = 0xe0702a, UP = 0x18364c, BEAM = 0x9fb0bf;   // site navy uprights, steel-grey beams
 /* a rack bay = frame + slots. axis 'x': slots run along x; 'z': along z. */
 /* face = +1/-1: which side the open face looks at (axis 'x' -> +z/-z, axis 'z' -> +x/-x). Slots are
    pushed to the front of the shelf, the way cartons sit when someone puts them away. */
@@ -408,13 +408,13 @@ function addBay(o) {
     const y = .15 + k * levelH;
     if (axis === 'x') for (const ez of [-1, 1]) S.frames.beam.add(mat4(cx, y, cz + ez * (sz / 2 - th / 2), sx, .07, th), bmC);
     else for (const ex of [-1, 1]) S.frames.beam.add(mat4(cx + ex * (sx / 2 - th / 2), y, cz, th, .07, sz), bmC);
-    if (k < levels) S.frames.deck.add(mat4(cx, y + .045, cz, sx - th, .025, sz - th), ghost ? 0xdfe3e6 : 0xaeb5bc);
+    if (k < levels) S.frames.deck.add(mat4(cx, y + .045, cz, sx - th, .025, sz - th), ghost ? 0xe3e7ea : 0xc9d1d8);
   }
   /* back panel: a thin wire-mesh look so the shelf reads as a shelf from the front */
   if (!ghost) {
     const bk = -face;
-    if (axis === 'x') S.frames.deck.add(mat4(cx, H / 2, cz + bk * (sz / 2 - .02), sx - th, H - .1, .02), 0x8d959c);
-    else S.frames.deck.add(mat4(cx + bk * (sx / 2 - .02), H / 2, cz, .02, H - .1, sz - th), 0x8d959c);
+    if (axis === 'x') S.frames.deck.add(mat4(cx, H / 2, cz + bk * (sz / 2 - .02), sx - th, H - .1, .02), 0xaab6c1);
+    else S.frames.deck.add(mat4(cx + bk * (sx / 2 - .02), H / 2, cz, .02, H - .1, sz - th), 0xaab6c1);
   }
   if (ghost || !o.codeAt) return;
   const slotLen = len / per;
@@ -460,8 +460,8 @@ const SCENES = {
     bounds: { x0: 30, y0: 83, x1: 1250, y1: 470 },
     cam: [0.15, 0.78, 1.0],
     build() {
-      paint(30, 83, 1250, 457, 0xc9cdd1, 0.01);
-      walls(30, 83, 1250, 457, 2.2, 0xcfd3d7);
+      paint(30, 83, 1250, 457, 0xdfe4e8, 0.01);
+      walls(30, 83, 1250, 457, 2.2, 0xf3f5f7);
       /* rooms */
       walls(171, 280, 312, 385, .45); paint(171, 280, 312, 385, 0xe6edf3, .02);
       stairs(171, 280, 241, 322, 'บันได'); lift(241, 280, 312, 322, 'ลิฟท์ขนของ');
@@ -549,8 +549,8 @@ const SCENES = {
     cam: [0.0, 0.82, 1.0],
     build() {
       /* same building style as the Ugreen floor: light floor, thin light walls, tinted rooms, yellow floor marks */
-      paint(97, 122, 1170, 454, 0xc9cdd1, 0.01);
-      walls(97, 122, 1170, 454, 2.2, 0xcfd3d7);
+      paint(97, 122, 1170, 454, 0xdfe4e8, 0.01);
+      walls(97, 122, 1170, 454, 2.2, 0xf3f5f7);
       paint(97, 122, 311, 454, 0xe6edf3, .02);
       /* one row of 8 desks along the left wall, facing the wall */
       packRoom(deskRow(8, 'z', px(290) - 8.4 + .3, 2.4, px(97) + .45, Math.PI / 2), 'ห้องแพ็คออฟไลน์ · 8 โต๊ะ', px(205), px(290));
@@ -608,7 +608,7 @@ const SCENES = {
     bounds: { x0: 20, y0: 154, x1: 1265, y1: 495 },
     cam: [0.0, 0.82, 1.0],
     build() {
-      paint(20, 168, 1248, 482, 0xc9cdd1, 0.01);
+      paint(20, 168, 1248, 482, 0xdfe4e8, 0.01);
       solid(20, 154, 1265, 168, 2.2, 0xbfc4c9); solid(20, 482, 1265, 495, 2.2, 0xbfc4c9); solid(1248, 154, 1265, 495, 2.2, 0xbfc4c9);
       walls(413, 295, 511, 352, 1.4); stairs(413, 295, 511, 352, 'บันได');
       walls(609, 295, 707, 367, 1.4); lift(609, 295, 707, 367, 'ลิฟท์ขนของ');
@@ -641,7 +641,7 @@ const MODES = {
 };
 const isLow = s => !!(s.loc && s.loc.qty > 0 && s.loc.low);
 let mode = 'real';
-const cardboard = ['#c79a62', '#bd8f58', '#d1a56f', '#b98a55', '#caa06a'];
+const cardboard = ['#cfa673', '#c69c68', '#d7b07e', '#c2976a', '#d2aa76'];
 const heatCol = q => q <= 0 ? '#d2d7dc' : q < 10 ? '#e6f2a0' : q < 50 ? '#cdeb03' : q < 200 ? '#9ab800' : q < 1000 ? '#4e5c00' : '#1e2400';
 function slotStyle(s) {
   const q = s.loc ? s.loc.qty : 0;
