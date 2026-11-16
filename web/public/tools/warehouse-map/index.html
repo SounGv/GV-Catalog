@@ -264,6 +264,8 @@ let DATA = EMPTY, F = null;
 const nf = n => Number(n || 0).toLocaleString('en-US');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const byKey = new Map(), byCode = new Map();
+const MASTER = new Set();                         // positions that exist in BigSeller (empty = draw the whole drawing)
+const exists = (code, key) => !MASTER.size || MASTER.has(code.toUpperCase()) || byKey.has(key);
 let STAFF = [];                                  // warehouse team per floor plan (from /api/warehouse/staff)
 const slotCache = {};                           // export's off-screen plan layouts, rebuilt once per data load
 async function loadData() {
@@ -278,6 +280,7 @@ async function loadData() {
   for (const k in slotCache) delete slotCache[k];
   byKey.clear(); byCode.clear();
   DATA.locs.forEach(l => { if (l.key) byKey.set(l.key, l); byCode.set(l.code, l); });
+  MASTER.clear(); (DATA.positions || []).forEach(c => MASTER.add(String(c).toUpperCase()));
   document.getElementById('empty').style.display = DATA.locs.length ? 'none' : 'flex';
   document.getElementById('asof').textContent = failed ? 'โหลดข้อมูลสต็อกไม่สำเร็จ: ' + failed
     : DATA.locs.length ? `สต็อก ณ ${DATA.asof} · ${nf(DATA.locs.length)} ตำแหน่ง` : 'ยังไม่มีข้อมูลสต็อก';
@@ -568,7 +571,7 @@ function addBay(o) {
   if (tag && /^(3B|F01|F02)-/.test(tag)) label(tag.replace(/-(\d)$/, '-0$1'), cx, H + .28, cz, 'small bay');
   const slotLen = len / per;
   for (let l = 0; l < levels; l++) for (let p = 0; p < per; p++) {
-    const r = o.codeAt(l, p); if (!r) continue;
+    const r = o.codeAt(l, p); if (!r || !exists(r.code, r.key)) continue;   // the drawing assumes more slots than BigSeller has: draw only real ones
     const u = (p + .5) * slotLen - len / 2;
     const x = axis === 'x' ? cx + u : cx, z = axis === 'x' ? cz : cz + u;
     const loc = byKey.get(r.key) || null;
@@ -588,6 +591,7 @@ function addBay(o) {
 }
 /* a floor stacking spot: yellow tape square on the floor, cartons stacked straight on it (no shelf, no pallet) */
 function floorSpot(x0, z0, x1, z1, key, code) {
+  if (!exists(code, key)) return;
   const t = 1.1;
   paint(x0, z0, x1, z0 + t, 0xe8b800, .035); paint(x0, z1 - t, x1, z1, 0xe8b800, .035);
   paint(x0, z0, x0 + t, z1, 0xe8b800, .035); paint(x1 - t, z0, x1, z1, 0xe8b800, .035);

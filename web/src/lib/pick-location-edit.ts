@@ -89,7 +89,8 @@ function cellText(value: unknown): string {
 }
 
 /** BigSeller "นำเข้าตำแหน่ง" export: position / area / type are written once per block, SKU on every row. */
-async function readImportFile(buffer: Buffer): Promise<FileRow[]> {
+type PositionInfo = { area: string | null; type: string | null; skus: number };
+async function readImportFile(buffer: Buffer): Promise<FileRow[] & { positions: Map<string, PositionInfo> }> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
   const sheet = workbook.worksheets[0];
@@ -99,20 +100,56 @@ async function readImportFile(buffer: Buffer): Promise<FileRow[]> {
   const col = { warehouse: header.get("ชื่อคลังสินค้า"), position: header.get("ชื่อตำแหน่ง"), area: header.get("พื้นที่คลัง"), type: header.get("ประเภทตำแหน่ง"), sku: header.get("SKU Merchant") };
   if (!col.position || !col.sku) throw new Error("ไม่ใช่ไฟล์นำเข้าตำแหน่งของ BigSeller (ต้องมีคอลัมน์ ชื่อตำแหน่ง และ SKU Merchant)");
   const out: FileRow[] = [];
+  const positions = new Map<string, PositionInfo>();
   let block = { warehouse: "", position: "", area: "", type: "" };
   for (let r = 2; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
     const get = (c?: number) => (c ? cellText(row.getCell(c).value) : "");
     if (get(col.position)) block = { warehouse: get(col.warehouse), position: get(col.position), area: get(col.area), type: get(col.type) };
+    if (!block.position) continue;
+    // every position the export lists, with or without a SKU: the warehouse map draws only these
+    const pos = positions.get(block.position) ?? { area: block.area || null, type: block.type || null, skus: 0 };
+    positions.set(block.position, pos);
     const sku = get(col.sku);
-    if (!sku || !block.position) continue;
+    if (!sku) continue;
+    pos.skus++;
     out.push({ sku, position: block.position, area: block.area || null, positionType: block.type || null, warehouse: block.warehouse || null });
   }
-  return out;
+  return Object.assign(out, { positions });
+}
+
+/** Replaces the list of positions that exist in BigSeller (warehouse_positions) with the ones in this export. */
+async function saveMasterPositions(positions: Map<string, PositionInfo>, fileDate: string) {
+  if (positions.size < 100) return;                       // a partial export must not wipe the map's position list
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM warehouse_positions");
+    const entries = [...positions.entries()];
+    for (let i = 0; i < entries.length; i += 500) {
+      const part = entries.slice(i, i + 500);
+      const values: unknown[] = [];
+      const tuples = part.map(([code, p], j) => {
+        values.push(code, p.area, p.type, p.skus, fileDate);
+        return `($${j * 5 + 1}, $${j * 5 + 2}, $${j * 5 + 3}, $${j * 5 + 4}, $${j * 5 + 5})`;
+      });
+      await client.query(`INSERT INTO warehouse_positions (code, area, position_type, sku_count, source_date) VALUES ${tuples.join(",")}`, values);
+    }
+    const n = (await client.query<{ n: number }>("SELECT count(*)::int AS n FROM warehouse_positions")).rows[0].n;
+    if (n !== positions.size) throw new Error("บันทึกรายการตำแหน่งไม่ครบ — ยกเลิก");
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export type PickImportPreview = {
   file_date: string;
+  /** positions the export lists (with or without a SKU); saved as the warehouse map's position list */
+  positions_in_file: number;
   rows_in: number;
   matched: number;
   to_insert: number;
@@ -162,6 +199,7 @@ async function planImport(buffer: Buffer, fileName: string) {
   for (const sku of noLocation) if (!bySku.has(sku) && !catalog.has(sku)) notInCatalog.push(sku);
   const preview: PickImportPreview = {
     file_date: fileDate(fileName),
+    positions_in_file: rows.positions.size,
     rows_in: rows.length,
     matched,
     to_insert: changes.filter((c) => !c.before.length).length,
@@ -171,7 +209,7 @@ async function planImport(buffer: Buffer, fileName: string) {
     not_in_catalog: notInCatalog.sort(),
     changes,
   };
-  return { preview, bySku };
+  return { preview, bySku, positions: rows.positions };
 }
 
 export async function previewPickImport(buffer: Buffer, fileName: string): Promise<PickImportPreview> {
@@ -180,7 +218,8 @@ export async function previewPickImport(buffer: Buffer, fileName: string): Promi
 
 /** Writes every changed SKU in one transaction, then reads each back; nothing is deleted for SKUs the file leaves out. */
 export async function applyPickImport(buffer: Buffer, fileName: string): Promise<PickImportPreview> {
-  const { preview, bySku } = await planImport(buffer, fileName);
+  const { preview, bySku, positions } = await planImport(buffer, fileName);
+  await saveMasterPositions(positions, preview.file_date);
   if (!preview.changes.length) return preview;
   const source = `${preview.file_date} (BigSeller position import file)`;
   const client = await pool.connect();

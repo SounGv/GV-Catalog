@@ -361,3 +361,15 @@ CREATE TABLE IF NOT EXISTS warehouse_task_log (
 );
 CREATE INDEX IF NOT EXISTS warehouse_task_log_day_idx ON warehouse_task_log (day);
 CREATE INDEX IF NOT EXISTS warehouse_task_log_position_idx ON warehouse_task_log (position, day);
+
+-- Every position that exists in BigSeller (including ones with no SKU yet), from the last "นำเข้าตำแหน่ง_*.xlsx"
+-- imported on the pick-locations page. The warehouse map draws only these positions, so a slot the drawing
+-- assumes but BigSeller does not have is not shown.
+CREATE TABLE IF NOT EXISTS warehouse_positions (
+  code text PRIMARY KEY,
+  area text,
+  position_type text,
+  sku_count integer NOT NULL DEFAULT 0,
+  source_date text,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);

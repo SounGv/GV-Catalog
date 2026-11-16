@@ -349,12 +349,15 @@ export async function mapData() {
     l.items.push({ sku: r.sku, gtin: r.gtin, name: r.name ?? "", qty: r.qty, avail: r.avail, locked: r.locked, min: r.min_qty, max: r.max_qty });
   }
   const locs = [...byCode.values()];
+  // positions that exist in BigSeller (from the last นำเข้าตำแหน่ง import); empty until one is imported
+  const positions = (await pool.query<{ code: string }>("SELECT code FROM warehouse_positions ORDER BY code").catch(() => ({ rows: [] as { code: string }[] }))).rows.map((r) => r.code);
   const when = meta.file_date ?? meta.imported_at;
   return {
     asof: new Date(when).toLocaleString("sv-SE", { timeZone: "Asia/Bangkok" }).slice(0, 16),
     file: meta.file_name,
     importedAt: new Date(meta.imported_at).toISOString(),
     locs,
+    positions,
     facts: facts(locs, rows.length),
   };
 }

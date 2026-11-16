@@ -80,7 +80,7 @@ export function PickLocationImport() {
                 </div>
               ))}
             </dl>
-            <p className="text-xs text-muted">skipped = แถว &quot;ไม่มีตำแหน่งหยิบ&quot; · SKU ที่ไฟล์ไม่มีจะเก็บตำแหน่งเดิมไว้ (ไม่ลบ)</p>
+            <p className="text-xs text-muted">skipped = แถว &quot;ไม่มีตำแหน่งหยิบ&quot; · SKU ที่ไฟล์ไม่มีจะเก็บตำแหน่งเดิมไว้ (ไม่ลบ) · ไฟล์มี {preview.positions_in_file} ตำแหน่ง ใช้เป็นรายการตำแหน่งจริงของผังคลัง</p>
             <div className="min-h-0 flex-1 overflow-y-auto rounded-[8px] border border-line p-3 text-sm">
               {changes ? (
                 <ul className="flex flex-col gap-1.5">
@@ -102,8 +102,8 @@ export function PickLocationImport() {
             </div>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => { setPreview(null); setFile(null); }} className="h-10 rounded-[10px] border border-line px-4 text-base">ยกเลิก</button>
-              <button type="button" disabled={busy || changes === 0} onClick={() => void send(file, false)} className="h-10 rounded-[10px] bg-accent px-5 text-base font-medium text-white disabled:opacity-50">
-                {busy ? "กำลังนำเข้า…" : `ยืนยันนำเข้า ${changes} SKU`}
+              <button type="button" disabled={busy} onClick={() => void send(file, false)} className="h-10 rounded-[10px] bg-accent px-5 text-base font-medium text-white disabled:opacity-50">
+                {busy ? "กำลังนำเข้า…" : changes ? `ยืนยันนำเข้า ${changes} SKU` : "ยืนยัน (อัปเดตรายการตำแหน่งในผังคลัง)"}
               </button>
             </div>
           </div>
