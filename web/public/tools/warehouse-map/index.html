@@ -508,9 +508,17 @@ const SCENES = {
           codeAt: (l, p) => l === 0 ? { key: `01U|${bay}|${p + 1}`, code: `01U-${bay}-${String(p + 1).padStart(2, '0')}` } : null });
         label('01U-' + bay, px((a + b) / 2), 2.6, px(265), 'zone');
       });
-      /* U01 / U02 blocks drawn on the map, codes not stated -> ghost */
-      [[312, 326], [326, 341], [355, 369], [369, 384], [384, 398], [398, 412]].forEach(([a, b]) => addBay({ cx: px((a + b) / 2), cz: px(332), len: px(100), dep: px(b - a - 2), axis: 'z', levels: 3, ghost: true }));
-      label('U01', px(326), 2.2, px(392), 'small'); label('U02-1', px(370), 2.2, px(392), 'small'); label('U02-2', px(398), 2.2, px(392), 'small');
+      /* U01: drawn on the map, no codes in the data -> ghost */
+      [[312, 326], [326, 341]].forEach(([a, b]) => addBay({ cx: px((a + b) / 2), cz: px(332), len: px(100), dep: px(b - a - 2), axis: 'z', levels: 3, ghost: true }));
+      label('U01', px(326), 2.2, px(392), 'small');
+      /* 02U (the map's U02-1 / U02-2 area): 3 bays like 01U, 11 positions each = 2 levels x 6 (the 12th is unused),
+         side by side and facing the open floor on the left */
+      [[355, 374, 1], [374, 393, 2], [393, 412, 3]].forEach(([a, b, bay]) => {
+        addBay({ cx: px((a + b) / 2), cz: px(332), len: px(100), dep: px(b - a - 2), axis: 'z', face: -1, levels: 2, per: 6, levelH: .8, tag: '02U-' + bay,
+          codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `02U|${bay}|${k}`, code: `02U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` }; } });
+        label(String(bay), px((a + b) / 2), 2.2, px(276), 'small');
+      });
+      label('02U', px(383), 2.9, px(276), 'zone');
     },
     finds() {
       const miss3b = 560 - F['3B'].codes;
@@ -518,7 +526,7 @@ const SCENES = {
         ['ok', 'โซน 3B', `ผังมี <b>35</b> bay (7 คอลัมน์ × 5) · ข้อมูลมี <b>${F['3B'].bays}</b> bay ตรงกัน`, `ผัง 4 ชั้น × 4 ช่อง = <b>560</b> ช่อง · ข้อมูลมีรหัส <b>${F['3B'].codes}</b> (ไม่มีรหัส ${miss3b} ช่อง = ยังไม่ผูก SKU)`],
         ['ok', 'แถว CW / CB / CR / CY', 'ผังมี <b>4</b> แถว · ข้อมูลมี <b>4</b> โซน ตรงกัน', `เลขรหัสขาด: CW ${F.CW.missing.join(',')} · CB ${F.CB.missing.join(',')} · CR ${F.CR.missing.join(',')} · CY ${F.CY.missing.join(',')}`],
         ['ask', '01U-01…18 = แถวบน 1–18 ?', `ข้อมูลมี 01U <b>21</b> bay · ผังเขียนรหัสเฉพาะ 01U-20, 01U-21 ส่วนแถวบนมีเลข 1–18 ต่อเนื่องกัน`, `สันนิษฐานว่าแถวบนคือ 01U-01…18 (${F['01U_1_19'].codes} ตำแหน่ง รวม bay 19) · 01U-19 วางต่อจาก 01U-18 ปลายแถวบน`],
-        ['diff', '02U vs U02-1 / U02-2', `ผังวาด <b>2</b> บล็อก · ข้อมูลมี 02U <b>3</b> bay`, `02U สต็อก <b>${nf(F['02U'].qty)}</b> ชิ้น ใน ${F['02U'].codes} ตำแหน่ง · ต้องยืนยันว่า U02-1/U02-2 คือ 02U-1…3 อย่างไร`],
+        ['ask', '02U = บล็อก U02-1 / U02-2', `วาดเป็น <b>3</b> bay ตามข้อมูล (02U-01…03 · bay ละ 11 ช่อง = 2 ชั้น × 6)`, `02U สต็อก <b>${nf(F['02U'].qty)}</b> ชิ้น ใน ${F['02U'].codes} ตำแหน่ง · ผังเดิมวาด 2 บล็อก ตำแหน่ง bay ในผังต้องให้หน้างานยืนยัน`],
         ['diff', 'สต็อกที่ไม่มีตำแหน่งหยิบ', `<b>${nf(F.noloc3.qty)}</b> ชิ้น ใน ${F.noloc3.rows} แถว SKU`, 'รหัส “001 ( ไม่มีตำแหน่งหยิบ )” ไม่อยู่ในผัง ควรจัดตำแหน่งให้ครบ'],
       ];
     },
@@ -812,7 +820,7 @@ function select(s, focus = false) {
 }
 
 /* ---------- search: SKU / barcode / name / position -> the slot in the map ---------- */
-const ZONE_SCENE = { '3B': 'ugreen', '01U': 'ugreen', CW: 'ugreen', CB: 'ugreen', CR: 'ugreen', CY: 'ugreen', F01: 'fantech', F02: 'fantech', F07: 'fantech' };
+const ZONE_SCENE = { '3B': 'ugreen', '01U': 'ugreen', '02U': 'ugreen', CW: 'ugreen', CB: 'ugreen', CR: 'ugreen', CY: 'ugreen', F01: 'fantech', F02: 'fantech', F07: 'fantech' };
 function search(qRaw) {
   const q = qRaw.trim().toUpperCase(), box = document.getElementById('searchBox'), out = document.getElementById('results');
   if (!q) { box.hidden = true; return; }
