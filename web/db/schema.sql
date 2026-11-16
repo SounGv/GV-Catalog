@@ -333,3 +333,12 @@ CREATE TABLE IF NOT EXISTS location_stock_imports (
   rows integer NOT NULL,
   imported_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Warehouse team shown on the warehouse map: who looks after (counts, refills) each floor plan.
+-- Staff type the names on the map page themselves; nothing about them lives in the repo.
+CREATE TABLE IF NOT EXISTS warehouse_staff (
+  id bigserial PRIMARY KEY,
+  scene text NOT NULL,
+  name text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);

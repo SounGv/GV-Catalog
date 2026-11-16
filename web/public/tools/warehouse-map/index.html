@@ -104,6 +104,18 @@ header a.gv-back{margin:0!important}
 .edit input[type=text]{min-height:44px;padding:0 12px;border:1px solid var(--border-strong);border-radius:var(--radius-control);font:inherit}
 .edit label{display:flex;gap:8px;align-items:center;font-size:13px}
 .edit .row{display:flex;gap:8px;flex-wrap:wrap}
+.team{display:flex;flex-direction:column;gap:8px}
+.floor{border:1px solid var(--border);border-radius:var(--radius-card);padding:10px 12px;background:var(--surface)}
+.floor.busy{border-color:var(--warning-dot);background:var(--warning-soft)}
+.floor .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:600}
+.floor .ct{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;margin-top:4px;font-variant-numeric:tabular-nums}
+.floor .ct b{font-size:15px}
+.names{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.name{display:inline-flex;align-items:center;gap:4px;background:var(--accent-soft);color:var(--primary);border-radius:var(--radius-chip);padding:2px 4px 2px 10px;font-size:13px;font-weight:600}
+.name button{border:0;background:transparent;color:var(--muted-foreground);min-width:28px;min-height:28px;border-radius:50%}
+.name button:hover{background:#fff;color:var(--danger)}
+.addname{display:flex;gap:6px;margin-top:8px}
+.addname input{flex:1;min-width:0;min-height:40px;padding:0 10px;border:1px solid var(--border-strong);border-radius:var(--radius-control);font:inherit}
 .msg{font-size:13px}.msg.bad{color:var(--danger)}.msg.ok{color:var(--success)}
 #empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:4;background:rgba(245,246,247,.9);padding:16px;text-align:center}
 #empty .box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:20px 24px;max-width:440px}
@@ -167,6 +179,7 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
     <div id="searchBox" hidden><h2 id="resTitle">ผลค้นหา</h2><div class="results" id="results"></div></div>
     <div><h2 id="sceneTitle"></h2><div class="note" id="sceneNote"></div></div>
     <div class="kpis" id="kpis"></div>
+    <div><h2>ทีมดูแลชั้น · งานเติมสต็อก</h2><div id="team" class="team"></div></div>
     <div><h2>ช่องที่เลือก</h2><div class="sel" id="sel"><span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span></div></div>
     <div><h2>เทียบผังกับข้อมูล</h2><div id="finds" style="display:flex;flex-direction:column;gap:8px"></div></div>
     <div class="note" id="foot"></div>
@@ -190,6 +203,7 @@ let DATA = EMPTY, F = null;
 const nf = n => Number(n || 0).toLocaleString('en-US');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const byKey = new Map(), byCode = new Map();
+let STAFF = [];                                  // warehouse team per floor plan (from /api/warehouse/staff)
 const slotCache = {};                           // export's off-screen plan layouts, rebuilt once per data load
 async function loadData() {
   let failed = '';
@@ -215,6 +229,7 @@ function zeroFacts() {
     noloc3: sp, nolocF: sp, gift: sp, pkg: sp, gifset: sp, lower: [], multi_sku_locs: 0 };
 }
 await loadData();
+await loadStaff();
 const U = 1 / 16;                       // 1 px of the source sheet = 1/16 unit (schematic, not metres)
 const px = v => v * U;
 
@@ -662,7 +677,9 @@ function slotStyle(s) {
 }
 
 /* ---------- build / switch ---------- */
-let sceneId = 'ugreen', slotMesh = null, extraMesh = null, hoverBox = null, selBox = null, selected = null;
+let sceneId = 'ugreen', slotMesh = null, extraMesh = null, markMesh = null, hoverBox = null, selBox = null, selected = null;
+let showMarks = true;                            // red tag = หมด (SKU, 0 pieces) · blue tag = ว่าง (no SKU in the slot)
+const MARK = { empty: '#c62828', nodata: '#1d5fd1' };
 function buildActive() {
   if (S) S.scene.traverse(o => { if (o.isMesh) { o.geometry !== box && !o.geometry.userData.keep && o.geometry.dispose(); } });
   labelsEl.innerHTML = '';
@@ -675,7 +692,9 @@ function buildActive() {
   slotMesh.castShadow = slotMesh.receiveShadow = true; slotMesh.count = S.slots.length;
   extraMesh = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ roughness: .85, metalness: 0 }), Math.max(1, S.slots.length));
   extraMesh.castShadow = extraMesh.receiveShadow = true; extraMesh.count = S.slots.length; extraMesh.frustumCulled = false;
-  S.scene.add(slotMesh, extraMesh);
+  markMesh = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ roughness: .5, metalness: 0, emissive: 0x222222 }), Math.max(1, S.slots.length));
+  markMesh.count = S.slots.length; markMesh.frustumCulled = false;
+  S.scene.add(slotMesh, extraMesh, markMesh);
   hoverBox = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0x18364c }));
   hoverBox.visible = false; S.scene.add(hoverBox);
   selBox = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0xcdeb03 }));
@@ -703,11 +722,22 @@ function applyMode() {
       extraMesh.setMatrixAt(i, mat4(x, s.y + hh + h2 / 2, z, w * .92, h2, d * .9)); extraMesh.setColorAt(i, tmpC.set(cardboard[(hash(s.code) + 2) % cardboard.length]));
     } else { extraMesh.setMatrixAt(i, ZERO); extraMesh.setColorAt(i, tmpC.set('#c79a62')); }
     s.rx = x; s.rz = z; s.rw = w; s.rd = d; s.h = h;
+    /* marker tag: a plate on the shelf's front edge, or a short post in the middle of a floor spot */
+    const mk = showMarks && !s.orphan && (s.status === 'empty' || s.status === 'nodata');
+    if (!mk) { markMesh.setMatrixAt(i, ZERO); markMesh.setColorAt(i, tmpC.set('#ffffff')); }
+    else {
+      if (s.ext) { const f = s.ext / 2 + .03, fx = s.x + s.nx * f, fz = s.z + s.nz * f, wide = Math.min(s.along * .7, .24);
+        markMesh.setMatrixAt(i, mat4(fx, s.y + .13, fz, s.nx ? .025 : wide, .16, s.nz ? .025 : wide)); }
+      else markMesh.setMatrixAt(i, mat4(s.x, s.y + .22, s.z, Math.min(s.w, .3), .44, Math.min(s.d, .3)));
+      markMesh.setColorAt(i, tmpC.set(MARK[s.status]));
+    }
   });
+  markMesh.instanceMatrix.needsUpdate = true; if (markMesh.instanceColor) markMesh.instanceColor.needsUpdate = true;
   slotMesh.instanceMatrix.needsUpdate = true; if (slotMesh.instanceColor) slotMesh.instanceColor.needsUpdate = true;
   extraMesh.instanceMatrix.needsUpdate = true; if (extraMesh.instanceColor) extraMesh.instanceColor.needsUpdate = true;
   const lg = document.getElementById('legend');
-  lg.innerHTML = `<b>${MODES[mode].name}</b>` + MODES[mode].legend.map(([c, t]) => `<div class="row"><i style="background:${c}"></i>${t}</div>`).join('');
+  lg.innerHTML = `<b>${MODES[mode].name}</b>` + MODES[mode].legend.map(([c, t]) => `<div class="row"><i style="background:${c}"></i>${t}</div>`).join('')
+    + (showMarks ? `<b style="margin-top:4px">ป้ายบนช่อง</b><div class="row"><i style="background:${MARK.empty}"></i>✗ หมด · มี SKU แต่ 0 ชิ้น</div><div class="row"><i style="background:${MARK.nodata}"></i>○ ว่าง · ไม่มี SKU วางของใหม่ได้</div>` : '');
 }
 function setView(v) {
   const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
@@ -733,7 +763,46 @@ Object.entries(MODES).forEach(([id, m]) => {
 });
 const viewsEl = document.getElementById('views');
 [['iso', 'มุมเฉียง'], ['top', 'มุมบน']].forEach(([id, t]) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = t; b.onclick = () => setView(id); viewsEl.appendChild(b); });
+{ const b = document.createElement('button'); b.className = 'chip'; b.textContent = 'ป้าย ว่าง/หมด'; b.setAttribute('aria-pressed', 'true');
+  b.onclick = () => { showMarks = !showMarks; b.setAttribute('aria-pressed', String(showMarks)); applyMode(); }; viewsEl.prepend(b); }
 
+/* ---------- team per floor + refill workload (which floor the 3 staff should help on) ---------- */
+async function loadStaff() {
+  try { const j = await fetch('/api/warehouse/staff', { cache: 'no-store' }).then(r => r.json()); STAFF = j.staff || []; } catch { STAFF = []; }
+}
+function workload(id) {
+  const sl = slotsOfScene(id).filter(x => !x.orphan);
+  return {
+    low: sl.filter(x => x.status === 'stock' && byCode.get(x.code)?.low).length,
+    out: sl.filter(x => x.status === 'empty').length,
+    free: sl.filter(x => x.status === 'nodata').length,
+  };
+}
+function renderTeam() {
+  const el = document.getElementById('team'); if (!el) return;
+  const floors = [['ugreen', 'ชั้น 3 Ugreen', 2], ['fantech', 'FANTECH', 1]];
+  const w = Object.fromEntries(floors.map(([id]) => [id, workload(id)]));
+  const work = id => w[id].low + w[id].out;
+  const busiest = work('ugreen') === work('fantech') ? '' : work('ugreen') > work('fantech') ? 'ugreen' : 'fantech';
+  el.innerHTML = floors.map(([id, title, planned]) => {
+    const names = STAFF.filter(x => x.scene === id);
+    return `<div class="floor${busiest === id ? ' busy' : ''}"><div class="hd"><span>${title}${id === sceneId ? ' · ผังที่เปิดอยู่' : ''}</span><span class="note">ดูแล ${names.length || planned} คน</span></div>
+      <div class="ct"><span>! ต้องเติม <b>${nf(w[id].low)}</b></span><span>✗ หมด <b>${nf(w[id].out)}</b></span><span>○ ว่าง <b>${nf(w[id].free)}</b> ช่อง</span></div>
+      ${busiest === id ? '<div class="note" style="color:var(--warning);font-weight:600;margin-top:4px">งานเติมเยอะกว่า — ให้ทีมลงช่วยกันชั้นนี้ก่อน</div>' : ''}
+      <div class="names">${names.length ? names.map(n => `<span class="name">${esc(n.name)}<button type="button" data-del="${esc(n.id)}" aria-label="เอา ${esc(n.name)} ออก">×</button></span>`).join('') : `<span class="note">ยังไม่ใส่ชื่อ (วางไว้ ${planned} คน)</span>`}</div>
+      <form class="addname" data-add="${id}"><input name="n" maxlength="40" placeholder="ชื่อพนักงานที่ดูแลชั้นนี้" aria-label="ชื่อพนักงานที่ดูแล ${title}"><button class="btn sm" type="submit">เพิ่ม</button></form></div>`;
+  }).join('') + '<div class="note">ทีมคลัง 3 คน: ชั้น 3 Ugreen 2 คน · FANTECH 1 คน — ตรวจนับและเติมของให้เต็มช่อง ชั้นไหนงานเติมเยอะ ทั้ง 3 คนลงช่วยกัน · ชื่อที่ใส่ ทุกคนที่เปิดหน้านี้เห็น</div>';
+  el.querySelectorAll('[data-add]').forEach(f => f.onsubmit = async e => {
+    e.preventDefault(); const name = f.n.value.trim(); if (!name) return;
+    const res = await fetch('/api/warehouse/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scene: f.dataset.add, name }) });
+    const j = await res.json().catch(() => ({})); if (!res.ok) { alert(j.error || 'เพิ่มชื่อไม่สำเร็จ'); return; }
+    await loadStaff(); renderTeam();
+  });
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm('เอาชื่อนี้ออกจากทีมดูแล?')) return;
+    await fetch('/api/warehouse/staff?id=' + encodeURIComponent(b.dataset.del), { method: 'DELETE' }); await loadStaff(); renderTeam();
+  });
+}
 function renderSide() {
   const d = SCENES[sceneId];
   document.getElementById('sceneTitle').textContent = d.title;
@@ -746,6 +815,7 @@ function renderSide() {
     ['', nf(qty), 'ชิ้นในช่องที่อยู่ในผัง'],
     ['', nf(oq), `ชิ้นนอกผัง (${nf(orph.length)} ช่อง)`],
   ].map(([c, v, l]) => `<div class="kpi ${c}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+  renderTeam();
   const lab = { ok: 'ตรงผัง', diff: 'ไม่ตรง', ask: 'ต้องยืนยัน', na: 'ไม่มีข้อมูล' };
   document.getElementById('finds').innerHTML = d.finds().map(([k, t, a, b]) =>
     `<div class="find"><div class="t"><span class="pill ${k}">${lab[k]}</span>${t}</div><div class="d">${a}</div><div class="d">${b}</div></div>`).join('');
