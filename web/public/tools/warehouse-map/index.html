@@ -624,7 +624,7 @@ function addBay(o) {
     else S.frames.deck.add(mat4(cx + bk * (sx / 2 - .02), H / 2, cz, .02, H - .1, sz - th), 0xaab6c1);
   }
   if (ghost || !o.codeAt) return;
-  if (tag && /^(3B|F01|F02)-/.test(tag)) label(tag.replace(/-(\d)$/, '-0$1'), cx, H + .28, cz, 'small bay');
+  if (tag && /^3B-/.test(tag)) label(tag.replace(/-(\d)$/, '-0$1'), cx, H + .28, cz, 'small bay');
   const slotLen = len / per;
   for (let l = 0; l < levels; l++) for (let p = 0; p < per; p++) {
     const r = o.codeAt(l, p); if (!r || !exists(r.code, r.key)) continue;   // the drawing assumes more slots than BigSeller has: draw only real ones
@@ -773,29 +773,29 @@ const SCENES = {
       hazardTape(483, 324, 1041, 324); label('F01', px(655), 3.1, px(390), 'zone'); label('ตำแหน่งหยิบ', px(676), 1.1, px(312), 'small');
       label('PA', px(955), 3.1, px(390), 'zone'); label('ตำแหน่งเก็บ', px(955), 1.1, px(312), 'small');
       label('F07', px(1148), 3.4, px(140), 'zone');
-      /* every map cell is a picking aisle: grey floor + yellow centre line, like the 3B aisles */
-      [483, 569, 655, 741, 827, 913, 998].forEach(x => { paint(x + 30, 122, x + 86, 250, 0xd8dbde, .012); aisleLine(x + 58, 126, x + 58, 246); });
-      [483, 569, 655, 741, 827, 869, 913, 998].forEach((x, i, a) => { const e = a[i + 1] || 1041; if (e - x > 40) { paint(x + 30, 327, e, 454, 0xd8dbde, .012); aisleLine((x + 30 + e) / 2, 331, (x + 30 + e) / 2, 450); } });
       const slotKey = (z, bay, k) => ({ key: `${z}|${bay}|${k}`, code: `${z}-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` });
       const slotAt = (z, bay) => (l, p) => { const k = l * 4 + p + 1; const r = slotKey(z, bay, k);
         if (z === 'F01' && bay === 6 && k === 12) { r.code = 'f01-06-12'; r.flag = 'ตัวพิมพ์เล็ก (f01)'; } return r; };
-      /* Same style as 3B: each map cell is an aisle (orange arrow); a rack run along z sits on its left edge and
-         faces the aisle. Bays are shared out over the cells in order (how many per cell is assumed, to confirm).
-         Levels follow the slot numbers in the data: F02/F07 1-12 = 3 levels x 4, F01 1-14 = 4 levels (4th holds 13-14). */
-            const RUN = 120;                                  // each run fills its cell end to end, like the 3B columns
-      const runs = (bays, counts, xs, zc, mk) => { let i = 0;
-        counts.forEach((n, c) => { const L = RUN / n; for (let r = 0; r < n && i < bays.length; r++, i++) mk(bays[i], xs[c], zc + (r - (n - 1) / 2) * L, L); }); };
-      const f02 = F.F02.bays, f01 = F.F01.bays;
-      const head = (bays, counts, xs, z, zone) => { let i = 0; counts.forEach((n, c) => {
-        const b = bays.slice(i, i + n); i += n; if (b.length) label(zone + ' · ' + b.map(v => String(v).padStart(2, '0')).join('·'), px(xs[c] + 15), 2.6, px(z), 'row'); }); };
-      head(f02, [3, 3, 2, 2, 2, 2, 2], [483, 569, 655, 741, 827, 913, 998], 118, 'F02');
-      head(f01, [2, 2, 1, 1, 1], [483, 569, 655, 741, 827], 458, 'F01');
-      runs(f02, [3, 3, 2, 2, 2, 2, 2], [483, 569, 655, 741, 827, 913, 998], 186, (bay, x, z, L) =>
-        addBay({ cx: px(x + 15), cz: px(z), len: px(L), dep: px(30), axis: 'z', face: 1, levels: 3, per: 4, levelH: .7, tag: 'F02-' + bay, codeAt: slotAt('F02', bay) }));
-      runs(f01, [2, 2, 1, 1, 1], [483, 569, 655, 741, 827], 390.5, (bay, x, z, L) =>
-        addBay({ cx: px(x + 15), cz: px(z), len: px(L), dep: px(30), axis: 'z', face: 1, levels: 4, per: 4, levelH: .55, tag: 'F01-' + bay,
-          codeAt: (l, p) => l * 4 + p + 1 > 14 ? null : slotAt('F01', bay)(l, p) }));
-      [869, 913, 998].forEach(x => addBay({ cx: px(x + 15), cz: px(390.5), len: px(RUN), dep: px(30), axis: 'z', face: 1, levels: 3, per: 4, ghost: true }));
+      /* Like the upper 01U row on 3FL Ugreen: one rack per bay, standing out from the wall up to the hazard tape of the
+         main corridor; racks come in pairs facing a picking aisle (grey floor, yellow centre line). F02 runs along the
+         back wall (z 124-249), F01 along the front wall (z 328-452). Levels follow the slot numbers in the data:
+         F02 1-12 = 3 levels x 4, F01 1-14 = 4 levels x 4 (the 4th holds 13-14). */
+      const wallRow = (bays, x0, x1, zA, zB, zone, levels, levelH, signZ) => {
+        const cells = Math.ceil(bays.length / 2), cw = (x1 - x0) / cells, len = zB - zA, cz = (zA + zB) / 2;
+        for (let c = 0; c < cells; c++) {
+          const a = x0 + cw * c, b = a + cw;
+          paint(a + 26, zA, b - 26, zB, 0xd8dbde, .012); aisleLine((a + b) / 2, zA + 4, (a + b) / 2, zB - 4);
+          [[a + 12, 1], [b - 12, -1]].forEach(([x, face], k) => {
+            const i = c * 2 + k, bay = bays[i]; if (bay == null) return;
+            addBay({ cx: px(x), cz: px(cz), len: px(len), dep: px(22), axis: 'z', face, levels, per: 4, levelH, tag: `${zone}-${bay}`,
+              codeAt: (l, p) => zone === 'F01' && l * 4 + p + 1 > 14 ? null : slotAt(zone, bay)(l, p) });
+            label(`${zone}-${String(bay).padStart(2, '0')}`, px(x), i % 2 ? 4.5 : 2.6, px(signZ), 'row');   // neighbours hang at two heights
+          });
+        }
+      };
+      wallRow(F.F02.bays, 483, 1084, 124, 249, 'F02', 3, .7, 236);
+      wallRow(F.F01.bays, 483, 869, 328, 452, 'F01', 4, .55, 340);
+      [869, 913, 998].forEach(x => addBay({ cx: px(x + 15), cz: px(390), len: px(124), dep: px(30), axis: 'z', face: 1, levels: 3, per: 4, ghost: true }));
       /* F07: 6 pads right column + F07-07 */
       const pads = [[1126, 122, 1], [1126, 173, 2], [1126, 224, 3], [1126, 275, 4], [1126, 326, 5], [1126, 377, 6], [1084, 416, 7]];
       pads.forEach(([x, y, bay]) => { addBay({ cx: px(x + 44 - 15), cz: px(y + 19), len: px(38), dep: px(30), axis: 'z', face: -1, levels: 3, per: 4, levelH: .7, tag: 'F07-' + bay, codeAt: slotAt('F07', bay) });
