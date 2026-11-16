@@ -373,3 +373,19 @@ CREATE TABLE IF NOT EXISTS warehouse_positions (
   source_date text,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Check jobs handed to a staff member from the warehouse map ("มอบหมายให้ไปเช็ก"): go to this position and count this SKU.
+-- Done jobs keep their result in warehouse_task_log (kind 'count').
+CREATE TABLE IF NOT EXISTS warehouse_assignments (
+  id bigserial PRIMARY KEY,
+  day date NOT NULL DEFAULT (now() AT TIME ZONE 'Asia/Bangkok')::date,
+  staff text NOT NULL,
+  scene text NOT NULL,
+  position text NOT NULL,
+  sku text,
+  note text,
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  done_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS warehouse_assignments_open_idx ON warehouse_assignments (status, day);

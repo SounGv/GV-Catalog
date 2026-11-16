@@ -266,7 +266,8 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const byKey = new Map(), byCode = new Map();
 const MASTER = new Set();                         // positions that exist in BigSeller (empty = draw the whole drawing)
 const exists = (code, key) => !MASTER.size || MASTER.has(code.toUpperCase()) || byKey.has(key);
-let STAFF = [];                                  // warehouse team per floor plan (from /api/warehouse/staff)
+let STAFF = [];
+let ASSIGN = [];                                  // check jobs handed out on the map (/api/warehouse/assignments)                                  // warehouse team per floor plan (from /api/warehouse/staff)
 const slotCache = {};                           // export's off-screen plan layouts, rebuilt once per data load
 async function loadData() {
   let failed = '';
@@ -294,6 +295,7 @@ function zeroFacts() {
 }
 await loadData();
 await loadStaff();
+await loadAssign();
 const U = 1 / 16;                       // 1 px of the source sheet = 1/16 unit (schematic, not metres)
 const px = v => v * U;
 
@@ -412,8 +414,23 @@ function walker(name, route, n, floor = null) {
   part(upper, .37, .06, .21, 0, .54, 0, 0xcdeb03);                                                                // lime collar band
   const armL = limb(upper, -.235, .54, .58, .1, shirt), armR = limb(upper, .235, .54, .58, .1, shirt);
   part(armL, .09, .1, .09, 0, -.62, 0, 0, { mat: M(skin) }); part(armR, .09, .1, .09, 0, -.62, 0, 0, { mat: M(skin) });
-  part(upper, .13, .14, .13, 0, .74, 0, 0, { geo: ball, mat: M(skin) });                                          // head
-  part(upper, .135, .08, .135, 0, .82, -.01, 0, { geo: ball, mat: M(0x1b1712) });                                 // hair
+  part(upper, .12, .14, .125, 0, .74, 0, 0, { geo: ball, mat: M(skin) });                                         // head
+  part(upper, .05, .05, .04, 0, .6, 0, 0, { mat: M(skin) });                                                      // neck
+  const dark = M(0x1b1712), white = M(0xf4f1ea);
+  for (const sx of [-1, 1]) {
+    part(upper, .022, .016, .01, sx * .043, .765, .112, 0, { geo: ball, mat: white, shadow: false });            // eye white
+    part(upper, .011, .012, .01, sx * .043, .765, .12, 0, { geo: ball, mat: dark, shadow: false });              // pupil
+    part(upper, .036, .008, .012, sx * .045, .792, .113, 0, { mat: dark, shadow: false }).rotation.z = sx * -.12; // eyebrow
+    part(upper, .022, .036, .02, sx * .122, .745, 0, 0, { geo: ball, mat: M(skin) });                           // ear
+  }
+  part(upper, .018, .035, .03, 0, .735, .125, 0, { mat: M(skin) });                                               // nose
+  part(upper, .042, .008, .01, 0, .698, .114, 0, { mat: M(0x8a4b3c), shadow: false });                           // mouth
+  /* short men's haircuts: crop, side part, buzz */
+  const hair = M([0x1b1712, 0x2a211b, 0x15120f][n % 3]);
+  if (n % 3 === 0) { part(upper, .128, .07, .13, 0, .815, -.008, 0, { geo: ball, mat: hair }); part(upper, .2, .04, .05, 0, .81, .085, 0, { mat: hair }); }
+  else if (n % 3 === 1) { part(upper, .13, .075, .135, .01, .82, -.01, 0, { geo: ball, mat: hair }); part(upper, .12, .05, .06, .03, .825, .08, 0, { mat: hair }).rotation.z = -.2; }
+  else { part(upper, .124, .06, .127, 0, .805, -.005, 0, { geo: ball, mat: hair }); }
+  part(upper, .1, .09, .02, 0, .745, -.122, 0, { mat: hair, shadow: false });                                    // back of the head
   const carton = new THREE.Group(); carton.position.set(0, .02, .26); upper.add(carton);                         // carton against the chest
   part(carton, .32, .24, .26, 0, 0, 0, 0xc79a62); part(carton, .33, .02, .06, 0, .125, 0, 0xd9c7a3, { shadow: false });
   const infoTag = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, sizeAttenuation: false }));       // "SKU -> slot" while on a refill trip
@@ -437,6 +454,7 @@ function walker(name, route, n, floor = null) {
       g.position.set(a.x, 0, a.z); g.rotation.y = a.face ?? g.rotation.y; legL.rotation.x = legR.rotation.x = 0;
       if (a.task === 'load') { bend = .25 + .2 * Math.abs(wave); aL = aR = -1.1 - .3 * wave; }
       else if (a.task === 'unload') { bend = .35 + .35 * Math.abs(wave); aL = aR = -1.2 + .4 * wave; carry = wave > 0; }
+      else if (a.task === 'check') { bend = .15; aL = -.3; aR = -(Math.PI / 2 + Math.atan2((a.reachY ?? 1.2) - 1.4, .45)) - .15 * Math.sin((tt - leg.t0) * 5); }
       else if (a.task === 'count') { bend = .8; aL = -.6; aR = -1 - .25 * Math.sin((tt - leg.t0) * 6); }
       else if (a.task === 'refill') {                  // carton goes into the slot at its real height
         const reach = -(Math.PI / 2 + Math.atan2((a.reachY ?? 1.2) - 1.4, .45)), low = (a.reachY ?? 1.2) < .7;
@@ -484,6 +502,15 @@ const MAIN_Z = { ugreen: 250, fantech: 290 };          // main aisle, sheet px
 const LIFT_DOOR = { ugreen: [325, 300], fantech: [440, 300] };   // where stock comes up (goods lift door), sheet px
 const STAGE = { ugreen: [425, 255], fantech: [505, 290] };       // floor entrance: the trolley is parked and checked here
 const PER_PERSON = 4;                                  // cartons per person per round
+/* open check jobs handed to this person on this floor -> stops: main aisle -> in front of the slot (count) -> main aisle */
+function checkStops(name, id, mainZ) {
+  return ASSIGN.filter(x => x.status === 'open' && x.staff === name && x.scene === id).flatMap(job => {
+    const s = S.slots.find(x => x.code.toUpperCase() === job.position.toUpperCase()); if (!s) return [];
+    const out = s.ext ? s.ext / 2 + .45 : .6, nx = s.nx || (s.ext ? 0 : 1), ax = s.x + nx * out, az = s.z + s.nz * out;
+    const info = `เช็ก ${job.sku || s.loc?.sku || ''} → ${s.code}`.replace('  ', ' ');
+    return [{ x: ax, z: mainZ, info }, { x: ax, z: az, wait: 5, task: 'check', info, reachY: s.y + .15, face: Math.atan2(-nx, -s.nz) }, { x: ax, z: mainZ }];
+  });
+}
 /* the slots below their minimum, in walking order, shared out between the floor's staff */
 function refillStops(crew) {
   const stops = S.slots.filter(s => !s.orphan && s.loc && isLow(s)).sort((a, b) => a.x - b.x || a.z - b.z);
@@ -500,8 +527,11 @@ function addWalkers(id) {
   const names = STAFF.filter(x => x.scene === id).map(x => x.name);
   const crew = names.length ? names : (id === 'fantech' ? ['พนักงาน'] : ['พนักงาน', 'พนักงาน']);
   const stops = refillStops(crew), N = stops.reduce((a, l) => a + l.length, 0);
-  if (!N || !LIFT_DOOR[id]) {                          // nothing to refill: walk the inspection round instead
-    crew.forEach((name, n) => walker(name, paths[n % paths.length].map(([x, z]) => ({ x: px(x), z: px(z) })), n));
+  if (!N || !LIFT_DOOR[id]) {                          // nothing to refill: assigned checks, else the inspection round
+    crew.forEach((name, n) => {
+      const checks = checkStops(name, id, px(MAIN_Z[id] ?? 250));
+      walker(name, checks.length ? checks : paths[n % paths.length].map(([x, z]) => ({ x: px(x), z: px(z) })), n);
+    });
     return;
   }
   const mainZ = px(MAIN_Z[id]), [lx, lz] = LIFT_DOOR[id], [sx, sz] = STAGE[id], lift = { x: px(lx), z: px(lz) }, stage = { x: px(sx), z: px(sz) };
@@ -517,6 +547,8 @@ function addWalkers(id) {
                         { x: p0.x, z: p0.z, wait: UNLOAD, task: 'unload', face: faceTo(p0, stack) });
     else r.push({ x: me.x, z: me.z, wait: arrive + UNLOAD, task: 'idle', face: faceTo(me, stack) });
     r.push({ x: me.x, z: me.z, wait: COUNT, task: 'count', face: faceTo(me, stack) });
+    const checks = checkStops(crew[n], id, mainZ);     // jobs handed to this person come first, then the cartons
+    if (checks.length) r.push(...checks, { x: me.x, z: me.z });
     stops[n].forEach(s => {                            // one carton per trip: stack -> main aisle -> slot -> back
       const out = s.ext ? s.ext / 2 + .45 : .6, nx = s.nx || (s.ext ? 0 : 1), ax = s.x + nx * out, az = s.z + s.nz * out;
       const it = (s.loc.items || []).find(i => i.min > 0 && i.qty < i.min) || s.loc.items?.[0] || { sku: s.loc.sku };
@@ -1035,6 +1067,9 @@ const viewsEl = document.getElementById('views');
   b.onclick = () => { showMarks = !showMarks; b.setAttribute('aria-pressed', String(showMarks)); applyMode(); }; viewsEl.prepend(b); }
 
 /* ---------- team per floor + refill workload (which floor the 3 staff should help on) ---------- */
+async function loadAssign() {
+  try { const j = await fetch('/api/warehouse/assignments', { cache: 'no-store' }).then(r => r.json()); ASSIGN = j.rows || []; } catch { ASSIGN = []; }
+}
 async function loadStaff() {
   try { const j = await fetch('/api/warehouse/staff', { cache: 'no-store' }).then(r => r.json()); STAFF = j.staff || []; } catch { STAFF = []; }
 }
@@ -1122,6 +1157,16 @@ function buildTasks() {
     .sort(byRoute(scene));
   return { scene, refill, count };
 }
+function assignList() {
+  const jobs = ASSIGN.filter(x => x.staff === worker && (x.status === 'open' || x.day === today()));
+  if (!jobs.length) return '';
+  return `<div><h3 class="sub">งานที่มอบหมาย · ${nf(jobs.filter(j => j.status === 'done').length)}/${nf(jobs.length)}</h3><div class="tasks">${jobs.map(j => {
+    const l = byCode.get(j.position);
+    return `<div class="task${j.status === 'done' ? ' done' : ''}"><div class="top"><button type="button" class="code" data-go="${esc(j.position)}">${esc(j.position)}</button><span class="info">${esc(j.sku || '')}</span></div>
+      ${j.note ? `<div class="info">หมายเหตุ: ${esc(j.note)}</div>` : ''}<div class="info">ในระบบ ${nf(l?.qty ?? 0)} ชิ้น</div>
+      ${j.status === 'done' ? '<div class="res">✓ เช็กแล้ว</div>' : `<form data-job="${esc(j.id)}" data-code="${esc(j.position)}"><input name="n" type="number" min="0" step="1" inputmode="numeric" placeholder="นับได้" aria-label="จำนวนที่นับได้ ${esc(j.position)}"><button class="btn sm dark" type="submit">เช็กแล้ว</button></form>`}</div>`;
+  }).join('')}</div></div>`;
+}
 function renderWork() {
   const pick = document.getElementById('whoPick'); if (!pick) return;
   pick.innerHTML = STAFF.length ? STAFF.map(x => `<button type="button" aria-pressed="${x.name === worker}" data-who="${esc(x.name)}">${esc(x.name)}</button>`).join('')
@@ -1143,6 +1188,7 @@ function renderWork() {
   };
   body.innerHTML = `<div class="floor"><div class="hd"><span>${title} · ${today()}</span><span class="note">${nf(fd + cd)} / ${nf(all)}</span></div>
       <div class="prog"><i style="width:${all ? Math.round((fd + cd) / all * 100) : 0}%"></i></div><div class="note">เดินตามลำดับรายการ กดรหัสช่องเพื่อดูในผัง · บันทึกเก็บในเว็บ ไม่แก้สต็อก BigSeller</div></div>
+    ${assignList()}
     <div><h3 class="sub">! เติมของ (ต่ำกว่าขั้นต่ำ) · ${nf(low.filter(x => x.done).length)}/${nf(low.length)} ช่อง</h3><div class="tasks">${low.map(x => row(x, 'refill')).join('') || '<p class="note">ไม่มีช่องที่ต่ำกว่าขั้นต่ำ</p>'}</div></div>
     <details><summary class="sub" style="cursor:pointer">✗ ช่องที่หมด (0 ชิ้น) · ${nf(out.filter(x => x.done).length)}/${nf(out.length)} ช่อง — เติมเมื่อมีของสำรอง</summary><div class="tasks" style="margin-top:8px">${out.map(x => row(x, 'refill')).join('') || '<p class="note">ไม่มีช่องที่หมด</p>'}</div></details>
     <div><h3 class="sub">สุ่มนับ · ${nf(cd)}/${nf(t.count.length)} ช่อง</h3><div class="tasks">${t.count.map(x => row(x, 'count')).join('') || '<p class="note">ไม่มีช่องให้สุ่มนับ</p>'}</div></div>
@@ -1155,6 +1201,15 @@ function renderWork() {
       body: JSON.stringify({ staff: worker, scene: t.scene, kind: f.dataset.kind, position: f.dataset.code, sku: it?.sku || l?.sku, systemQty: l?.qty ?? null, [f.dataset.kind === 'count' ? 'countedQty' : 'filledQty']: Number(n) }) });
     const j = await res.json().catch(() => ({})); if (!res.ok) { alert(j.error || 'บันทึกไม่สำเร็จ'); return; }
     await loadTaskLog(); renderWork();
+  });
+  body.querySelectorAll('form[data-job]').forEach(f => f.onsubmit = async e => {
+    e.preventDefault(); const n = f.n.value.trim(); if (n === '') { f.n.focus(); return; }
+    const l = byCode.get(f.dataset.code), job = ASSIGN.find(x => x.id === f.dataset.job);
+    const res = await fetch('/api/warehouse/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staff: worker, scene: job?.scene || t.scene, kind: 'count', position: f.dataset.code, sku: job?.sku || l?.sku, systemQty: l?.qty ?? null, countedQty: Number(n), note: 'งานที่มอบหมาย' + (job?.note ? ': ' + job.note : '') }) });
+    const j = await res.json().catch(() => ({})); if (!res.ok) { alert(j.error || 'บันทึกไม่สำเร็จ'); return; }
+    await fetch('/api/warehouse/assignments', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: f.dataset.job }) });
+    await loadAssign(); await loadTaskLog(); buildActive(); showPane('work');
   });
   body.querySelectorAll('[data-undo]').forEach(b => b.onclick = async () => {
     if (!confirm('ลบรายการนี้แล้วบันทึกใหม่?')) return;
@@ -1173,6 +1228,30 @@ function renderWork() {
     XLSX.writeFile(wb, `ผลเดินตรวจคลัง_${today()}.xlsx`);
   };
 }
+/* "มอบหมายให้ไปเช็ก": pick a person of the slot's floor; their 3D figure walks there and it appears in their งานวันนี้ */
+function sceneOfCode(code) { const z = (byCode.get(code)?.key || '').split('|')[0] || code.toUpperCase().split('-')[0]; return ZONE_SCENE[z] || sceneId; }
+function assignBox(s) {
+  const scene = sceneOfCode(s.code), people = STAFF.filter(x => x.scene === scene), jobs = ASSIGN.filter(x => x.status === 'open' && x.position.toUpperCase() === s.code.toUpperCase());
+  return `<div class="edit"><b>มอบหมายให้ไปเช็กช่องนี้</b>
+    ${jobs.length ? `<div class="note">มอบหมายแล้ว: ${jobs.map(j => `<b>${esc(j.staff)}</b>${j.note ? ' (' + esc(j.note) + ')' : ''} <button type="button" class="linkbtn" data-unassign="${esc(j.id)}">ยกเลิก</button>`).join(' · ')}</div>` : ''}
+    <input type="text" id="assignNote" maxlength="200" placeholder="หมายเหตุ เช่น นับให้ละเอียด / ลูกค้าแจ้งของไม่ตรง" aria-label="หมายเหตุงานเช็ก">
+    <div class="who-pick">${people.length ? people.map(x => `<button type="button" data-assign="${esc(x.name)}">${esc(x.name)}</button>`).join('') : '<span class="note">ยังไม่มีรายชื่อทีมของชั้นนี้</span>'}</div>
+    <div class="msg" id="assignMsg" role="status"></div></div>`;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-assign],[data-unassign]'); if (!b || !selected) return;
+  const msg = document.getElementById('assignMsg'), code = selected.code;
+  if (b.dataset.unassign) { await fetch('/api/warehouse/assignments?id=' + encodeURIComponent(b.dataset.unassign), { method: 'DELETE' }); }
+  else {
+    const it = selected.loc?.items?.[0];
+    const res = await fetch('/api/warehouse/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staff: b.dataset.assign, scene: sceneOfCode(code), position: code, sku: it?.sku || selected.loc?.sku || '', note: document.getElementById('assignNote')?.value || '' }) });
+    const j = await res.json().catch(() => ({})); if (!res.ok) { if (msg) { msg.className = 'msg bad'; msg.textContent = j.error || 'มอบหมายไม่สำเร็จ'; } return; }
+  }
+  await loadAssign();
+  const l = byCode.get(code); buildActive(); if (l) goTo(l);          // rebuild so the figure walks to the job
+  const m2 = document.getElementById('assignMsg'); if (m2 && !b.dataset.unassign) { m2.className = 'msg ok'; m2.textContent = `✓ มอบหมายให้ ${b.dataset.assign} แล้ว — ดูได้ในแท็บ งานวันนี้`; }
+});
 function showPane(id) {
   if (id === 'work') loadTaskLog().then(renderWork);
   document.querySelectorAll('.seg [data-pane]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.pane === id)));
@@ -1197,6 +1276,7 @@ function renderSel() {
       + `<div class="items">${items.map(it => `<div class="item"><div><b>${esc(it.sku)}</b> · <span class="q">${nf(it.qty)} ชิ้น</span>${it.min != null && it.min > 0 ? ` <span class="hint">(ขั้นต่ำ ${nf(it.min)}${it.max != null ? ' · สูงสุด ' + nf(it.max) : ''})</span>` : ''}</div>`
       + `<div class="hint">${esc(it.name)}</div><button type="button" class="btn sm" data-out="${esc(it.sku)}">เอา SKU นี้ออกจากช่องนี้</button></div>`).join('')}</div>`
     : '<div class="hint" style="margin-top:6px">ช่องนี้ยังไม่มี SKU ในไฟล์สต็อก (ยังไม่ผูก SKU หรือยังไม่สร้างตำแหน่งใน BigSeller)</div>')
+    + assignBox(s)
     + `<div class="edit"><b>ใส่ SKU ที่ช่องนี้</b>
       <input type="text" id="editSku" placeholder="SKU เช่น 45091HC" aria-label="SKU ที่จะใส่ช่อง ${esc(s.code)}" autocomplete="off">
       <label><input type="radio" name="editMode" value="move" checked> ย้ายมาที่นี่ (แทนตำแหน่งเดิมของ SKU)</label>
