@@ -383,6 +383,52 @@ function signTexture(text) {
   const v = { tex, aspect: W / H }; signTex.set(text, v); return v;
 }
 const SIGN_Y = 3.55, CEIL = 5.8, wireMat = new THREE.MeshStandardMaterial({ color: 0x6b7178, roughness: .6 });
+/* ---------- warehouse staff walking their floor: simple jointed figure, arms and legs swing as they walk ---------- */
+const PATROL = {                                  // walkways in sheet px: main aisle and the aisles between the racks
+  ugreen: [
+    [[330, 245], [1225, 245], [1225, 250], [330, 250]],
+    [[508, 250], [508, 440], [508, 250], [621, 250], [621, 440], [621, 250], [732, 250], [732, 440], [732, 250], [915, 250], [915, 440], [915, 250], [985, 250], [985, 440], [985, 250], [1055, 250], [1055, 440], [1055, 250]],
+  ],
+  fantech: [
+    [[330, 288], [541, 288], [541, 140], [541, 288], [713, 288], [713, 140], [713, 288], [885, 288], [885, 140], [885, 288], [1040, 288], [1040, 292], [799, 292], [799, 440], [799, 292], [627, 292], [627, 440], [627, 292], [330, 292]],
+    [[627, 288], [627, 140], [627, 288], [799, 288], [799, 140], [799, 288], [971, 288], [971, 140], [971, 288]],
+  ],
+};
+function walker(name, path, n) {
+  const g = new THREE.Group(), shirt = 0x18364c, pants = 0x2e3440, skin = SKINS[n % SKINS.length];
+  const limb = (x, y, len, w, color) => { const p = new THREE.Group(); p.position.set(x, y, 0); g.add(p); part(p, w, len, w, 0, -len / 2, 0, color); return p; };
+  const legL = limb(-.09, .86, .84, .13, pants), legR = limb(.09, .86, .84, .13, pants);
+  part(legL, .14, .07, .22, 0, -.86, .04, 0x1a1c1e); part(legR, .14, .07, .22, 0, -.86, .04, 0x1a1c1e);           // shoes
+  part(g, .36, .56, .2, 0, 1.15, 0, shirt);                                                                       // body
+  part(g, .37, .06, .21, 0, 1.4, 0, 0xcdeb03);                                                                    // lime collar band
+  const armL = limb(-.235, 1.4, .58, .1, shirt), armR = limb(.235, 1.4, .58, .1, shirt);
+  part(armL, .09, .1, .09, 0, -.62, 0, 0, { mat: M(skin) }); part(armR, .09, .1, .09, 0, -.62, 0, 0, { mat: M(skin) });
+  part(g, .13, .14, .13, 0, 1.6, 0, 0, { geo: ball, mat: M(skin) });                                              // head
+  part(g, .135, .08, .135, 0, 1.68, -.01, 0, { geo: ball, mat: M(0x1b1712) });                                    // hair
+  part(g, .12, .14, .03, .09, 1.18, .11, 0xf2f2f2);                                                               // scanner in the shirt pocket
+  S.scene.add(g);
+  const pts = path.map(([x, z]) => new THREE.Vector2(px(x), px(z)));
+  const seg = pts.map((p, i) => p.distanceTo(pts[(i + 1) % pts.length])), total = seg.reduce((a, b) => a + b, 0);
+  if (name) { const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: signTexture(name).tex, depthTest: false, sizeAttenuation: false }));
+    const a = signTexture(name).aspect; tag.scale.set(.02 * a, .02, 1); tag.center.set(.5, 0); tag.position.set(0, 1.85, 0); tag.renderOrder = 6; g.add(tag); }
+  const speed = .9, offset = n * 37.3;
+  S.anim.push(t => {
+    let d = ((t * speed + offset) % total + total) % total, i = 0;
+    while (d > seg[i]) { d -= seg[i]; i = (i + 1) % pts.length; }
+    const a = pts[i], b = pts[(i + 1) % pts.length], k = seg[i] ? d / seg[i] : 0;
+    g.position.set(a.x + (b.x - a.x) * k, 0, a.y + (b.y - a.y) * k);
+    g.rotation.y = Math.atan2(b.x - a.x, b.y - a.y);
+    const sw = Math.sin(t * 7 + offset) * .55;
+    legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -sw * .8; armR.rotation.x = sw * .8;
+    g.position.y = Math.abs(Math.cos(t * 7 + offset)) * .03;                                                    // small bob per step
+  });
+}
+function addWalkers(id) {
+  const paths = PATROL[id]; if (!paths) return;
+  const names = STAFF.filter(x => x.scene === id).map(x => x.name);
+  const crew = names.length ? names : (id === 'fantech' ? ['พนักงาน'] : ['พนักงาน', 'พนักงาน']);
+  crew.forEach((name, n) => walker(name, paths[n % paths.length], n));
+}
 function hangSign(text, x, z, lift = 0) {
   /* the board keeps the same size on screen (readable from the overview and up close); it hangs on one wire from the ceiling */
   const { tex, aspect } = signTexture(text), h = .025;
@@ -774,6 +820,7 @@ function buildActive() {
   const def = SCENES[sceneId];
   S = newScene(def.bounds);
   def.build();
+  addWalkers(sceneId);
   const solidsMesh = ['up', 'beam', 'deck', 'plate'].map(k => S.frames[k].build());
   S.scene.add(...solidsMesh, S.patch.build());
   slotMesh = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ roughness: .8, metalness: 0 }), Math.max(1, S.slots.length));
