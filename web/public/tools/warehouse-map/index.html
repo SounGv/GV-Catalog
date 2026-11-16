@@ -29,7 +29,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 header{background:var(--navy);border-bottom:1px solid var(--navy-line);box-shadow:var(--shadow-sm);color:var(--on-inverse);display:flex;align-items:center;gap:16px;padding:8px 16px;min-height:72px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .brand img{height:40px;width:auto}
-.brand h1{font-size:18px;line-height:1.35;margin:0;font-weight:700}
+.brand h1{font-size:22px;line-height:1.35;margin:0;font-weight:700}
 .brand small{display:block;color:var(--on-inverse-muted);font-size:12px;font-weight:400}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
 .tab{min-height:44px;padding:0 12px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--navy-text);font-size:16px;font-weight:500}
@@ -37,7 +37,7 @@ header{background:var(--navy);border-bottom:1px solid var(--navy-line);box-shado
 .tab[aria-selected=true]{color:var(--lime);border-bottom-color:var(--lime);font-weight:600}
 .badge-sample{font-size:12px;background:rgba(255,255,255,.08);color:var(--navy-ink);border:1px solid #2c4a60;padding:2px 10px;border-radius:var(--radius-chip);font-weight:500}
 main{flex:1;display:flex;min-height:0}
-#stage{position:relative;flex:1;min-width:0;background:linear-gradient(#eef2f5,#dfe5ea)}
+#stage{position:relative;flex:1;min-width:0;background:radial-gradient(120% 80% at 50% 0%,#f6fafc 0%,#e3ebf1 55%,#d3dde6 100%)}
 #stage canvas{display:block;width:100%;height:100%}
 #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .lbl{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-size:12px;font-weight:600;padding:1px 8px;border-radius:6px;background:rgba(255,255,255,.88);color:#20262b;box-shadow:0 1px 3px rgba(0,0,0,.2)}
@@ -47,31 +47,36 @@ main{flex:1;display:flex;min-height:0}
 .lbl.small{font-size:11px;font-weight:500;background:rgba(255,255,255,.72)}
 .lbl.row{font-size:12px;font-weight:700;background:#fff;color:var(--navy);border:1.5px solid var(--navy);box-shadow:0 1px 4px rgba(24,54,76,.25)}
 .lbl.bay{font-size:11px;font-weight:700;background:var(--navy);color:#fff;padding:0 6px}
-.hud{position:absolute;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
+.glass{background:rgba(255,255,255,.82);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 1px rgba(255,255,255,.55),0 1px 2px rgba(24,54,76,.12),0 6px 16px rgba(24,54,76,.14)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.glass{background:rgba(255,255,255,.96)}}
+@media (prefers-reduced-transparency:reduce){.glass{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none}}
+.hud{position:absolute;display:flex;gap:4px;flex-wrap:wrap;z-index:2;padding:5px;border-radius:var(--radius-chip)}
 #modes{left:12px;top:12px}
 #views{right:12px;top:12px}
-.chip{min-height:44px;padding:0 14px;border-radius:var(--radius-chip);border:1px solid var(--border-strong);background:var(--surface);font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.chip{min-height:40px;padding:0 14px;border-radius:var(--radius-chip);border:1px solid transparent;background:transparent;font-weight:600;color:#2b3a46;white-space:nowrap;flex:none}
+.chip:hover{background:rgba(24,54,76,.07)}
 .chip[aria-pressed=true]{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
-#legend{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.94);border:1px solid var(--border);border-radius:var(--radius-card);padding:10px 14px;font-size:13px;display:flex;flex-direction:column;gap:2px;max-width:min(92%,420px);z-index:2}
+#legend{position:absolute;left:12px;bottom:12px;border-radius:14px;padding:10px 14px;font-size:13px;display:flex;flex-direction:column;gap:2px;max-width:min(92%,420px);z-index:2}
 #legend b{font-size:13px}
 #legend .row{display:flex;align-items:center;gap:8px}
 #legend i{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.25);flex:none}
 #tip{position:absolute;pointer-events:none;background:var(--surface-inverse);color:#fff;border-radius:10px;padding:8px 12px;font-size:13px;line-height:1.5;max-width:300px;box-shadow:0 6px 18px rgba(0,0,0,.3);display:none;z-index:3}
 #tip b{color:var(--lime);font-variant-numeric:tabular-nums}
 #tip .n{color:var(--on-inverse-muted);font-size:12px}
-#hint{position:absolute;right:12px;bottom:12px;font-size:12px;color:#39424a;background:rgba(255,255,255,.8);padding:2px 10px;border-radius:var(--radius-chip);z-index:2}
+#hint{position:absolute;right:12px;bottom:12px;font-size:12px;color:#39424a;padding:4px 12px;border-radius:var(--radius-chip);z-index:2}
+#legend .lg-toggle{display:none}
 aside{width:340px;max-width:42vw;background:var(--surface);border-left:1px solid var(--border);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
-aside h2{font-size:16px;margin:0;font-weight:700}
+aside h2{font-size:18px;margin:0;font-weight:700}
 .side-head .note{margin-top:2px}
 .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface-sunken);border-radius:var(--radius-control);padding:4px;position:sticky;top:-16px;z-index:2}
-.seg button{min-height:40px;border:0;border-radius:8px;background:transparent;color:var(--muted-foreground);font-weight:600;font-size:14px;position:relative}
+.seg button{min-height:44px;border:0;border-radius:8px;background:transparent;color:#4a5869;font-weight:600;font-size:14px;position:relative}
 .seg button[aria-selected=true]{background:var(--surface);color:var(--navy);box-shadow:0 1px 3px rgba(24,54,76,.18)}
 .seg .dot{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--lime);border:1.5px solid var(--navy)}
 .pane{display:flex;flex-direction:column;gap:14px}
 .pane[hidden]{display:none}
 .sub{font-size:14px;font-weight:700;margin:0 0 8px;color:var(--navy)}
 .finds{display:flex;flex-direction:column;gap:8px}
-.linkbtn{border:0;background:none;color:var(--primary);font-weight:600;font-size:13px;padding:0;min-height:32px;text-decoration:underline;text-underline-offset:3px}
+.linkbtn{border:0;background:none;color:var(--primary);font-weight:600;font-size:14px;padding:0 4px;min-height:44px;text-decoration:underline;text-underline-offset:3px}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--border);border-radius:var(--radius-card);overflow:hidden}
 .stat{padding:10px 12px;border-bottom:1px solid var(--border)}
 .stat:nth-child(odd){border-right:1px solid var(--border)}
@@ -79,7 +84,7 @@ aside h2{font-size:16px;margin:0;font-weight:700}
 .stat .v{font-size:20px;font-weight:700;line-height:1.25;color:var(--navy);font-variant-numeric:tabular-nums}
 .stat .l{font-size:12px;color:var(--muted-foreground)}
 .side-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.hide-side{border:1px solid var(--border-strong);background:var(--surface);border-radius:var(--radius-chip);min-height:32px;padding:0 12px;font-size:13px;font-weight:600;color:var(--muted-foreground)}
+.hide-side{border:1px solid var(--border-strong);background:var(--surface);border-radius:var(--radius-chip);min-height:40px;padding:0 12px;font-size:13px;font-weight:600;color:var(--muted-foreground)}
 .show-side{position:absolute;right:12px;top:64px;z-index:3;min-height:40px;padding:0 14px;border-radius:var(--radius-chip);border:1px solid var(--border-strong);background:var(--surface);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 body.side-off aside{display:none}
 .work{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
@@ -124,6 +129,21 @@ header a.gv-back{margin:0!important}
 .results{display:flex;flex-direction:column;gap:6px}
 .res{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--border);border-radius:var(--radius-card);padding:8px 12px;background:var(--surface);min-height:44px}
 .res:hover{border-color:var(--primary)}
+.res.best{border-color:var(--primary);box-shadow:0 0 0 2px var(--accent-soft)}
+.res .tag{font-size:12px;font-weight:600;color:var(--warning);background:var(--warning-soft);border-radius:var(--radius-chip);padding:0 8px}
+.refill{display:flex;flex-direction:column;gap:6px}
+.refill .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.rf{display:grid;grid-template-columns:1fr auto;gap:2px 10px;text-align:left;border:1px solid var(--border);border-left-width:4px;border-radius:var(--radius-card);padding:8px 10px;background:var(--surface);min-height:44px;width:100%}
+.rf:hover{border-color:var(--primary)}
+.rf.out{border-left-color:var(--danger)}.rf.low{border-left-color:#F5A800}
+.rf .c{font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
+.rf .q{font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rf .nm{grid-column:1/-1;font-size:13px;color:#4a5869;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rf .src{grid-column:1/-1;font-size:13px}
+.rf .src.none{color:var(--danger);font-weight:600}
+.empty-floor{border:1px dashed var(--border-strong);border-radius:var(--radius-card);padding:14px;background:var(--surface-sunken);font-size:14px}
+.empty-floor b{display:block;color:var(--navy);margin-bottom:4px}
+.more-btn{display:none}
 .res .c{font-weight:700;font-variant-numeric:tabular-nums}
 .res .n{font-size:12px;color:var(--muted-foreground)}
 .items{margin-top:8px;display:flex;flex-direction:column;gap:6px}
@@ -135,13 +155,13 @@ header a.gv-back{margin:0!important}
 .edit .row{display:flex;gap:8px;flex-wrap:wrap}
 .team{display:flex;flex-direction:column;gap:8px}
 .floor{border:1px solid var(--border);border-radius:var(--radius-card);padding:10px 12px;background:var(--surface)}
-.floor.busy{border-color:var(--warning-dot);box-shadow:inset 3px 0 0 var(--warning-dot)}
+.floor.busy{border-color:#f3d37a;background:var(--warning-soft)}
 .floor .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:600}
 .floor .ct{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;margin-top:4px;font-variant-numeric:tabular-nums}
 .floor .ct b{font-size:15px}
 .names{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .name{display:inline-flex;align-items:center;gap:4px;background:var(--accent-soft);color:var(--primary);border-radius:var(--radius-chip);padding:2px 4px 2px 10px;font-size:13px;font-weight:600}
-.name button{border:0;background:transparent;color:var(--muted-foreground);min-width:28px;min-height:28px;border-radius:50%}
+.name button{border:0;background:transparent;color:#4a5869;min-width:36px;min-height:36px;border-radius:50%}
 .name button:hover{background:#fff;color:var(--danger)}
 .addname{display:flex;gap:6px;margin-top:8px}
 .addname[hidden]{display:none}
@@ -172,11 +192,16 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 @media (max-width:860px){
   body{overflow:auto}
   main{flex-direction:column}
-  #stage{height:62vh;flex:none}
+  #stage{height:74vh;flex:none}
+  .more-btn{display:inline-flex;align-items:center}
+  .tools{display:none;width:100%}
+  body.tools-open .tools{display:flex}
+  #modes{flex-wrap:nowrap;overflow-x:auto;max-width:calc(100% - 24px);left:12px}
+  #legend .lg-toggle{display:block;border:0;background:none;font:inherit;font-weight:700;padding:0;min-height:36px;text-align:left;color:var(--navy)}
+  #legend:not(.open) .row,#legend:not(.open) .lg-title{display:none}
   aside{width:auto;max-width:none;border-left:0;border-top:1px solid var(--border);overflow:visible}
   .tabs{margin-left:0}
-  #modes{right:12px}
-  #views{top:auto;bottom:12px}
+  #views{top:auto;bottom:12px;right:12px}
   #hint{display:none}
   #legend{bottom:64px;max-width:calc(100% - 24px)}
   .badge-sample{display:none}
@@ -200,11 +225,11 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 <div class="toolbar">
   <form id="searchForm" class="search" role="search">
     <input id="q" type="search" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า / ตำแหน่ง" aria-label="ค้นหา SKU บาร์โค้ด ชื่อสินค้า หรือตำแหน่ง" autocomplete="off">
-    <button type="submit" class="btn">ค้นหา</button>
+    <button type="submit" class="btn dark">ค้นหา</button><button type="button" class="btn more-btn" id="moreBtn" aria-expanded="false">⋯ จัดการข้อมูล</button>
   </form>
   <div class="tools">
     <input id="stockFile" type="file" accept=".xlsx" hidden>
-    <button type="button" class="btn dark" id="syncBtn">ซิงค์สต็อกจาก BigSeller</button>
+    <button type="button" class="btn" id="syncBtn">ซิงค์สต็อกจาก BigSeller</button>
     <button type="button" class="btn" id="uploadBtn">อัปไฟล์สต็อกตำแหน่ง</button>
     <button type="button" class="btn" id="exportBtn">ส่งออกรายการช่อง (.xlsx)</button>
   </div>
@@ -212,11 +237,11 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 <main>
   <section id="stage" aria-label="ผัง 3D">
     <div id="labels"></div>
-    <div class="hud" id="modes" role="group" aria-label="โหมดแสดงผล"></div>
-    <div class="hud" id="views" role="group" aria-label="มุมมอง"></div>
-    <div id="legend"></div>
+    <div class="hud glass" id="modes" role="group" aria-label="โหมดแสดงผล"></div>
+    <div class="hud glass" id="views" role="group" aria-label="มุมมอง"></div>
+    <div id="legend" class="glass"></div>
     <div id="tip"></div>
-    <div id="hint">ลากหมุน · ล้อเมาส์ซูม · คลิกช่องเพื่อดูรายละเอียด</div>
+    <div id="hint" class="glass">ลากหมุน · ล้อเมาส์ซูม · คลิกช่องเพื่อดูรายละเอียด</div>
     <div id="empty"><div class="box"><h2>ยังไม่มีข้อมูลสต็อก</h2><p>กด <b>ซิงค์สต็อกจาก BigSeller</b> ด้านบน (ดึงจาก Google Sheet ที่อัปเดตจาก BigSeller) หรืออัปไฟล์ “สต็อกตำแหน่ง” ที่ส่งออกจาก BigSeller</p></div></div>
   </section>
   <aside>
@@ -229,10 +254,11 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
     </div>
     <section class="pane" data-pane="over">
       <div class="kpis" id="kpis"></div>
+      <div><div class="refill"><div class="bar"><h3 class="sub" style="margin:0">ต้องเติมวันนี้ <span id="refillCount" class="note"></span></h3><button type="button" class="btn sm" id="refillXlsx">ดาวน์โหลด (.xlsx)</button></div><div id="refill" class="refill"></div></div></div>
       <div><h3 class="sub">ทีมดูแลชั้น · งานเติมสต็อก</h3><div id="team" class="team"></div></div>
     </section>
     <section class="pane" data-pane="slot" hidden>
-      <div id="searchBox" hidden><h3 class="sub" id="resTitle">ผลค้นหา</h3><div class="results" id="results"></div></div>
+      <div id="searchBox" hidden><h3 class="sub" id="resTitle">ผลค้นหา</h3><div class="results" id="results" aria-live="polite"></div></div>
       <div><h3 class="sub">ช่องที่เลือก</h3><div class="sel" id="sel"><span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span></div></div>
     </section>
     <section class="pane" data-pane="work" hidden>
@@ -966,7 +992,7 @@ const MODES = {
   real: { name: 'สมจริง', legend: [['#c79a62', 'มีสินค้า (ขนาดกล่องตามจำนวน)'], ['#c3c9cf', 'ช่องมีรหัสแต่สต็อก 0'], ['#e4e7ea', 'ช่องในผังไม่มีรหัสในข้อมูล']] },
   heat: { name: 'ปริมาณสต็อก', legend: [['#d2d7dc', '0 ชิ้น'], ['#e6f2a0', '1–9'], ['#cdeb03', '10–49'], ['#9ab800', '50–199'], ['#4e5c00', '200–999'], ['#1e2400', '1,000+']] },
   cmp: { name: 'เทียบผังกับข้อมูล', legend: [['#1a7f4e', 'ตรงผัง · มีสต็อก'], ['#ffb900', 'ตรงผัง · สต็อก 0'], ['#b7bdc3', 'ผังมีช่อง แต่ไม่มีรหัสในข้อมูล'], ['#d4511f', 'ข้อมูลมีรหัส แต่ผังไม่ได้วาด']] },
-  refill: { name: 'ช่องว่าง/ต้องเติม', legend: [['#c62828', '✗ สต็อก 0 (มี SKU)'], ['#ffb900', '! ต่ำกว่าขั้นต่ำ ต้องเติม'], ['#1a7f4e', '✓ สต็อกปกติ'], ['#5aa9e6', '○ ช่องว่าง ไม่มี SKU · วางของใหม่ได้']] },
+  refill: { name: 'ช่องว่าง/ต้องเติม', legend: [['#C62828', '✗ หมด · มี SKU แต่ 0 ชิ้น'], ['#F5A800', '! ใกล้หมด · ต่ำกว่าขั้นต่ำ ต้องเติม'], ['#1a7f4e', '✓ สต็อกปกติ'], ['#1D5FD1', '○ ว่าง · ไม่มี SKU วางของใหม่ได้']] },
 };
 const isLow = s => !!(s.loc && s.loc.qty > 0 && s.loc.low);
 const nearLow = l => !!l?.items?.some(i => i.min > 0 && i.qty >= i.min && i.qty < i.min * 1.5);
@@ -980,6 +1006,7 @@ function mixPick(items, rank, rnd, quota, total) {
   return out.slice(0, total);
 }
 let mode = 'real';
+const MARK = { low: '#F5A800', empty: '#C62828', nodata: '#1D5FD1' };   // one status palette: modes, shelf tags, icons, legend
 const cardboard = ['#cfa673', '#c69c68', '#d7b07e', '#c2976a', '#d2aa76'];
 const heatCol = q => q <= 0 ? '#d2d7dc' : q < 10 ? '#e6f2a0' : q < 50 ? '#cdeb03' : q < 200 ? '#9ab800' : q < 1000 ? '#4e5c00' : '#1e2400';
 function slotStyle(s) {
@@ -991,12 +1018,12 @@ function slotStyle(s) {
     return [s.status === 'stock' ? s.ih * (.4 + .6 * sz) : .05, c];
   }
   if (mode === 'refill') {
-    if (s.status === 'stock') return [s.ih * (.4 + .6 * sz), isLow(s) ? '#ffb900' : '#1a7f4e'];
-    return s.status === 'empty' ? [s.ih * .35, '#c62828'] : [s.ih * .25, '#5aa9e6'];
+    if (s.status === 'stock') return [s.ih * (.4 + .6 * sz), isLow(s) ? MARK.low : '#1a7f4e'];
+    return s.status === 'empty' ? [s.ih * .35, MARK.empty] : [s.ih * .25, MARK.nodata];
   }
   if (mode === 'heat') return [s.status === 'stock' ? s.ih * (.4 + .6 * sz) : .03, heatCol(q)];
-  if (s.status === 'stock') return [s.ih * (.45 + .55 * sz), showMarks && isLow(s) ? '#f0a020' : cardboard[hash(s.code) % cardboard.length]];
-  return s.status === 'empty' ? (showMarks ? [.04, '#c62828'] : plate) : [.02, '#e4e7ea'];
+  if (s.status === 'stock') return [s.ih * (.45 + .55 * sz), showMarks && isLow(s) ? MARK.low : cardboard[hash(s.code) % cardboard.length]];
+  return s.status === 'empty' ? (showMarks ? [.04, '#e7b3b3'] : plate) : [.02, '#e4e7ea'];
 }
 
 /* ---------- build / switch ---------- */
@@ -1007,13 +1034,13 @@ function warnTexture(kind) {                     // amber triangle "!" = near em
   if (warnTex[kind]) return warnTex[kind];
   const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
   g.lineJoin = 'round'; g.lineWidth = 10; g.strokeStyle = '#ffffff';
-  if (kind === 'low') { g.fillStyle = '#f0a020'; g.beginPath(); g.moveTo(64, 10); g.lineTo(120, 112); g.lineTo(8, 112); g.closePath(); g.fill(); g.stroke(); }
-  else { g.fillStyle = '#c62828'; g.beginPath(); g.arc(64, 64, 54, 0, Math.PI * 2); g.fill(); g.stroke(); }
+  if (kind === 'low') { g.fillStyle = MARK.low; g.beginPath(); g.moveTo(64, 10); g.lineTo(120, 112); g.lineTo(8, 112); g.closePath(); g.fill(); g.stroke(); }
+  else { g.fillStyle = MARK.empty; g.beginPath(); g.arc(64, 64, 54, 0, Math.PI * 2); g.fill(); g.stroke(); }
   g.fillStyle = '#ffffff'; g.font = '900 72px "Segoe UI", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText(kind === 'low' ? '!' : '✗', 64, kind === 'low' ? 76 : 66);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return (warnTex[kind] = t);
 }                            // red tag = หมด (SKU, 0 pieces) · blue tag = ว่าง (no SKU in the slot)
-const MARK = { low: '#f0a020', empty: '#c62828', nodata: '#1d5fd1' };
+
 function buildActive() {
   if (S) S.scene.traverse(o => { if (o.isMesh) { o.geometry !== box && !o.geometry.userData.keep && o.geometry.dispose(); } });
   labelsEl.innerHTML = '';
@@ -1043,8 +1070,36 @@ function buildActive() {
   hoverBox.visible = false; S.scene.add(hoverBox);
   selBox = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0xcdeb03 }));
   selBox.visible = false; S.scene.add(selBox);
+  makeRipple();
   S.labels.forEach(l => { const e = document.createElement('div'); e.className = 'lbl ' + l.cls; e.textContent = l.text; labelsEl.appendChild(e); l.el = e; });
-  applyMode(); renderSide(); setView('iso'); selected = null; renderSel();
+  const prio = c => /zone|hot|warn/.test(c) ? 0 : /row/.test(c) ? 1 : /bay/.test(c) ? 2 : /small/.test(c) ? 4 : 3;   // signs first, bay numbers last
+  S.labelsByPrio = [...S.labels].sort((a, b) => prio(a.cls) - prio(b.cls));
+  renderer.domElement.setAttribute('role', 'img'); renderer.domElement.setAttribute('aria-label', 'ผัง 3D ' + SCENES[sceneId].title + ' · ใช้ช่องค้นหาเพื่อไปที่ช่อง');
+  applyMode(); renderSide(); setView(matchMedia('(max-width:860px)').matches ? 'top' : 'iso'); selected = null; renderSel();
+}
+/* the found slot: three lime rings spread on the floor like a drop in water, a soft glow box around the
+   carton and a faint light column above it; the rings rest still (no motion) under prefers-reduced-motion */
+let ripple = null;
+function makeRipple() {
+  const g = new THREE.Group(); g.visible = false;
+  const rings = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.RingGeometry(.42, .52, 48), new THREE.MeshBasicMaterial({ color: 0xcdeb03, transparent: true, opacity: .8, depthWrite: false, side: THREE.DoubleSide }));
+    m.rotation.x = -Math.PI / 2; m.renderOrder = 5; g.add(m); return m; });
+  const glow = new THREE.Mesh(box, new THREE.MeshBasicMaterial({ color: 0xcdeb03, transparent: true, opacity: .32, depthWrite: false }));
+  glow.renderOrder = 6; g.add(glow);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(.18, .32, 1, 24, 1, true), new THREE.MeshBasicMaterial({ color: 0xdff36a, transparent: true, opacity: .22, depthWrite: false, side: THREE.DoubleSide }));
+  beam.renderOrder = 6; g.add(beam);
+  S.scene.add(g); ripple = { g, rings, glow, beam };
+  S.anim.push(t => { if (!ripple.g.visible) return;
+    ripple.rings.forEach((r, i) => { const p = ((t * .55) + i / 3) % 1; r.scale.setScalar(1 + p * 4.2); r.material.opacity = .85 * (1 - p) * (1 - p); });
+    ripple.glow.material.opacity = .22 + .12 * Math.sin(t * 3); });
+}
+function showRipple(s) {
+  if (!ripple) return; if (!s) { ripple.g.visible = false; return; }
+  const h = Math.max(s.h, .06);
+  ripple.rings.forEach((r, i) => { r.position.set(s.rx, .05, s.rz); r.scale.setScalar(1 + i * 1.4); r.material.opacity = .7 - i * .2; });
+  ripple.glow.position.set(s.rx, s.y + h / 2, s.rz); ripple.glow.scale.set(s.rw * 1.22 + .06, h * 1.25 + .06, s.rd * 1.22 + .06);
+  const top = s.y + h + .1, bh = 3.2; ripple.beam.position.set(s.rx, top + bh / 2, s.rz); ripple.beam.scale.set(1, bh, 1);
+  ripple.g.visible = true;
 }
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 function applyMode() {
@@ -1082,8 +1137,8 @@ function applyMode() {
   slotMesh.instanceMatrix.needsUpdate = true; if (slotMesh.instanceColor) slotMesh.instanceColor.needsUpdate = true;
   extraMesh.instanceMatrix.needsUpdate = true; if (extraMesh.instanceColor) extraMesh.instanceColor.needsUpdate = true;
   const lg = document.getElementById('legend');
-  lg.innerHTML = `<b>${MODES[mode].name}</b>` + MODES[mode].legend.map(([c, t]) => `<div class="row"><i style="background:${c}"></i>${t}</div>`).join('')
-    + (showMarks ? `<b style="margin-top:4px">ป้ายเตือนบนช่อง</b><div class="row"><i style="background:${MARK.low}"></i>! ใกล้หมด · ต่ำกว่าขั้นต่ำ ต้องเติม</div><div class="row"><i style="background:${MARK.empty}"></i>✗ หมด · มี SKU แต่ 0 ชิ้น</div><div class="row"><i style="background:${MARK.nodata}"></i>○ ว่าง · ไม่มี SKU วางของใหม่ได้</div>` : '');
+  lg.innerHTML = `<button type="button" class="lg-toggle" aria-expanded="${lg.classList.contains('open')}">คำอธิบายสี · ${MODES[mode].name} ▾</button><b class="lg-title">${MODES[mode].name}</b>` + MODES[mode].legend.map(([c, t]) => `<div class="row"><i style="background:${c}"></i>${t}</div>`).join('')
+    + (showMarks && mode !== 'refill' ? `<b class="lg-title" style="margin-top:4px">ป้ายเตือนบนช่อง</b><div class="row"><i style="background:${MARK.low}"></i>! ใกล้หมด · ต่ำกว่าขั้นต่ำ ต้องเติม</div><div class="row"><i style="background:${MARK.empty}"></i>✗ หมด · มี SKU แต่ 0 ชิ้น</div><div class="row"><i style="background:${MARK.nodata}"></i>○ ว่าง · ไม่มี SKU วางของใหม่ได้</div>` : '');
 }
 function setView(v) {
   const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
@@ -1152,19 +1207,55 @@ function renderTeam() {
     await fetch('/api/warehouse/staff?id=' + encodeURIComponent(b.dataset.del), { method: 'DELETE' }); await loadStaff(); renderTeam();
   });
 }
+/* ต้องเติมวันนี้: every SKU in a pick slot of this floor that is sold out or below its minimum, most urgent first
+   (sold out, then furthest below the minimum), with how many to bring and where the stock is (the other positions
+   that hold the SKU, biggest first; none = order it) */
+function refillRows(sceneOnly) {
+  const rows = [];
+  DATA.locs.forEach(l => {
+    const zone = l.key ? l.key.split('|')[0] : '', sc = ZONE_SCENE[zone];
+    if (!sc || (sceneOnly && sc !== sceneOnly)) return;
+    (l.items || []).forEach(it => {
+      const out = it.qty <= 0, low = it.min > 0 && it.qty < it.min; if (!out && !low) return;
+      const src = DATA.locs.filter(o => o !== l && o.qty > 0).flatMap(o => (o.items || []).filter(x => x.sku === it.sku && x.qty > 0).map(x => ({ code: o.code, qty: x.qty }))).sort((a, b) => b.qty - a.qty);
+      const fill = Math.max(0, (it.max > 0 ? it.max : it.min) - it.qty);
+      rows.push({ l, it, out, fill, src, gap: it.min > 0 ? it.qty / it.min : 0, scene: sc });
+    });
+  });
+  /* refillable today first (stock is somewhere in the warehouse), then the ones that must be ordered */
+  return rows.sort((a, b) => (b.src.length > 0) - (a.src.length > 0) || b.out - a.out || a.gap - b.gap || b.fill - a.fill);
+}
+let refillAll = false;
+function renderRefill() {
+  const el = document.getElementById('refill'); if (!el) return;
+  const rows = refillRows(sceneId), ready = rows.filter(r => r.src.length), show = refillAll ? rows : ready.slice(0, 30);   // refillable first; to-order ones on demand
+  const can = rows.filter(r => r.src.length).length;
+  document.getElementById('refillCount').textContent = rows.length ? `· เติมได้เลย ${nf(can)} · ไม่มีของสำรอง ${nf(rows.length - can)}` : '';
+  if (!rows.length) { el.innerHTML = '<p class="note">ไม่มีรุ่นที่หมดหรือต่ำกว่าขั้นต่ำในชั้นนี้</p>'; return; }
+  const head = show.length ? '' : '<p class="note">ตอนนี้ไม่มีรุ่นที่เติมได้จากของสำรองในคลังนี้</p>';
+  el.innerHTML = head + show.map((r, i) => `<button type="button" class="rf ${r.out ? 'out' : 'low'}" data-i="${i}">
+      <span class="c">${esc(r.l.code)} · ${esc(r.it.sku)}</span><span class="q">${r.out ? '<span class="pill diff">✗ หมด</span>' : `${nf(r.it.qty)}/${nf(r.it.min)}`}</span>
+      <span class="nm">${esc(r.it.name || '')}</span>
+      <span class="src${r.src.length ? '' : ' none'}">${r.fill ? `เติม ${nf(r.fill)} ชิ้น · ` : ''}${r.src.length ? 'เอาจาก ' + r.src.slice(0, 2).map(x => `${esc(x.code)} (${nf(x.qty)})`).join(', ') : 'ไม่มีของสำรองในคลังนี้ · ต้องโอนหรือสั่งเพิ่ม'}</span></button>`).join('')
+    + (rows.length > show.length ? `<button type="button" class="linkbtn" id="refillMore">ดูทั้งหมด ${nf(rows.length)} รายการ (รวมที่ไม่มีของสำรอง ${nf(rows.length - ready.length)})</button>` : '');
+  el.querySelectorAll('.rf').forEach(b => b.onclick = () => goTo(show[+b.dataset.i].l));
+  const more = document.getElementById('refillMore'); if (more) more.onclick = () => { refillAll = true; renderRefill(); };
+}
 function renderSide() {
   const d = SCENES[sceneId];
   document.getElementById('sceneTitle').textContent = d.title;
   document.getElementById('sceneNote').textContent = d.note;
   const inMap = S.slots.filter(s => !s.orphan), st = inMap.filter(s => s.status === 'stock'), qty = st.reduce((a, s) => a + s.loc.qty, 0);
   const orph = S.slots.filter(s => s.orphan), oq = orph.reduce((a, s) => a + (s.loc ? s.loc.qty : 0), 0);
-  document.getElementById('kpis').innerHTML = [
+  const kp = document.getElementById('kpis');
+  if (!inMap.some(s => s.loc)) { kp.style.display = 'block'; kp.innerHTML = `<div class="empty-floor"><b>ยังไม่มีสต็อกของชั้นนี้</b>${inMap.length ? `ผังวาดช่องไว้ ${nf(inMap.length)} ช่อง แต่` : 'ผังชั้นนี้วาดแผนพาเลทไว้ แต่'}ยังไม่มีรหัสตำแหน่งของชั้นนี้ในข้อมูลสต็อก · สร้างรหัสตำแหน่งใน BigSeller ก่อน แล้วกดซิงค์สต็อก</div>`; }
+  else { kp.style.display = ''; kp.innerHTML = [
     [nf(inMap.length), 'ช่องในผัง'],
     [inMap.length ? Math.round(st.length / inMap.length * 100) + '%' : '–', `มีสต็อก (${nf(st.length)} ช่อง)`],
     [nf(qty), 'ชิ้นในผัง'],
     [nf(oq), `ชิ้นนอกผัง (${nf(orph.length)} ช่อง)`],
-  ].map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
-  renderTeam();
+  ].map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join(''); }
+  renderTeam(); renderRefill();
   const lab = { ok: 'ตรงผัง', diff: 'ไม่ตรง', ask: 'ต้องยืนยัน', na: 'ไม่มีข้อมูล' };
   document.getElementById('finds').innerHTML = d.finds().map(([k, t, a, b]) =>
     `<div class="find"><div class="t"><span class="pill ${k}">${lab[k]}</span>${t}</div><div class="d">${a}</div><div class="d">${b}</div></div>`).join('');
@@ -1383,9 +1474,10 @@ renderer.domElement.addEventListener('pointerup', e => { if (downAt && Math.hypo
 function select(s, focus = false) {
   if (s) { showPane('slot'); if (document.body.classList.contains('side-off')) document.querySelector('.show-side').click(); }
   selected = s; renderSel();
-  if (!s) { selBox.visible = false; return; }
+  if (!s) { selBox.visible = false; showRipple(null); return; }
   const h = Math.max(s.h, .06);
-  selBox.position.set(s.rx, s.y + h / 2, s.rz); selBox.scale.set(s.rw * 1.12, h * 1.15, s.rd * 1.12); selBox.visible = true;
+  selBox.position.set(s.rx, s.y + h / 2, s.rz); selBox.scale.set(s.rw * 1.12, h * 1.15, s.rd * 1.12); selBox.visible = true; showRipple(s);
+  if (matchMedia('(max-width:860px)').matches) document.getElementById('sel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   if (focus) {                                   // swing the camera in front of the slot's open face
     controls.target.set(s.rx, s.y + .4, s.rz);
     const fx = s.nx || 0, fz = s.nz || (s.nx ? 0 : 1);
@@ -1397,16 +1489,18 @@ function select(s, focus = false) {
 const ZONE_SCENE = { '3B': 'ugreen', '01U': 'ugreen', '02U': 'ugreen', CW: 'ugreen', CB: 'ugreen', CR: 'ugreen', CY: 'ugreen', F01: 'fantech', F02: 'fantech', F07: 'fantech' };
 function search(qRaw) {
   const q = qRaw.trim().toUpperCase(), box = document.getElementById('searchBox'), out = document.getElementById('results');
-  if (!q) { box.hidden = true; return; }
+  if (!q) { box.hidden = true; select(null); return; }
+  /* pick slots drawn in the map come first (where a picker walks to), then stock elsewhere (ZZZZ, PC-…, 001 …) */
+  const inMapOf = l => !!ZONE_SCENE[l.key ? l.key.split('|')[0] : ''];
   const hits = DATA.locs.filter(l => l.code.toUpperCase().includes(q) || (l.items || []).some(it => it.sku.toUpperCase().includes(q) || (it.gtin || '') === q || it.name.toUpperCase().includes(q)))
-    .sort((a, b) => (b.qty > 0) - (a.qty > 0) || b.qty - a.qty).slice(0, 30);
+    .sort((a, b) => inMapOf(b) - inMapOf(a) || (b.qty > 0) - (a.qty > 0) || b.qty - a.qty).slice(0, 30);
   box.hidden = false; showPane('slot');
-  document.getElementById('resTitle').textContent = hits.length ? `ผลค้นหา “${qRaw.trim()}” · ${hits.length >= 30 ? '30+' : hits.length} ตำแหน่ง` : `ไม่พบ “${qRaw.trim()}” ในไฟล์สต็อกตำแหน่ง`;
+  document.getElementById('resTitle').textContent = hits.length ? `ผลค้นหา “${qRaw.trim()}” · ${hits.length >= 30 ? '30+' : hits.length} ตำแหน่ง` : `ไม่พบ “${qRaw.trim()}” · ลองพิมพ์แค่บางส่วนของรหัส ชื่อรุ่น หรือยิงบาร์โค้ด`;
   out.innerHTML = hits.map((l, i) => { const it = (l.items || []).find(x => x.sku.toUpperCase().includes(q) || (x.gtin || '') === q) || l.items?.[0] || { sku: l.sku, name: l.name };
     const zone = l.key ? l.key.split('|')[0] : '', inMap = !!ZONE_SCENE[zone];
-    return `<button type="button" class="res" data-i="${i}"><span class="c">${esc(l.code)} · ${nf(l.qty)} ชิ้น${l.low && l.qty > 0 ? ' · ! ต้องเติม' : ''}</span><span>${esc(it.sku)}</span><span class="n">${esc(it.name)}${inMap ? '' : ' · ไม่อยู่ในผัง'}</span></button>`; }).join('');
+    return `<button type="button" class="res${i === 0 && inMap ? ' best' : ''}" data-i="${i}"><span class="c">${esc(l.code)} · ${nf(l.qty)} ชิ้น ${l.low && l.qty > 0 ? '<span class="pill ask">! ต้องเติม</span>' : ''}</span><span>${esc(it.sku)}</span><span class="n">${esc(it.name)}</span>${inMap ? '' : '<span class="tag">สต็อกสำรอง · ไม่ใช่ช่องหยิบในผัง</span>'}</button>`; }).join('');
   out.querySelectorAll('.res').forEach(b => b.onclick = () => goTo(hits[+b.dataset.i]));
-  if (hits.length === 1) goTo(hits[0]);
+  if (hits.length && (hits.length === 1 || inMapOf(hits[0]))) goTo(hits[0]);   // fly to the best pick slot right away
 }
 function goTo(l) {
   const zone = l.key ? l.key.split('|')[0] : '', target = ZONE_SCENE[zone];
@@ -1416,6 +1510,10 @@ function goTo(l) {
   else { selected = { code: l.code, loc: l, status: l.qty > 0 ? 'stock' : 'empty', orphan: true, flag: 'ไม่ได้วาดในผัง' }; renderSel(); selBox.visible = false; }
 }
 document.getElementById('searchForm').onsubmit = e => { e.preventDefault(); search(document.getElementById('q').value); };
+document.getElementById('q').addEventListener('search', e => { if (!e.target.value) search(''); });      // the input's own × clears the result
+document.getElementById('moreBtn').onclick = e => { const on = document.body.classList.toggle('tools-open'); e.currentTarget.setAttribute('aria-expanded', on); };
+document.getElementById('legend').addEventListener('click', e => { if (!e.target.closest('.lg-toggle')) return; const lg = e.currentTarget; lg.classList.toggle('open'); e.target.setAttribute('aria-expanded', lg.classList.contains('open')); });
+addEventListener('keydown', e => { if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') { e.preventDefault(); document.getElementById('q').focus(); } });
 
 /* ---------- stock in: Google Sheet DB_LOCATION_CURRENT (main) or an uploaded สต็อกตำแหน่ง export (fallback).
    Both: DryRun -> confirm -> replace snapshot -> redraw ---------- */
@@ -1467,6 +1565,18 @@ function loadXlsx() {
   if (window.XLSX) return Promise.resolve();
   return new Promise((ok, bad) => { const s = document.createElement('script'); s.src = '/tools/receiving/xlsx.full.min.js'; s.onload = ok; s.onerror = () => bad(Error('โหลดตัวสร้าง Excel ไม่สำเร็จ')); document.head.append(s); });
 }
+document.getElementById('refillXlsx').onclick = async e => {
+  const btn = e.currentTarget; btn.disabled = true;
+  try {
+    await loadXlsx();
+    const rows = refillRows(null).map(r => ({ ชั้น: SCENES[r.scene].short, สถานะ: r.out ? 'หมด' : 'ต่ำกว่าขั้นต่ำ', ช่องหยิบ: r.l.code, SKU: r.it.sku, ชื่อสินค้า: r.it.name, คงเหลือ: r.it.qty, ขั้นต่ำ: r.it.min ?? '', สูงสุด: r.it.max ?? '', ต้องเติม: r.fill,
+      เอาของจาก: r.src.length ? r.src.slice(0, 3).map(x => `${x.code} (${x.qty})`).join(', ') : 'ไม่มีของสำรองในคลังนี้ · ต้องโอนหรือสั่งเพิ่ม' }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ หมายเหตุ: 'ไม่มีรายการ' }]), 'ต้องเติมวันนี้');
+    XLSX.writeFile(wb, `ต้องเติมวันนี้_${(DATA.asof || 'ไม่มีข้อมูล').replace(/[: ]/g, '-')}.xlsx`);
+  } catch (err) { alert(err.message); }
+  finally { btn.disabled = false; }
+};
 document.getElementById('exportBtn').onclick = async () => {
   const btn = document.getElementById('exportBtn'); btn.disabled = true;
   try {
@@ -1509,7 +1619,7 @@ function updateHover() {
 /* ---------- loop ---------- */
 function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 let first = true;
-new ResizeObserver(() => { resize(); if (S && first) { first = false; setView('iso'); } }).observe(stage); resize();
+new ResizeObserver(() => { resize(); if (S && first) { first = false; setView(matchMedia('(max-width:860px)').matches ? 'top' : 'iso'); } }).observe(stage); resize();
 const v3 = new THREE.Vector3();
 function loop() {
   requestAnimationFrame(loop);
@@ -1517,8 +1627,13 @@ function loop() {
   controls.update();
   const w = stage.clientWidth, h = stage.clientHeight;
   const close = camera.position.distanceTo(controls.target) < S.baseDist * 0.55;
-  S.labels.forEach(l => { v3.copy(l.pos).project(camera); const vis = v3.z < 1 && Math.abs(v3.x) < 1.1 && Math.abs(v3.y) < 1.1 && (close || !l.cls.includes('small'));
-    l.el.style.display = vis ? '' : 'none'; if (vis) l.el.style.transform = `translate(-50%,-50%) translate(${(v3.x * .5 + .5) * w}px,${(-v3.y * .5 + .5) * h}px)`; });
+  const placed = [];
+  S.labelsByPrio.forEach(l => { v3.copy(l.pos).project(camera); let vis = v3.z < 1 && Math.abs(v3.x) < 1.1 && Math.abs(v3.y) < 1.1 && (close || !l.cls.includes('small'));
+    const px = (v3.x * .5 + .5) * w, py = (-v3.y * .5 + .5) * h;
+    if (vis) { if (!l.bw) { l.el.style.display = ''; l.bw = l.el.offsetWidth / 2 + 2; l.bh = l.el.offsetHeight / 2 + 1; }
+      const r = [px - l.bw, py - l.bh, px + l.bw, py + l.bh];
+      if (placed.some(p => r[0] < p[2] && r[2] > p[0] && r[1] < p[3] && r[3] > p[1])) vis = false; else placed.push(r); }
+    l.el.style.display = vis ? '' : 'none'; if (vis) l.el.style.transform = `translate(-50%,-50%) translate(${px}px,${py}px)`; });
   updateHover();
   renderer.render(S.scene, camera);
 }
