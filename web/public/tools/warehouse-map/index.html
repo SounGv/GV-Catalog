@@ -511,13 +511,6 @@ function checkStops(name, id, mainZ) {
     return [{ x: ax, z: mainZ, info }, { x: ax, z: az, wait: 5, task: 'check', info, reachY: s.y + .15, face: Math.atan2(-nx, -s.nz) }, { x: ax, z: mainZ }];
   });
 }
-/* the slots below their minimum, in walking order, shared out between the floor's staff */
-function refillStops(crew) {
-  const stops = S.slots.filter(s => !s.orphan && s.loc && isLow(s)).sort((a, b) => a.x - b.x || a.z - b.z);
-  const per = crew.map(() => []);
-  stops.forEach((s, i) => per[i % crew.length].push(s));
-  return per.map(l => l.slice(0, PER_PERSON));
-}
 const routeTime = route => route.reduce((T, a, i) => { const b = route[(i + 1) % route.length]; return T + (a.wait || 0) + Math.hypot(b.x - a.x, b.z - a.z) / 1.1; }, 0);
 /* One round per floor: load at the lift, push the trolley to the floor entrance, unload the cartons onto the floor,
    everyone bends down and counts them, then each person carries one carton at a time to a slot below its minimum
@@ -526,8 +519,10 @@ function addWalkers(id) {
   const paths = PATROL[id]; if (!paths) return;
   const names = STAFF.filter(x => x.scene === id).map(x => x.name);
   const crew = names.length ? names : (id === 'fantech' ? ['พนักงาน'] : ['พนักงาน', 'พนักงาน']);
-  const stops = refillStops(crew), N = stops.reduce((a, l) => a + l.length, 0);
-  if (!N || !LIFT_DOOR[id]) {                          // nothing to refill: assigned checks, else the inspection round
+  /* every slot below its minimum, in walking order; each round takes the next PER_PERSON cartons per person,
+     so the crew works through all of them before the loop starts over */
+  const allStops = S.slots.filter(s => !s.orphan && s.loc && isLow(s)).sort((a, b) => a.x - b.x || a.z - b.z);
+  if (!allStops.length || !LIFT_DOOR[id]) {            // nothing to refill: assigned checks, else the inspection round
     crew.forEach((name, n) => {
       const checks = checkStops(name, id, px(MAIN_Z[id] ?? 250));
       walker(name, checks.length ? checks : paths[n % paths.length].map(([x, z]) => ({ x: px(x), z: px(z) })), n);
@@ -538,51 +533,61 @@ function addWalkers(id) {
   const stack = { x: stage.x + 1.1, z: stage.z };       // floor spot for the unloaded cartons
   const around = n => { const ang = Math.PI * (.6 + .55 * n); return { x: stack.x + Math.cos(ang) * .75, z: stack.z + Math.sin(ang) * .75 }; };
   const faceTo = (p, q) => Math.atan2(q.x - p.x, q.z - p.z);
-  const LOAD = 4, UNLOAD = 2.5 + .45 * N, COUNT = 5 + .3 * N;
   const p0 = { x: stage.x + .2, z: stage.z - .8 };        // where the first person stops the trolley
-  const arrive = LOAD + Math.hypot(p0.x - lift.x, p0.z - lift.z) / 1.1;
-  const refilled = new Set(stops.flat().map(s => s.code)), seed = seeded(new Date().toLocaleDateString('sv-SE') + id);
-  const countPool = mixPick(S.slots.filter(s => !s.orphan && s.loc && !refilled.has(s.code) && countRank(s.loc) <= 2), s => countRank(s.loc), seed,
-    [crew.length, crew.length, crew.length], crew.length * 3);   // per person: one sold out, one below minimum, one close to it
-  const countStops = crew.map((_, n) => countPool.filter((_, i) => i % crew.length === n).sort((a, b) => a.x - b.x));
-  const routes = crew.map((_, n) => {
-    const me = around(n), r = [];
-    if (n === 0) r.push({ x: lift.x, z: lift.z, wait: LOAD, task: 'load', push: true, face: faceTo(lift, stage) },
-                        { x: p0.x, z: p0.z, wait: UNLOAD, task: 'unload', face: faceTo(p0, stack) });
-    else r.push({ x: me.x, z: me.z, wait: arrive + UNLOAD, task: 'idle', face: faceTo(me, stack) });
-    r.push({ x: me.x, z: me.z, wait: COUNT, task: 'count', face: faceTo(me, stack) });
-    const checks = checkStops(crew[n], id, mainZ);     // jobs handed to this person come first, then the cartons
-    if (checks.length) r.push(...checks, { x: me.x, z: me.z });
-    stops[n].forEach(s => {                            // one carton per trip: stack -> main aisle -> slot -> back
-      const out = s.ext ? s.ext / 2 + .45 : .6, nx = s.nx || (s.ext ? 0 : 1), ax = s.x + nx * out, az = s.z + s.nz * out;
-      const it = (s.loc.items || []).find(i => i.min > 0 && i.qty < i.min) || s.loc.items?.[0] || { sku: s.loc.sku };
-      const info = `${it.sku} → ${s.code}`;
-      r.push({ x: me.x, z: me.z, carry: true, pickup: true, info }, { x: ax, z: mainZ, carry: true, info },
-             { x: ax, z: az, wait: 3.5, task: 'refill', info, reachY: s.y + .15, face: Math.atan2(-nx, -s.nz) }, { x: ax, z: mainZ });
+  const LOAD = 4, toEntrance = Math.hypot(p0.x - lift.x, p0.z - lift.z) / 1.1, arrive = LOAD + toEntrance;
+  const stopAt = s => { const out = s.ext ? s.ext / 2 + .45 : .6, nx = s.nx || (s.ext ? 0 : 1); return { ax: s.x + nx * out, az: s.z + s.nz * out, face: Math.atan2(-nx, -s.nz) }; };
+  const perRound = crew.length * PER_PERSON, rounds = [];
+  for (let i = 0; i < allStops.length && rounds.length < 30; i += perRound) rounds.push(allStops.slice(i, i + perRound));
+  const seed = seeded(new Date().toLocaleDateString('sv-SE') + id), counted = new Set(), refilledAll = new Set(allStops.map(s => s.code));
+  const countCands = S.slots.filter(s => !s.orphan && s.loc && !refilledAll.has(s.code) && countRank(s.loc) <= 2);
+  const routes = crew.map(() => []), info = [];          // info[k] = { start, N, unload } for the carton counts of round k
+  let start = 0;
+  rounds.forEach((list, k) => {
+    const N = list.length, UNLOAD = 2.5 + .45 * N, COUNT = 5 + .3 * N;
+    const mine = crew.map((_, n) => list.filter((_, i) => i % crew.length === n));
+    const pool = mixPick(countCands.filter(s => !counted.has(s.code)), s => countRank(s.loc), seed, [crew.length, crew.length, crew.length], crew.length * 3);
+    pool.forEach(s => counted.add(s.code));
+    const seg = crew.map((_, n) => {
+      const me = around(n), r = [];
+      if (n === 0) r.push({ x: lift.x, z: lift.z, wait: LOAD, task: 'load', push: true, face: faceTo(lift, stage) },
+                          { x: p0.x, z: p0.z, wait: UNLOAD, task: 'unload', face: faceTo(p0, stack) });
+      else r.push({ x: me.x, z: me.z, wait: arrive + UNLOAD, task: 'idle', face: faceTo(me, stack) });
+      r.push({ x: me.x, z: me.z, wait: COUNT, task: 'count', face: faceTo(me, stack) });
+      if (k === 0) { const checks = checkStops(crew[n], id, mainZ); if (checks.length) r.push(...checks, { x: me.x, z: me.z }); }   // handed-out jobs first
+      mine[n].forEach(s => {                           // one carton per trip: stack -> main aisle -> slot -> back
+        const { ax, az, face } = stopAt(s);
+        const it = (s.loc.items || []).find(i => i.min > 0 && i.qty < i.min) || s.loc.items?.[0] || { sku: s.loc.sku };
+        const tag = `${it.sku} → ${s.code}`;
+        r.push({ x: me.x, z: me.z, carry: true, pickup: true, info: tag }, { x: ax, z: mainZ, carry: true, info: tag },
+               { x: ax, z: az, wait: 3.5, task: 'refill', info: tag, reachY: s.y + .15, face }, { x: ax, z: mainZ });
+      });
+      pool.filter((_, i) => i % crew.length === n).sort((a, b) => a.x - b.x).forEach(s => {   // then spot-count slots likely to need stock
+        const { ax, az, face } = stopAt(s), tag = `สุ่มนับ ${s.loc.items?.[0]?.sku || s.loc.sku} → ${s.code}`;
+        r.push({ x: ax, z: mainZ, info: tag }, { x: ax, z: az, wait: 4, task: 'check', info: tag, reachY: s.y + .15, face }, { x: ax, z: mainZ });
+      });
+      r.push({ x: me.x, z: me.z });
+      if (n === 0) r.push({ x: p0.x, z: p0.z, push: true });   // fetch the empty trolley and push it back to the lift
+      return r;
     });
-    countStops[n].forEach(s => {                       // all cartons in: spot-count the slots most likely to need stock
-      const out = s.ext ? s.ext / 2 + .45 : .6, nx = s.nx || (s.ext ? 0 : 1), ax = s.x + nx * out, az = s.z + s.nz * out;
-      const info = `สุ่มนับ ${s.loc.items?.[0]?.sku || s.loc.sku} → ${s.code}`;
-      r.push({ x: ax, z: mainZ, info }, { x: ax, z: az, wait: 4, task: 'check', info, reachY: s.y + .15, face: Math.atan2(-nx, -s.nz) }, { x: ax, z: mainZ });
-    });
-    r.push({ x: me.x, z: me.z });
-    return r;
+    /* everyone's segment ends at the same moment, so the next round starts together */
+    const segTime = r => r.reduce((T, a, i) => { const b = r[i + 1] || (r === seg[0] ? { x: lift.x, z: lift.z } : around(seg.indexOf(r))); return T + (a.wait || 0) + Math.hypot(b.x - a.x, b.z - a.z) / 1.1; }, 0);
+    const T = Math.max(...seg.map(segTime));
+    seg.forEach((r, n) => { const i = n ? r.length - 1 : r.length - 2; r[i].wait = (r[i].wait || 0) + T - segTime(r); r[i].task = 'idle'; r[i].face = faceTo(r[i], stack); routes[n].push(...r); });
+    info.push({ start, N, UNLOAD }); start += T;
   });
-  routes[0].push({ x: p0.x, z: p0.z, push: true });     // fetch the empty trolley and push it back to the lift
-  const T = Math.max(...routes.map(routeTime));
-  routes.forEach((r, n) => { const i = n ? r.length - 1 : r.length - 2; r[i].wait = (r[i].wait || 0) + T - routeTime(r); r[i].task = 'idle'; r[i].face = faceTo(r[i], stack); });
+  const total = start;
   const tr = makeTrolley(), stackBoxes = makeStack(stack.x, stack.z);
   const floor = { trolley: tr.g, park: { x: p0.x + Math.sin(faceTo(lift, p0)) * .75, z: p0.z + Math.cos(faceTo(lift, p0)) * .75, face: faceTo(lift, p0) } };
   const timelines = crew.map((name, n) => walker(name, routes[n], n, floor));
-  /* carton counts on the trolley and on the floor follow the timeline: loaded at the lift, unloaded, then picked up one by one */
+  /* carton counts on the trolley and on the floor follow the round in progress: loaded, unloaded, picked up one by one */
   const pickups = timelines.flatMap(tl => tl.legs.filter(l => !l.wait && l.a.pickup).map(l => l.t0)).sort((a, b) => a - b);
-  const vis = (boxes, n) => boxes.forEach((b, i) => { b.visible = i < Math.round(Math.min(n, N) / N * Math.min(N, boxes.length)); });
+  const vis = (boxes, n, N) => boxes.forEach((b, i) => { b.visible = i < Math.round(Math.min(n, N) / N * Math.min(N, boxes.length)); });
   S.anim.push(t => {
-    const tt = (t % T + T) % T, unloadT0 = arrive, unloadT1 = arrive + UNLOAD;
-    const onTrolley = tt < LOAD ? N * tt / LOAD : tt < unloadT0 ? N : tt < unloadT1 ? N * (1 - (tt - unloadT0) / UNLOAD) : 0;
-    const taken = pickups.filter(p => p <= tt).length;
-    const onFloor = tt < unloadT0 ? 0 : tt < unloadT1 ? N * (tt - unloadT0) / UNLOAD : N - taken;
-    vis(tr.boxes, onTrolley); vis(stackBoxes, onFloor);
+    const tt = (t % total + total) % total, k = info.findLastIndex(r => r.start <= tt), { start: s0, N, UNLOAD } = info[Math.max(k, 0)], lt = tt - s0;
+    const onTrolley = lt < LOAD ? N * lt / LOAD : lt < arrive ? N : lt < arrive + UNLOAD ? N * (1 - (lt - arrive) / UNLOAD) : 0;
+    const taken = pickups.filter(p => p >= s0 && p <= tt).length;
+    const onFloor = lt < arrive ? 0 : lt < arrive + UNLOAD ? N * (lt - arrive) / UNLOAD : N - taken;
+    vis(tr.boxes, onTrolley, N); vis(stackBoxes, onFloor, N);
   });
 }
 function hangSign(text, x, z, lift = 0) {
