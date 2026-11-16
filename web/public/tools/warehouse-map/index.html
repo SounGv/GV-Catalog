@@ -61,7 +61,17 @@ main{flex:1;display:flex;min-height:0}
 #tip .n{color:var(--on-inverse-muted);font-size:12px}
 #hint{position:absolute;right:12px;bottom:12px;font-size:12px;color:#39424a;background:rgba(255,255,255,.8);padding:2px 10px;border-radius:var(--radius-chip);z-index:2}
 aside{width:380px;max-width:42vw;background:var(--surface);border-left:1px solid var(--border);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
-aside h2{font-size:15px;margin:0 0 6px;font-weight:600}
+aside h2{font-size:16px;margin:0;font-weight:700}
+.side-head .note{margin-top:2px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--surface-sunken);border-radius:var(--radius-control);padding:4px;position:sticky;top:-16px;z-index:2}
+.seg button{min-height:40px;border:0;border-radius:8px;background:transparent;color:var(--muted-foreground);font-weight:600;font-size:14px;position:relative}
+.seg button[aria-selected=true]{background:var(--surface);color:var(--navy);box-shadow:0 1px 3px rgba(24,54,76,.18)}
+.seg .dot{position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--lime);border:1.5px solid var(--navy)}
+.pane{display:flex;flex-direction:column;gap:14px}
+.pane[hidden]{display:none}
+.sub{font-size:14px;font-weight:700;margin:0 0 8px;color:var(--navy)}
+.finds{display:flex;flex-direction:column;gap:8px}
+.linkbtn{border:0;background:none;color:var(--primary);font-weight:600;font-size:13px;padding:0;min-height:32px;text-decoration:underline;text-underline-offset:3px}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .kpi{border:1px solid var(--border);border-radius:var(--radius-card);padding:8px 12px;background:var(--surface)}
 .kpi.dark{background:var(--navy);color:#fff;border-color:var(--navy)}
@@ -117,6 +127,7 @@ header a.gv-back{margin:0!important}
 .name button{border:0;background:transparent;color:var(--muted-foreground);min-width:28px;min-height:28px;border-radius:50%}
 .name button:hover{background:#fff;color:var(--danger)}
 .addname{display:flex;gap:6px;margin-top:8px}
+.addname[hidden]{display:none}
 .addname input{flex:1;min-width:0;min-height:40px;padding:0 10px;border:1px solid var(--border-strong);border-radius:var(--radius-control);font:inherit}
 .msg{font-size:13px}.msg.bad{color:var(--danger)}.msg.ok{color:var(--success)}
 #empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:4;background:rgba(245,246,247,.9);padding:16px;text-align:center}
@@ -178,13 +189,24 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
     <div id="empty"><div class="box"><h2>ยังไม่มีข้อมูลสต็อก</h2><p>กด <b>ซิงค์สต็อกจาก BigSeller</b> ด้านบน (ดึงจาก Google Sheet ที่อัปเดตจาก BigSeller) หรืออัปไฟล์ “สต็อกตำแหน่ง” ที่ส่งออกจาก BigSeller</p></div></div>
   </section>
   <aside>
-    <div id="searchBox" hidden><h2 id="resTitle">ผลค้นหา</h2><div class="results" id="results"></div></div>
-    <div><h2 id="sceneTitle"></h2><div class="note" id="sceneNote"></div></div>
-    <div class="kpis" id="kpis"></div>
-    <div><h2>ทีมดูแลชั้น · งานเติมสต็อก</h2><div id="team" class="team"></div></div>
-    <div><h2>ช่องที่เลือก</h2><div class="sel" id="sel"><span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span></div></div>
-    <div><h2>เทียบผังกับข้อมูล</h2><div id="finds" style="display:flex;flex-direction:column;gap:8px"></div></div>
-    <div class="note" id="foot"></div>
+    <div class="side-head"><h2 id="sceneTitle"></h2><div class="note" id="sceneNote"></div></div>
+    <div class="seg" role="tablist" aria-label="แถบข้อมูล">
+      <button type="button" role="tab" data-pane="over" aria-selected="true">ภาพรวม</button>
+      <button type="button" role="tab" data-pane="slot" aria-selected="false">ช่อง / ค้นหา<span class="dot" id="slotDot" hidden></span></button>
+      <button type="button" role="tab" data-pane="check" aria-selected="false">ตรวจผัง</button>
+    </div>
+    <section class="pane" data-pane="over">
+      <div class="kpis" id="kpis"></div>
+      <div><h3 class="sub">ทีมดูแลชั้น · งานเติมสต็อก</h3><div id="team" class="team"></div></div>
+    </section>
+    <section class="pane" data-pane="slot" hidden>
+      <div id="searchBox" hidden><h3 class="sub" id="resTitle">ผลค้นหา</h3><div class="results" id="results"></div></div>
+      <div><h3 class="sub">ช่องที่เลือก</h3><div class="sel" id="sel"><span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span></div></div>
+    </section>
+    <section class="pane" data-pane="check" hidden>
+      <div id="finds" class="finds"></div>
+      <div class="note" id="foot"></div>
+    </section>
   </aside>
 </main>
 <script src="../shared/back-link.js"></script>
@@ -305,7 +327,34 @@ function newScene(bounds) {
   }, patch: new Inst(new THREE.MeshStandardMaterial({ roughness: .95 }), false) };
 }
 
-function label(text, x, y, z, cls = '') { S.labels.push({ text, cls, pos: new THREE.Vector3(x, y, z) }); }
+function label(text, x, y, z, cls = '') {
+  if (cls === 'row') return hangSign(text, x, z);          // row names are real hanging boards, like the signs on site
+  S.labels.push({ text, cls, pos: new THREE.Vector3(x, y, z) });
+}
+/* ---------- hanging row sign: white board with the row code, hung on two wires from the ceiling ---------- */
+const signTex = new Map();                                    // text -> { tex, aspect }, kept across rebuilds
+function signTexture(text) {
+  if (signTex.has(text)) return signTex.get(text);
+  const H = 128, pad = 34, c = document.createElement('canvas'), g = c.getContext('2d');
+  const font = '700 72px Sarabun, "Segoe UI", sans-serif';
+  g.font = font; const W = Math.ceil(g.measureText(text).width + pad * 2);
+  c.width = W; c.height = H; g.font = font;
+  g.fillStyle = '#ffffff'; g.strokeStyle = '#18364c'; g.lineWidth = 8;
+  g.beginPath(); g.roundRect(4, 4, W - 8, H - 8, 14); g.fill(); g.stroke();
+  g.fillStyle = '#18364c'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, W / 2, H / 2 + 4);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const v = { tex, aspect: W / H }; signTex.set(text, v); return v;
+}
+const SIGN_Y = 3.15, CEIL = 4.3, wireMat = new THREE.MeshStandardMaterial({ color: 0x6b7178, roughness: .6 });
+function hangSign(text, x, z) {
+  const { tex, aspect } = signTexture(text), h = .42, w = h * aspect;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
+  sp.scale.set(w, h, 1); sp.position.set(x, SIGN_Y, z); sp.userData.sign = true; S.scene.add(sp);
+  for (const dx of [-w * .35, w * .35]) {                    // the two wires the board hangs on
+    const wire = new THREE.Mesh(box, wireMat); wire.scale.set(.012, CEIL - SIGN_Y - h / 2, .012);
+    wire.position.set(x + dx, (CEIL + SIGN_Y + h / 2) / 2, z); S.scene.add(wire);
+  }
+}
 function paint(x0, y0, x1, y1, color, h = 0.03) { S.patch.add(mat4(px((x0 + x1) / 2), h / 2, px((y0 + y1) / 2), px(x1 - x0), h, px(y1 - y0)), color); }
 function solid(x0, y0, x1, y1, h, color, y = 0, mat) {
   const m = new THREE.Mesh(box, mat || new THREE.MeshStandardMaterial({ color, roughness: .85 }));
@@ -546,7 +595,7 @@ const SCENES = {
       [1, 2, 3].forEach((bay, r) => {
         const xa = ROW_X[bay], xb = xa + ROW_W - 1.5;
         for (let k = 1; k <= 11; k++) floorSpot(xa, SZ0 + (k - 1) * SL, xb, SZ0 + k * SL - 1.2, `02U|${bay}|${k}`, `02U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}`);
-        label('02U-' + String(bay).padStart(2, '0'), px((xa + xb) / 2), 2.4, px(SZ1 + 8 + (bay === 3 ? 7 : 0)), 'row');
+        label('02U-' + String(bay).padStart(2, '0'), px((xa + xb) / 2), 2.4, px(bay === 3 ? SZ0 - 6 : SZ1 + 8), 'row');   // 02U-02 and 02U-03 sit back to back: their signs hang at opposite ends
       });
       label('02U · พื้นวางกองชิดกำแพง ใกล้ลิฟท์', px(352), 3.3, px(SZ0 - 10), 'zone');
     },
@@ -789,12 +838,13 @@ function renderTeam() {
   const busiest = work('ugreen') === work('fantech') ? '' : work('ugreen') > work('fantech') ? 'ugreen' : 'fantech';
   el.innerHTML = floors.map(([id, title, planned]) => {
     const names = STAFF.filter(x => x.scene === id);
-    return `<div class="floor${busiest === id ? ' busy' : ''}"><div class="hd"><span>${title}${id === sceneId ? ' · ผังที่เปิดอยู่' : ''}</span><span class="note">ดูแล ${names.length || planned} คน</span></div>
+    return `<div class="floor${busiest === id ? ' busy' : ''}"><div class="hd"><span>${title}${busiest === id ? ' <span class="pill ask">! งานเยอะ ช่วยกันที่นี่</span>' : ''}</span><span class="note">ดูแล ${names.length || planned} คน</span></div>
       <div class="ct"><span>! ต้องเติม <b>${nf(w[id].low)}</b></span><span>✗ หมด <b>${nf(w[id].out)}</b></span><span>○ ว่าง <b>${nf(w[id].free)}</b> ช่อง</span></div>
-      ${busiest === id ? '<div class="note" style="color:var(--warning);font-weight:600;margin-top:4px">งานเติมเยอะกว่า — ให้ทีมลงช่วยกันชั้นนี้ก่อน</div>' : ''}
       <div class="names">${names.length ? names.map(n => `<span class="name">${esc(n.name)}<button type="button" data-del="${esc(n.id)}" aria-label="เอา ${esc(n.name)} ออก">×</button></span>`).join('') : `<span class="note">ยังไม่ใส่ชื่อ (วางไว้ ${planned} คน)</span>`}</div>
-      <form class="addname" data-add="${id}"><input name="n" maxlength="40" placeholder="ชื่อพนักงานที่ดูแลชั้นนี้" aria-label="ชื่อพนักงานที่ดูแล ${title}"><button class="btn sm" type="submit">เพิ่ม</button></form></div>`;
-  }).join('') + '<div class="note">ทีมคลัง 3 คน: ชั้น 3 Ugreen 2 คน · FANTECH 1 คน — ตรวจนับและเติมของให้เต็มช่อง ชั้นไหนงานเติมเยอะ ทั้ง 3 คนลงช่วยกัน · ชื่อที่ใส่ ทุกคนที่เปิดหน้านี้เห็น</div>';
+      <button type="button" class="linkbtn" data-open="${id}">+ เพิ่มชื่อ</button>
+      <form class="addname" data-add="${id}" hidden><input name="n" maxlength="40" placeholder="ชื่อพนักงานที่ดูแลชั้นนี้" aria-label="ชื่อพนักงานที่ดูแล ${title}"><button class="btn sm" type="submit">เพิ่ม</button></form></div>`;
+  }).join('') + '<div class="note">ทีมคลัง 3 คน ตรวจนับและเติมของให้เต็มช่อง ชั้นไหนงานเยอะลงช่วยกัน · ชื่อที่ใส่ ทุกคนที่เปิดหน้านี้เห็น</div>';
+  el.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { const f = el.querySelector(`[data-add=${b.dataset.open}]`); f.hidden = false; b.hidden = true; f.n.focus(); });
   el.querySelectorAll('[data-add]').forEach(f => f.onsubmit = async e => {
     e.preventDefault(); const name = f.n.value.trim(); if (!name) return;
     const res = await fetch('/api/warehouse/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scene: f.dataset.add, name }) });
@@ -824,6 +874,12 @@ function renderSide() {
     `<div class="find"><div class="t"><span class="pill ${k}">${lab[k]}</span>${t}</div><div class="d">${a}</div><div class="d">${b}</div></div>`).join('');
   document.getElementById('foot').innerHTML = (DATA.locs.length ? `ข้อมูลสต็อก ณ ${esc(DATA.asof)} จากไฟล์ ${esc(DATA.file)} · ${nf(F.rows)} แถว · ${nf(F.locations)} ตำแหน่ง` : 'ยังไม่มีข้อมูลสต็อก — กด อัปไฟล์สต็อกตำแหน่ง') + ' · ขนาดและตำแหน่งในผัง 3D ประมาณจากภาพผัง ไม่ใช่สเกลหน้างาน';
 }
+function showPane(id) {
+  document.querySelectorAll('.seg [data-pane]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.pane === id)));
+  document.querySelectorAll('section.pane').forEach(p => { p.hidden = p.dataset.pane !== id; });
+  if (id === 'slot') document.getElementById('slotDot').hidden = true;
+}
+document.querySelectorAll('.seg [data-pane]').forEach(b => b.onclick = () => showPane(b.dataset.pane));
 function renderSel() {
   const el = document.getElementById('sel');
   if (!selected) { el.innerHTML = '<span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span>'; return; }
@@ -893,6 +949,7 @@ renderer.domElement.addEventListener('pointerleave', () => { pointer = null; });
 renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', e => { if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 5) select(pick()); });
 function select(s, focus = false) {
+  if (s) showPane('slot');
   selected = s; renderSel();
   if (!s) { selBox.visible = false; return; }
   const h = Math.max(s.h, .06);
@@ -911,7 +968,7 @@ function search(qRaw) {
   if (!q) { box.hidden = true; return; }
   const hits = DATA.locs.filter(l => l.code.toUpperCase().includes(q) || (l.items || []).some(it => it.sku.toUpperCase().includes(q) || (it.gtin || '') === q || it.name.toUpperCase().includes(q)))
     .sort((a, b) => (b.qty > 0) - (a.qty > 0) || b.qty - a.qty).slice(0, 30);
-  box.hidden = false;
+  box.hidden = false; showPane('slot');
   document.getElementById('resTitle').textContent = hits.length ? `ผลค้นหา “${qRaw.trim()}” · ${hits.length >= 30 ? '30+' : hits.length} ตำแหน่ง` : `ไม่พบ “${qRaw.trim()}” ในไฟล์สต็อกตำแหน่ง`;
   out.innerHTML = hits.map((l, i) => { const it = (l.items || []).find(x => x.sku.toUpperCase().includes(q) || (x.gtin || '') === q) || l.items?.[0] || { sku: l.sku, name: l.name };
     const zone = l.key ? l.key.split('|')[0] : '', inMap = !!ZONE_SCENE[zone];
@@ -1033,6 +1090,7 @@ function loop() {
   updateHover();
   renderer.render(S.scene, camera);
 }
+try { await document.fonts.load('700 72px Sarabun'); } catch { /* sign text falls back to Segoe UI */ }
 buildActive(); loop();
 window.__wh = { camera, controls, get S() { return S; }, setScene: id => document.querySelector(`.tab[data-id=${id}]`).click(), setMode: id => document.querySelector(`.chip[data-id=${id}]`).click() };
 </script>
