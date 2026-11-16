@@ -517,21 +517,17 @@ const SCENES = {
           codeAt: (l, p) => l === 0 ? { key: `01U|${bay}|${p + 1}`, code: `01U-${bay}-${String(p + 1).padStart(2, '0')}` } : null });
         label('01U-' + bay, px((a + b) / 2), 2.6, px(265), 'zone');
       });
-      /* U01: drawn on the map, no codes in the data -> ghost */
-      [[312, 326], [326, 341]].forEach(([a, b]) => addBay({ cx: px((a + b) / 2), cz: px(332), len: px(100), dep: px(b - a - 2), axis: 'z', levels: 3, ghost: true }));
-      label('U01', px(326), 2.2, px(392), 'small');
-      /* 02U next to the goods lift: not a rack but a floor stacking area. Yellow tape marks the spots on the floor
-         (spot number taped on the floor, e.g. 01-04) and a sign over each row (02U-01, 02U-02 ...) lists spots 1-11.
-         The stacks stand against the building wall below the stair/lift room: 3 rows parallel to the wall, 02U-01 on
-         the wall (its sign hangs deepest in the photo), 02U-02 and 02U-03 in front; 11 spots per row along the wall.
-         Cartons stack straight on the floor, stack height follows the quantity. */
-      const WALL_Z = 452, ROW_D = 19, SX0 = 176, SX1 = 310, SW = (SX1 - SX0) / 11;
+      /* 02U, next to the goods lift where the map draws U01/U02: not a rack but a floor stacking area. Yellow tape
+         marks the spots (spot number taped on the floor, e.g. 01-04) and a sign over each row (02U-01, 02U-02 ...) lists
+         spots 1-11. 3 rows run along the wall of the stair/lift room, 02U-01 on the wall (its sign hangs deepest in the
+         photo), 02U-02 and 02U-03 in front; 11 spots per row. Cartons stack on the floor, height follows the quantity. */
+      const WALL_X = 314, ROW_W = 16, SZ0 = 282, SZ1 = 382, SL = (SZ1 - SZ0) / 11;
       [1, 2, 3].forEach((bay, r) => {
-        const zb = WALL_Z - r * ROW_D, za = zb - ROW_D + 3;
-        for (let k = 1; k <= 11; k++) floorSpot(SX0 + (k - 1) * SW, za, SX0 + k * SW - 1.5, zb, `02U|${bay}|${k}`, `02U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}`);
-        label('02U-' + String(bay).padStart(2, '0'), px(SX1 + 9), 1.2, px((za + zb) / 2), 'small');
+        const xa = WALL_X + r * ROW_W, xb = xa + ROW_W - 2.5;
+        for (let k = 1; k <= 11; k++) floorSpot(xa, SZ0 + (k - 1) * SL, xb, SZ0 + k * SL - 1.2, `02U|${bay}|${k}`, `02U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}`);
+        label('02U-' + String(bay).padStart(2, '0'), px((xa + xb) / 2), 2.4, px(SZ1 + 8 + r * 7), 'small');
       });
-      label('02U · พื้นวางกองชิดกำแพง ใกล้ลิฟท์', px((SX0 + SX1) / 2), 3.3, px(WALL_Z - ROW_D * 3 - 8), 'zone');
+      label('02U · พื้นวางกองชิดกำแพง ใกล้ลิฟท์', px(WALL_X + ROW_W * 1.5), 3.3, px(SZ0 - 10), 'zone');
     },
     finds() {
       const miss3b = 560 - F['3B'].codes;
