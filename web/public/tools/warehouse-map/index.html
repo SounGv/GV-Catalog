@@ -471,25 +471,25 @@ const SCENES = {
       walls(171, 135, 312, 238, 1.2); paint(171, 135, 241, 238, 0xefe3cf, .02); paint(241, 135, 312, 238, 0xdde8d3, .02);
       label('รถเข็น', px(206), 1.8, px(190), 'small'); label('ตะกร้า', px(276), 1.8, px(190), 'small');
       /* best-seller banner + marks */
-      paint(449, 114, 827, 135, 0xffe600, .04); label('ขายดีลองลงมา', px(638), 1.0, px(124), 'hot');
-      paint(425, 385, 449, 405, 0xffe600, .04); label('ขายดี', px(437), 1.0, px(396), 'hot');
-      /* upper ghost row: 9 cells x 2 numbered columns = 18, no codes in the stock file */
+      paint(449, 192, 827, 200, 0xffe600, .04); label('ขายดีลองลงมา', px(638), 1.0, px(196), 'hot');
+      paint(425, 300, 449, 316, 0xffe600, .04); label('ขายดี', px(437), 1.0, px(308), 'hot');
       /* Upper row 01U-01..19 runs the whole back wall, from the stair/lift block to the right end wall (checked on site):
          10 equal cells; cells 1-9 hold a rack on both edges facing the cell's aisle (bays 1-18), the last cell holds
          01U-19 alone against the right end wall, facing back into that cell. Bay = 11 positions (2 levels x 6). */
-      const UX0 = 312, UX1 = 1246, UCELL = (UX1 - UX0) / 10;
+      /* the racks stand flush against the back wall (inner face z 85), so the row runs z 86-186 */
+      const UX0 = 312, UX1 = 1246, UCELL = (UX1 - UX0) / 10, UZ = 136;
       const upper = [];
       for (let c = 0; c < 9; c++) upper.push([UX0 + UCELL * c + 12, 1], [UX0 + UCELL * (c + 1) - 12, -1]);
       upper.push([UX1 - 12, -1]);
       upper.forEach(([x, face], i) => { const bay = i + 1;
-        addBay({ cx: px(x), cz: px(186), len: px(100), dep: px(20), axis: 'z', face, levels: 2, per: 6, levelH: .8, tag: '01U-' + bay,
+        addBay({ cx: px(x), cz: px(UZ), len: px(100), dep: px(20), axis: 'z', face, levels: 2, per: 6, levelH: .8, tag: '01U-' + bay,
           codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `01U|${bay}|${k}`, code: `01U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` }; } });
-        label(String(bay), px(x), 2.2, px(135), 'small'); });
-      label('แถวบน = 01U-01…19 (เต็มผนังหลัง 19 ชิดผนังขวา)', px((UX0 + UX1) / 2), 3.0, px(135), 'warn');
+        label(String(bay), px(x), 2.2, px(UZ + 56), 'small'); });
+      label('แถวบน = 01U-01…19 (ชิดผนังหลัง · 19 ชิดผนังขวา)', px((UX0 + UX1) / 2), 3.0, px(UZ + 66), 'warn');
       /* 3B: 7 columns x 5 bays, back-to-back pairs with aisles */
       /* Each column is one rack run along z (5 bays). Faces open onto the aisles (orange arrows on the map);
          even/odd runs sit back to back: 2|11, 12|21, 22|31. Bay = 4 levels (first digit of the code) x 4 positions (second digit). */
-      const DEP = 30, PITCH = 28, Z0 = 280;      // rack depth / bay width in sheet px (bay width stretched from 21 so a bay is not a thin tower)
+      const DEP = 30, PITCH = 28, Z0 = 315;      // rack depth / bay width in sheet px; Z0 puts the run's far end flush on the front wall (inner face z 455)
       const blocks = [
         { back: 449, face: 1, bays: [1, 3, 5, 7, 9] }, { back: 563, face: -1, bays: [2, 4, 6, 8, 10] },
         { back: 563, face: 1, bays: [11, 13, 15, 17, 19] }, { back: 679, face: -1, bays: [12, 14, 16, 18, 20] },
@@ -502,20 +502,21 @@ const SCENES = {
       })));
       const zEnd = Z0 + PITCH * 5;
       [[484, 533], [593, 649], [709, 756]].forEach(([a, b]) => { paint(a, Z0, b, zEnd, 0xd8dbde, 0.012); aisleLine((a + b) / 2, Z0, (a + b) / 2, zEnd); });
-      blocks.forEach((b, i) => label(['1·3·5·7·9', '2·4·6·8·10', '11·13·15·17·19', '12·14·16·18·20', '21·23·25·27·29', '22·24·26·28·30', '31–35'][i], px(b.back + b.face * DEP / 2), 2.6, px(276), 'small'));
-      label('3B', px(640), 3.1, px(262), 'zone');
-      /* C-zones: 4 tall racks along z */
+      blocks.forEach((b, i) => label(['1·3·5·7·9', '2·4·6·8·10', '11·13·15·17·19', '12·14·16·18·20', '21·23·25·27·29', '22·24·26·28·30', '31–35'][i], px(b.back + b.face * DEP / 2), 2.6, px(Z0 - 4), 'small'));
+      label('3B', px(640), 3.1, px(Z0 - 18), 'zone');
+      /* C-zones: 4 tall racks along z, flush on the front wall like 3B (z 340-455) */
+      const CZ = 397.5;
       [['CW', 861, 897], ['CB', 932, 968], ['CR', 1002, 1038], ['CY', 1073, 1108]].forEach(([z, a, b]) => {
-        addBay({ cx: px((a + b) / 2), cz: px(327.5), len: px(115), dep: px(b - a), axis: 'z', levels: 4, per: 24, levelH: .55, tag: z,
+        addBay({ cx: px((a + b) / 2), cz: px(CZ), len: px(115), dep: px(b - a), axis: 'z', levels: 4, per: 24, levelH: .55, tag: z,
           codeAt: (l, p) => { const n = l * 24 + p + 1; return { key: `${z}|0|${n}`, code: `${z}-${String(n).padStart(3, '0')}` }; } });
-        label(z, px((a + b) / 2), 3.1, px(265), 'zone');
+        label(z, px((a + b) / 2), 3.1, px(CZ - 63), 'zone');
       });
       /* 01U-20/21 explicit on the map */
       [[1143, 1178, 20], [1178, 1214, 21]].forEach(([a, b, bay]) => {
-        addBay({ cx: px((a + b) / 2), cz: px(327.5), len: px(115), dep: px(b - a), axis: 'z', levels: 2, per: 11, levelH: .8, tag: '01U-' + bay,
+        addBay({ cx: px((a + b) / 2), cz: px(CZ), len: px(115), dep: px(b - a), axis: 'z', levels: 2, per: 11, levelH: .8, tag: '01U-' + bay,
           codeAt: (l, p) => l === 0 ? { key: `01U|${bay}|${p + 1}`, code: `01U-${bay}-${String(p + 1).padStart(2, '0')}` } : null });
       });
-      label('01U-20 · 21', px(1178), 2.6, px(265), 'zone');   // one sign for the two narrow racks (two signs overlapped)
+      label('01U-20 · 21', px(1178), 2.6, px(CZ - 63), 'zone');   // one sign for the two narrow racks (two signs overlapped)
       /* 02U, next to the goods lift where the map draws U01/U02: not a rack but a floor stacking area. Yellow tape
          marks the spots (spot number taped on the floor, e.g. 01-04) and a sign over each row (02U-01, 02U-02 ...) lists
          spots 1-11. Rows run along the wall of the stair/lift room: 02U-01 is a single row on that wall (next to the
