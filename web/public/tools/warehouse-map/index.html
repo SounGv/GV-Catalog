@@ -45,6 +45,8 @@ main{flex:1;display:flex;min-height:0}
 .lbl.warn{background:#FFF6DB;color:#8A6100}
 .lbl.hot{background:var(--lime);color:var(--navy)}
 .lbl.small{font-size:11px;font-weight:500;background:rgba(255,255,255,.72)}
+.lbl.row{font-size:12px;font-weight:700;background:#fff;color:var(--navy);border:1.5px solid var(--navy);box-shadow:0 1px 4px rgba(24,54,76,.25)}
+.lbl.bay{font-size:11px;font-weight:700;background:var(--navy);color:#fff;padding:0 6px}
 .hud{position:absolute;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
 #modes{left:12px;top:12px}
 #views{right:12px;top:12px}
@@ -432,6 +434,7 @@ function addBay(o) {
     else S.frames.deck.add(mat4(cx + bk * (sx / 2 - .02), H / 2, cz, .02, H - .1, sz - th), 0xaab6c1);
   }
   if (ghost || !o.codeAt) return;
+  if (tag && /^(3B|F01|F02)-/.test(tag)) label(tag.replace(/-(\d)$/, '-0$1'), cx, H + .28, cz, 'small bay');
   const slotLen = len / per;
   for (let l = 0; l < levels; l++) for (let p = 0; p < per; p++) {
     const r = o.codeAt(l, p); if (!r) continue;
@@ -499,7 +502,7 @@ const SCENES = {
       upper.forEach(([x, face], i) => { const bay = i + 1;
         addBay({ cx: px(x), cz: px(UZ), len: px(100), dep: px(20), axis: 'z', face, levels: 2, per: 6, levelH: .8, tag: '01U-' + bay,
           codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `01U|${bay}|${k}`, code: `01U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` }; } });
-        label(String(bay), px(x), 2.2, px(UZ + 56), 'small'); });
+        label('01U-' + String(bay).padStart(2, '0'), px(x), 2.2, px(UZ + 56), 'row'); });
       label('แถวบน = 01U-01…19 (ชิดผนังหลัง · 19 ชิดผนังขวา)', px((UX0 + UX1) / 2), 3.0, px(UZ + 66), 'warn');
       /* 3B: 7 columns x 5 bays, back-to-back pairs with aisles */
       /* Each column is one rack run along z (5 bays). Faces open onto the aisles (orange arrows on the map);
@@ -517,7 +520,7 @@ const SCENES = {
       })));
       const zEnd = Z0 + PITCH * 5;
       [[484, 533], [593, 649], [709, 756]].forEach(([a, b]) => { paint(a, Z0, b, zEnd, 0xd8dbde, 0.012); aisleLine((a + b) / 2, Z0, (a + b) / 2, zEnd); });
-      blocks.forEach((b, i) => label(['1·3·5·7·9', '2·4·6·8·10', '11·13·15·17·19', '12·14·16·18·20', '21·23·25·27·29', '22·24·26·28·30', '31–35'][i], px(b.back + b.face * DEP / 2), 2.6, px(Z0 - 4), 'small'));
+      blocks.forEach((b, i) => label('3B · ' + ['01·03·05·07·09', '02·04·06·08·10', '11·13·15·17·19', '12·14·16·18·20', '21·23·25·27·29', '22·24·26·28·30', '31–35'][i], px(b.back + b.face * DEP / 2), 2.6, px(Z0 - 4), 'row'));
       label('3B', px(640), 3.1, px(Z0 - 18), 'zone');
       /* C-zones: 4 tall racks along z, flush on the front wall like 3B (z 340-455) */
       const CZ = 397.5;
@@ -543,7 +546,7 @@ const SCENES = {
       [1, 2, 3].forEach((bay, r) => {
         const xa = ROW_X[bay], xb = xa + ROW_W - 1.5;
         for (let k = 1; k <= 11; k++) floorSpot(xa, SZ0 + (k - 1) * SL, xb, SZ0 + k * SL - 1.2, `02U|${bay}|${k}`, `02U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}`);
-        label('02U-' + String(bay).padStart(2, '0'), px((xa + xb) / 2), 2.4, px(SZ1 + 8 + (bay === 3 ? 7 : 0)), 'small');
+        label('02U-' + String(bay).padStart(2, '0'), px((xa + xb) / 2), 2.4, px(SZ1 + 8 + (bay === 3 ? 7 : 0)), 'row');
       });
       label('02U · พื้นวางกองชิดกำแพง ใกล้ลิฟท์', px(352), 3.3, px(SZ0 - 10), 'zone');
     },
@@ -592,7 +595,7 @@ const SCENES = {
         counts.forEach((n, c) => { const L = RUN / n; for (let r = 0; r < n && i < bays.length; r++, i++) mk(bays[i], xs[c], zc + (r - (n - 1) / 2) * L, L); }); };
       const f02 = F.F02.bays, f01 = F.F01.bays;
       const head = (bays, counts, xs, z, zone) => { let i = 0; counts.forEach((n, c) => {
-        const b = bays.slice(i, i + n); i += n; if (b.length) label(b.map(v => String(v).padStart(2, '0')).join('·'), px(xs[c] + 15), 2.6, px(z), 'small'); }); };
+        const b = bays.slice(i, i + n); i += n; if (b.length) label(zone + ' · ' + b.map(v => String(v).padStart(2, '0')).join('·'), px(xs[c] + 15), 2.6, px(z), 'row'); }); };
       head(f02, [3, 3, 2, 2, 2, 2, 2], [483, 569, 655, 741, 827, 913, 998], 118, 'F02');
       head(f01, [2, 2, 1, 1, 1], [483, 569, 655, 741, 827], 458, 'F01');
       runs(f02, [3, 3, 2, 2, 2, 2, 2], [483, 569, 655, 741, 827, 913, 998], 186, (bay, x, z, L) =>
@@ -604,7 +607,7 @@ const SCENES = {
       /* F07: 6 pads right column + F07-07 */
       const pads = [[1126, 122, 1], [1126, 173, 2], [1126, 224, 3], [1126, 275, 4], [1126, 326, 5], [1126, 377, 6], [1084, 416, 7]];
       pads.forEach(([x, y, bay]) => { addBay({ cx: px(x + 44 - 15), cz: px(y + 19), len: px(38), dep: px(30), axis: 'z', face: -1, levels: 3, per: 4, levelH: .7, tag: 'F07-' + bay, codeAt: slotAt('F07', bay) });
-        label('F07-' + String(bay).padStart(2, '0'), px(x + 29), 2.6, px(y + 19), 'small'); });
+        label('F07-' + String(bay).padStart(2, '0'), px(x + 29), 2.6, px(y + 19), 'row'); });
     },
     finds() {
       return [
