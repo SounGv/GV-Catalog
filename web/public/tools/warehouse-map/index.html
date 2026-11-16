@@ -541,6 +541,10 @@ function addWalkers(id) {
   const LOAD = 4, UNLOAD = 2.5 + .45 * N, COUNT = 5 + .3 * N;
   const p0 = { x: stage.x + .2, z: stage.z - .8 };        // where the first person stops the trolley
   const arrive = LOAD + Math.hypot(p0.x - lift.x, p0.z - lift.z) / 1.1;
+  const refilled = new Set(stops.flat().map(s => s.code)), seed = seeded(new Date().toLocaleDateString('sv-SE') + id);
+  const countPool = mixPick(S.slots.filter(s => !s.orphan && s.loc && !refilled.has(s.code) && countRank(s.loc) <= 2), s => countRank(s.loc), seed,
+    [crew.length, crew.length, crew.length], crew.length * 3);   // per person: one sold out, one below minimum, one close to it
+  const countStops = crew.map((_, n) => countPool.filter((_, i) => i % crew.length === n).sort((a, b) => a.x - b.x));
   const routes = crew.map((_, n) => {
     const me = around(n), r = [];
     if (n === 0) r.push({ x: lift.x, z: lift.z, wait: LOAD, task: 'load', push: true, face: faceTo(lift, stage) },
@@ -555,6 +559,11 @@ function addWalkers(id) {
       const info = `${it.sku} → ${s.code}`;
       r.push({ x: me.x, z: me.z, carry: true, pickup: true, info }, { x: ax, z: mainZ, carry: true, info },
              { x: ax, z: az, wait: 3.5, task: 'refill', info, reachY: s.y + .15, face: Math.atan2(-nx, -s.nz) }, { x: ax, z: mainZ });
+    });
+    countStops[n].forEach(s => {                       // all cartons in: spot-count the slots most likely to need stock
+      const out = s.ext ? s.ext / 2 + .45 : .6, nx = s.nx || (s.ext ? 0 : 1), ax = s.x + nx * out, az = s.z + s.nz * out;
+      const info = `สุ่มนับ ${s.loc.items?.[0]?.sku || s.loc.sku} → ${s.code}`;
+      r.push({ x: ax, z: mainZ, info }, { x: ax, z: az, wait: 4, task: 'check', info, reachY: s.y + .15, face: Math.atan2(-nx, -s.nz) }, { x: ax, z: mainZ });
     });
     r.push({ x: me.x, z: me.z });
     return r;
@@ -955,6 +964,16 @@ const MODES = {
   refill: { name: 'ช่องว่าง/ต้องเติม', legend: [['#c62828', '✗ สต็อก 0 (มี SKU)'], ['#ffb900', '! ต่ำกว่าขั้นต่ำ ต้องเติม'], ['#1a7f4e', '✓ สต็อกปกติ'], ['#5aa9e6', '○ ช่องว่าง ไม่มี SKU · วางของใหม่ได้']] },
 };
 const isLow = s => !!(s.loc && s.loc.qty > 0 && s.loc.low);
+const nearLow = l => !!l?.items?.some(i => i.min > 0 && i.qty >= i.min && i.qty < i.min * 1.5);
+/* counting priority: 0 sold out (SKU, 0 pcs) · 1 below minimum · 2 close to the minimum · 3 anything else */
+const countRank = l => !l ? 9 : l.qty <= 0 && l.items?.length ? 0 : l.low ? 1 : nearLow(l) ? 2 : 3;
+/* a mixed sample: `quota[r]` items of each priority group (random inside a group), short groups topped up from the rest */
+function mixPick(items, rank, rnd, quota, total) {
+  const groups = [0, 1, 2, 3].map(r => items.filter(x => rank(x) === r).map(x => [rnd(), x]).sort((a, b) => a[0] - b[0]).map(x => x[1]));
+  const out = []; groups.forEach((g, r) => out.push(...g.splice(0, quota[r] || 0)));
+  for (const g of groups) while (out.length < total && g.length) out.push(g.shift());
+  return out.slice(0, total);
+}
 let mode = 'real';
 const cardboard = ['#cfa673', '#c69c68', '#d7b07e', '#c2976a', '#d2aa76'];
 const heatCol = q => q <= 0 ? '#d2d7dc' : q < 10 ? '#e6f2a0' : q < 50 ? '#cdeb03' : q < 200 ? '#9ab800' : q < 1000 ? '#4e5c00' : '#1e2400';
@@ -1174,7 +1193,8 @@ function buildTasks() {
   const cutoff = new Date(Date.now() - RECOUNT_DAYS * 864e5).toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
   const recent = new Set(TASKLOG.filter(r => r.kind === 'count' && r.day >= cutoff && r.day < d).map(r => r.position));
   const doneCount = new Map(mine.filter(r => r.kind === 'count' && r.staff === worker).map(r => [r.position, r]));
-  const rnd = seeded(d + '|' + worker), pool = locs.filter(l => l.qty > 0 && !recent.has(l.code)).map(l => [rnd(), l]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+  const rnd = seeded(d + '|' + worker);
+  const pool = mixPick(locs.filter(l => (l.qty > 0 || l.items?.length) && !recent.has(l.code)), countRank, rnd, [7, 7, 6], COUNT_PER_DAY);   // 7 sold out · 7 below min · 6 close to min
   const count = pool.slice(0, COUNT_PER_DAY).map(l => ({ code: l.code, sku: l.items?.[0]?.sku || l.sku, name: l.items?.[0]?.name || l.name, qty: l.qty, done: doneCount.get(l.code) }))
     .sort(byRoute(scene));
   return { scene, refill, count };
