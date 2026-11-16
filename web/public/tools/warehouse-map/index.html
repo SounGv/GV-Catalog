@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ผังคลังและสต็อก</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand-lime:#CDEB03; --brand-charcoal:#131516;
+  --primary:#131516; --primary-hover:#272B30; --primary-foreground:#fff;
+  --accent:#CDEB03; --accent-foreground:#131516; --link:#4E5C00; --accent-soft:#F4FAD2;
+  --background:#F5F6F7; --surface:#fff; --surface-sunken:#EEF0F2; --surface-inverse:#131516;
+  --on-inverse:#fff; --on-inverse-muted:#B8BEC4; --foreground:#131516; --muted-foreground:#5E6670;
+  --border:#E5E7EA; --border-strong:#D4D8DC; --ring:#131516;
+  --success:#1A7F4E; --success-soft:#E3F4EA; --warning:#8A6100; --warning-soft:#FFF6DB; --warning-dot:#FFB900;
+  --danger:#C62828; --danger-soft:#FCE8E8; --info:#1D5FD1; --info-soft:#E6EEFC;
+  --font-sans:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --radius-chip:999px; --radius-control:12px; --radius-card:14px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:var(--font-sans);background:var(--background);color:var(--foreground);line-height:1.6;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+header{background:var(--surface-inverse);color:var(--on-inverse);display:flex;align-items:center;gap:16px;padding:8px 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand img{height:34px;width:auto;filter:drop-shadow(0 0 8px rgba(205,235,3,.25))}
+.brand h1{font-size:16px;line-height:1.35;margin:0;font-weight:600}
+.brand small{display:block;color:var(--on-inverse-muted);font-size:12px;font-weight:400}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.tab{min-height:44px;padding:0 16px;border-radius:var(--radius-chip);border:1px solid #3A4046;background:transparent;color:var(--on-inverse);font-weight:500}
+.tab[aria-selected=true]{background:var(--accent);color:var(--accent-foreground);border-color:var(--accent);font-weight:600}
+.badge-sample{font-size:12px;background:var(--warning-soft);color:var(--warning);padding:2px 10px;border-radius:var(--radius-chip);font-weight:600}
+main{flex:1;display:flex;min-height:0}
+#stage{position:relative;flex:1;min-width:0;background:linear-gradient(#dfe4e9,#cfd6dd)}
+#stage canvas{display:block;width:100%;height:100%}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-size:12px;font-weight:600;padding:1px 8px;border-radius:6px;background:rgba(255,255,255,.88);color:#20262b;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.lbl.zone{background:rgba(19,21,22,.88);color:#fff;font-size:13px}
+.lbl.warn{background:#FFF6DB;color:#8A6100}
+.lbl.hot{background:var(--accent);color:var(--accent-foreground)}
+.lbl.small{font-size:11px;font-weight:500;background:rgba(255,255,255,.72)}
+.hud{position:absolute;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
+#modes{left:12px;top:12px}
+#views{right:12px;top:12px}
+.chip{min-height:44px;padding:0 14px;border-radius:var(--radius-chip);border:1px solid var(--border-strong);background:var(--surface);font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.chip[aria-pressed=true]{background:var(--primary);color:#fff;border-color:var(--primary)}
+#legend{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.94);border:1px solid var(--border);border-radius:var(--radius-card);padding:10px 14px;font-size:13px;display:flex;flex-direction:column;gap:2px;max-width:min(92%,420px);z-index:2}
+#legend b{font-size:13px}
+#legend .row{display:flex;align-items:center;gap:8px}
+#legend i{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.25);flex:none}
+#tip{position:absolute;pointer-events:none;background:var(--surface-inverse);color:#fff;border-radius:10px;padding:8px 12px;font-size:13px;line-height:1.5;max-width:300px;box-shadow:0 6px 18px rgba(0,0,0,.3);display:none;z-index:3}
+#tip b{color:var(--accent);font-variant-numeric:tabular-nums}
+#tip .n{color:var(--on-inverse-muted);font-size:12px}
+#hint{position:absolute;right:12px;bottom:12px;font-size:12px;color:#39424a;background:rgba(255,255,255,.8);padding:2px 10px;border-radius:var(--radius-chip);z-index:2}
+aside{width:380px;max-width:42vw;background:var(--surface);border-left:1px solid var(--border);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+aside h2{font-size:15px;margin:0 0 6px;font-weight:600}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{border:1px solid var(--border);border-radius:var(--radius-card);padding:8px 12px;background:var(--surface)}
+.kpi.dark{background:var(--surface-inverse);color:#fff;border-color:var(--surface-inverse)}
+.kpi.dark .v{color:var(--accent)}
+.kpi .v{font-size:22px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted-foreground)}
+.kpi.dark .l{color:var(--on-inverse-muted)}
+.sel{border:1px solid var(--border);border-radius:var(--radius-card);padding:12px;background:var(--surface-sunken);font-size:14px}
+.sel .code{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.sel .hint{color:var(--muted-foreground)}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:var(--radius-chip);padding:0 10px;font-size:12px;font-weight:600;line-height:22px;white-space:nowrap}
+.pill.ok{background:var(--success-soft);color:var(--success)}
+.pill.diff{background:var(--danger-soft);color:var(--danger)}
+.pill.ask{background:var(--warning-soft);color:var(--warning)}
+.pill.na{background:var(--surface-sunken);color:var(--muted-foreground)}
+.find{border:1px solid var(--border);border-radius:var(--radius-card);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.find .t{font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.find .d{font-size:13px;color:var(--muted-foreground)}
+.find .d b{color:var(--foreground);font-variant-numeric:tabular-nums}
+.note{font-size:12px;color:var(--muted-foreground)}
+header a.gv-back{margin:0!important}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border)}
+.search{display:flex;gap:6px;flex:1;min-width:240px;max-width:640px}
+.search input{flex:1;min-width:0;min-height:44px;padding:0 14px;border:2px solid var(--primary);border-radius:var(--radius-control);font:inherit;background:var(--surface)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.btn{min-height:44px;padding:0 16px;border-radius:var(--radius-control);border:1px solid var(--border-strong);background:var(--surface);font-weight:600}
+.btn.dark{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
+.btn.lime{background:var(--accent);color:var(--accent-foreground);border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{min-height:36px;padding:0 12px;font-size:13px}
+.results{display:flex;flex-direction:column;gap:6px}
+.res{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--border);border-radius:var(--radius-card);padding:8px 12px;background:var(--surface);min-height:44px}
+.res:hover{border-color:var(--primary)}
+.res .c{font-weight:700;font-variant-numeric:tabular-nums}
+.res .n{font-size:12px;color:var(--muted-foreground)}
+.items{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.item{border-top:1px solid var(--border);padding-top:6px}
+.item .q{font-variant-numeric:tabular-nums}
+.edit{margin-top:10px;border-top:1px dashed var(--border-strong);padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.edit input[type=text]{min-height:44px;padding:0 12px;border:1px solid var(--border-strong);border-radius:var(--radius-control);font:inherit}
+.edit label{display:flex;gap:8px;align-items:center;font-size:13px}
+.edit .row{display:flex;gap:8px;flex-wrap:wrap}
+.msg{font-size:13px}.msg.bad{color:var(--danger)}.msg.ok{color:var(--success)}
+#empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:4;background:rgba(245,246,247,.9);padding:16px;text-align:center}
+#empty .box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:20px 24px;max-width:440px}
+dialog{border:0;border-radius:16px;padding:20px 22px;max-width:480px;width:calc(100% - 32px);box-shadow:0 24px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(10,20,16,.5)}
+dialog h3{margin:0 0 6px;font-size:17px}
+dialog dl{display:grid;grid-template-columns:1fr auto;gap:2px 16px;margin:12px 0;font-size:14px}
+dialog dd{margin:0;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+@media (max-width:860px){
+  body{overflow:auto}
+  main{flex-direction:column}
+  #stage{height:62vh;flex:none}
+  aside{width:auto;max-width:none;border-left:0;border-top:1px solid var(--border);overflow:visible}
+  .tabs{margin-left:0}
+  #modes{right:12px}
+  #views{top:auto;bottom:12px}
+  #hint{display:none}
+  #legend{bottom:64px;max-width:calc(100% - 24px)}
+  .badge-sample{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<header>
+  <a href="/">‹ กลับหน้าหลัก</a>
+  <div class="brand">
+    <img src="../shared/gv-mark.png" alt="GV">
+    <h1>ผังคลังและสต็อก <small id="asof">กำลังโหลดข้อมูลสต็อก…</small></h1>
+  </div>
+  <span class="badge-sample">ผังประมาณจากแบบ · ไม่ใช่สเกลจริง</span>
+  <div class="tabs" role="tablist" id="tabs"></div>
+</header>
+<div class="toolbar">
+  <form id="searchForm" class="search" role="search">
+    <input id="q" type="search" placeholder="ค้นหา SKU / บาร์โค้ด / ชื่อสินค้า / ตำแหน่ง" aria-label="ค้นหา SKU บาร์โค้ด ชื่อสินค้า หรือตำแหน่ง" autocomplete="off">
+    <button type="submit" class="btn">ค้นหา</button>
+  </form>
+  <div class="tools">
+    <input id="stockFile" type="file" accept=".xlsx" hidden>
+    <button type="button" class="btn dark" id="uploadBtn">อัปไฟล์สต็อกตำแหน่ง</button>
+    <button type="button" class="btn" id="exportBtn">ส่งออกรายการช่อง (.xlsx)</button>
+  </div>
+</div>
+<main>
+  <section id="stage" aria-label="ผัง 3D">
+    <div id="labels"></div>
+    <div class="hud" id="modes" role="group" aria-label="โหมดแสดงผล"></div>
+    <div class="hud" id="views" role="group" aria-label="มุมมอง"></div>
+    <div id="legend"></div>
+    <div id="tip"></div>
+    <div id="hint">ลากหมุน · ล้อเมาส์ซูม · คลิกช่องเพื่อดูรายละเอียด</div>
+    <div id="empty"><div class="box"><h2>ยังไม่มีข้อมูลสต็อก</h2><p>ส่งออกไฟล์ “สต็อกตำแหน่ง” จาก BigSeller แล้วกด <b>อัปไฟล์สต็อกตำแหน่ง</b> ด้านบน</p></div></div>
+  </section>
+  <aside>
+    <div id="searchBox" hidden><h2 id="resTitle">ผลค้นหา</h2><div class="results" id="results"></div></div>
+    <div><h2 id="sceneTitle"></h2><div class="note" id="sceneNote"></div></div>
+    <div class="kpis" id="kpis"></div>
+    <div><h2>ช่องที่เลือก</h2><div class="sel" id="sel"><span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span></div></div>
+    <div><h2>เทียบผังกับข้อมูล</h2><div id="finds" style="display:flex;flex-direction:column;gap:8px"></div></div>
+    <div class="note" id="foot"></div>
+  </aside>
+</main>
+<script src="../shared/back-link.js"></script>
+<dialog id="importDlg" aria-labelledby="importTitle">
+  <h3 id="importTitle">ตรวจก่อนอัปสต็อก</h3>
+  <div class="note" id="importFile"></div>
+  <dl id="importStats"></dl>
+  <div class="msg" id="importMsg" role="status"></div>
+  <div class="acts"><button type="button" class="btn" id="importCancel">ยกเลิก</button><button type="button" class="btn dark" id="importOk">ยืนยันอัปสต็อก</button></div>
+</dialog>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* Stock per pick location comes from the GV Catalog database (uploaded สต็อกตำแหน่ง export), not a file baked in here. */
+const EMPTY = { asof: '', file: '', locs: [], facts: null };
+let DATA = EMPTY, F = null;
+const nf = n => Number(n || 0).toLocaleString('en-US');
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const byKey = new Map(), byCode = new Map();
+const slotCache = {};                           // export's off-screen plan layouts, rebuilt once per data load
+async function loadData() {
+  let failed = '';
+  try {
+    const res = await fetch('/api/warehouse/stock', { cache: 'no-store' });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw Error(j.error || 'HTTP ' + res.status);
+    DATA = j.data || EMPTY;
+  } catch (e) { DATA = EMPTY; failed = e.message; }
+  F = DATA.facts || zeroFacts();
+  for (const k in slotCache) delete slotCache[k];
+  byKey.clear(); byCode.clear();
+  DATA.locs.forEach(l => { if (l.key) byKey.set(l.key, l); byCode.set(l.code, l); });
+  document.getElementById('empty').style.display = DATA.locs.length ? 'none' : 'flex';
+  document.getElementById('asof').textContent = failed ? 'โหลดข้อมูลสต็อกไม่สำเร็จ: ' + failed
+    : DATA.locs.length ? `สต็อก ณ ${DATA.asof} · ${nf(DATA.locs.length)} ตำแหน่ง` : 'ยังไม่มีข้อมูลสต็อก';
+}
+/* facts with every zone empty, so the notes on the right still render before the first upload */
+function zeroFacts() {
+  const z = { codes: 0, used: 0, qty: 0 }, row = { ...z, max: 0, missing: [] }, bays = { ...z, bays: [] }, sp = { ...z, rows: 0 };
+  return { rows: 0, locations: 0, areas: {}, '3B': { ...z, bays: 0 }, '01U_1_19': z, '01U_20_21': z, '01U_bays': [], '02U': z, '02U_bays': [],
+    CW: row, CB: row, CR: row, CY: row, F01: bays, F02: bays, F03: bays, F07: bays, F07_03_slots: [], F07_08_slots: [],
+    noloc3: sp, nolocF: sp, gift: sp, pkg: sp, gifset: sp, lower: [], multi_sku_locs: 0 };
+}
+await loadData();
+const U = 1 / 16;                       // 1 px of the source sheet = 1/16 unit (schematic, not metres)
+const px = v => v * U;
+
+/* ---------- renderer ---------- */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.prepend(renderer.domElement);
+const camera = new THREE.PerspectiveCamera(38, 1, 0.5, 600);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.49; controls.minDistance = 6; controls.maxDistance = 160;
+const raycaster = new THREE.Raycaster();
+const labelsEl = document.getElementById('labels');
+const tip = document.getElementById('tip');
+
+/* ---------- helpers ---------- */
+const box = new THREE.BoxGeometry(1, 1, 1);
+const hash = s => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
+const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpV = new THREE.Vector3(), tmpS = new THREE.Vector3(), tmpC = new THREE.Color();
+const mat4 = (cx, cy, cz, sx, sy, sz) => tmpM.compose(tmpV.set(cx, cy, cz), tmpQ, tmpS.set(sx, sy, sz)).clone();
+
+class Inst {                           // collects boxes, then becomes one InstancedMesh
+  constructor(material, shadow = true) { this.items = []; this.material = material; this.shadow = shadow; }
+  add(m, color) { this.items.push([m, new THREE.Color(color)]); }
+  build() {
+    const mesh = new THREE.InstancedMesh(box, this.material, Math.max(1, this.items.length));
+    this.items.forEach(([m, c], i) => { mesh.setMatrixAt(i, m); mesh.setColorAt(i, c); });
+    mesh.count = this.items.length; mesh.castShadow = this.shadow; mesh.receiveShadow = true;
+    return mesh;
+  }
+}
+
+function concreteTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+  g.fillStyle = '#b9bdc1'; g.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 9000; i++) { const v = 150 + Math.random() * 60 | 0; g.fillStyle = `rgba(${v},${v},${v + 3},.22)`; g.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 3, 2 + Math.random() * 3); }
+  g.strokeStyle = 'rgba(70,75,80,.18)'; g.lineWidth = 2; g.strokeRect(1, 1, 510, 510);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+const concrete = concreteTexture();
+
+/* ---------- scene construction ---------- */
+let S = null;                          // the active scene object
+
+function newScene(bounds) {
+  const sc = new THREE.Scene();
+  sc.background = new THREE.Color(0xd6dce2);
+  sc.fog = new THREE.Fog(0xd6dce2, 120, 320);
+  sc.add(new THREE.HemisphereLight(0xffffff, 0x7d848c, 1.05));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.7);
+  const cx = (bounds.x0 + bounds.x1) / 2 * U, cz = (bounds.y0 + bounds.y1) / 2 * U;
+  const w = (bounds.x1 - bounds.x0) * U, d = (bounds.y1 - bounds.y0) * U, R = Math.max(w, d) * 0.62;
+  sun.position.set(cx - w * 0.25, 60, cz + d * 0.7); sun.target.position.set(cx, 0, cz);
+  sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096);
+  Object.assign(sun.shadow.camera, { left: -R, right: R, top: R, bottom: -R, near: 1, far: 220 });
+  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+  sc.add(sun, sun.target);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w + 6, d + 6), new THREE.MeshStandardMaterial({ map: concrete.clone(), roughness: .92, metalness: 0 }));
+  floor.material.map.needsUpdate = true; floor.material.map.repeat.set((w + 6) / 6, (d + 6) / 6);
+  floor.rotation.x = -Math.PI / 2; floor.position.set(cx, 0, cz); floor.receiveShadow = true; sc.add(floor);
+  return { scene: sc, bounds, cx, cz, w, d, slots: [], labels: [], statics: [], anim: [], frames: {
+    up: new Inst(new THREE.MeshStandardMaterial({ roughness: .45, metalness: .5 })),
+    beam: new Inst(new THREE.MeshStandardMaterial({ roughness: .5, metalness: .35 })),
+    deck: new Inst(new THREE.MeshStandardMaterial({ roughness: .8, metalness: .1 })),
+    plate: new Inst(new THREE.MeshStandardMaterial({ roughness: .5 }), false),
+  }, patch: new Inst(new THREE.MeshStandardMaterial({ roughness: .95 }), false) };
+}
+
+function label(text, x, y, z, cls = '') { S.labels.push({ text, cls, pos: new THREE.Vector3(x, y, z) }); }
+function paint(x0, y0, x1, y1, color, h = 0.03) { S.patch.add(mat4(px((x0 + x1) / 2), h / 2, px((y0 + y1) / 2), px(x1 - x0), h, px(y1 - y0)), color); }
+function solid(x0, y0, x1, y1, h, color, y = 0, mat) {
+  const m = new THREE.Mesh(box, mat || new THREE.MeshStandardMaterial({ color, roughness: .85 }));
+  m.scale.set(px(x1 - x0), h, px(y1 - y0)); m.position.set(px((x0 + x1) / 2), y + h / 2, px((y0 + y1) / 2));
+  m.castShadow = m.receiveShadow = true; S.scene.add(m); return m;
+}
+function walls(x0, y0, x1, y1, h = 1.1, color = 0xf1f2f3, sides = 'tblr') {
+  const t = 0.14 / U;
+  if (sides.includes('t')) solid(x0, y0, x1, y0 + t, h, color);
+  if (sides.includes('b')) solid(x0, y1 - t, x1, y1, h, color);
+  if (sides.includes('l')) solid(x0, y0, x0 + t, y1, h, color);
+  if (sides.includes('r')) solid(x1 - t, y0, x1, y1, h, color);
+}
+function stairs(x0, y0, x1, y1, name) {
+  const n = 7, run = (y1 - y0) / n;
+  for (let i = 0; i < n; i++) solid(x0 + 3, y0 + i * run, x1 - 3, y0 + (i + 1) * run, 0.15 * (i + 1), 0xd9dcdf);
+  label(name, px((x0 + x1) / 2), 1.6, px((y0 + y1) / 2), 'small');
+}
+function lift(x0, y0, x1, y1, name) {
+  solid(x0 + 3, y0 + 3, x1 - 3, y1 - 3, 3.2, 0, 0, new THREE.MeshStandardMaterial({ color: 0x9fb4c6, roughness: .25, metalness: .6, transparent: true, opacity: .62 }));
+  label(name, px((x0 + x1) / 2), 3.6, px((y0 + y1) / 2), 'small');
+}
+/* ---------- packing station: desk + PC + scanner + seated packer ---------- */
+const ball = new THREE.SphereGeometry(1, 20, 14); ball.userData.keep = true;
+const matCache = {};
+const M = (c, extra) => extra ? new THREE.MeshStandardMaterial({ color: c, roughness: .6, ...extra }) : (matCache[c] ||= new THREE.MeshStandardMaterial({ color: c, roughness: .7 }));
+function part(g, w, h, d, x, y, z, color, o = {}) {
+  const m = new THREE.Mesh(o.geo || box, o.mat || M(color));
+  m.scale.set(w, h, d); m.position.set(x, y, z); m.castShadow = o.shadow !== false; m.receiveShadow = true; g.add(m); return m;
+}
+const SHIRTS = [0x131516, 0x2b3a4a, 0x131516, 0x4e5c00, 0x131516, 0x3a3f45, 0x131516, 0x2b3a4a];
+const SKINS = [0xc99a74, 0xb5835e, 0xd6a988, 0xa8774f];
+/* Local frame: desk centred at origin, packer sits on +z looking at -z. rotY turns the whole station. */
+function packStation(x, z, rotY, n) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rotY;
+  const shirt = SHIRTS[n % SHIRTS.length], skin = SKINS[n % SKINS.length];
+  /* desk */
+  part(g, 1.2, .05, .7, 0, .75, 0, 0xd9c7a3);
+  for (const [lx, lz] of [[-.56, -.31], [.56, -.31], [-.56, .31], [.56, .31]]) part(g, .05, .73, .05, lx, .365, lz, 0x6b7178);
+  /* PC: monitor showing the packing screen, keyboard, tower, label printer */
+  part(g, .04, .2, .04, -.12, .87, -.2, 0x2a2e33); part(g, .2, .02, .14, -.12, .78, -.2, 0x2a2e33);
+  part(g, .58, .36, .03, -.12, 1.11, -.21, 0x1b1e21);
+  part(g, .53, .31, .005, -.12, 1.11, -.193, 0, { mat: M(0, { color: 0xeaf5ff, emissive: 0x3d8bd9, emissiveIntensity: .55 }), shadow: false });
+  part(g, .5, .05, .006, -.12, 1.23, -.19, 0, { mat: M(0, { color: 0xcdeb03, emissive: 0xcdeb03, emissiveIntensity: .5 }), shadow: false });
+  part(g, .42, .02, .13, -.12, .785, .1, 0x30353a); part(g, .07, .02, .1, .16, .785, .12, 0x30353a);
+  part(g, .2, .42, .42, -.42, .21, -.08, 0x1f2326);
+  part(g, .17, .13, .2, -.46, .84, -.18, 0xf2f2f2); part(g, .1, .005, .08, -.46, .905, -.07, 0xffffff, { shadow: false });
+  /* parcel being scanned + one packed parcel waiting for its label */
+  part(g, .28, .16, .22, .33, .855, .08, 0xc79a62);
+  part(g, .26, .16, .2, .45, .855, -.12, 0xbd8f58);
+  /* webcam on a desk stand, looking straight down at the parcel being packed (records every pack) */
+  const camX = .33, camZ = .06;
+  for (const a of [0, 2.1, 4.2]) part(g, .12, .015, .025, camX + Math.cos(a) * .05, .783, -.3 + Math.sin(a) * .05, 0x1f2326).rotation.y = -a;
+  part(g, .025, .68, .025, camX, 1.12, -.31, 0x2a2e33);                 // pole
+  part(g, .02, .02, .39, camX, 1.45, -.125, 0x2a2e33);                     // boom over the packing spot
+  part(g, .12, .05, .07, camX, 1.43, camZ, 0x131516);                    // camera body
+  part(g, .04, .03, .04, camX, 1.395, camZ, 0, { mat: M(0, { color: 0x0a0a0a, roughness: .2, metalness: .6 }) });   // lens, pointing down
+  const led = part(g, .015, .015, .015, camX + .045, 1.43, camZ + .036, 0, { mat: M(0, { color: 0xff3030, emissive: 0xff0000, emissiveIntensity: 2.5 }), shadow: false });
+  /* beside the packer: picking basket of products on a small stand, and a stack of empty packing boxes */
+  part(g, .5, .03, .42, .95, .52, .2, 0x8d959c);
+  for (const [lx, lz] of [[.72, .01], [1.18, .01], [.72, .39], [1.18, .39]]) part(g, .03, .52, .03, lx, .26, lz, 0x8d959c);
+  const basket = 0xd23b2b;
+  part(g, .46, .02, .36, .95, .545, .2, basket);
+  part(g, .46, .2, .02, .95, .64, .03, basket); part(g, .46, .2, .02, .95, .64, .37, basket);
+  part(g, .02, .2, .36, .73, .64, .2, basket); part(g, .02, .2, .36, 1.17, .64, .2, basket);
+  [[.86, .12, 0x2f6fb5, .14], [1.04, .14, 0xffffff, .18], [.9, .28, 0xcdeb03, .12], [1.06, .29, 0x131516, .16], [.98, .2, 0xe8742a, .2]]
+    .forEach(([lx, lz, c, h]) => part(g, .13, h, .1, lx, .56 + h / 2, lz, c));
+  for (let k = 0; k < 6; k++) part(g, .46 - (k % 2) * .03, .06, .34, .95, .03 + k * .062, -.2, k % 2 ? 0xbd8f58 : 0xc79a62);   // flat cartons
+  part(g, .3, .2, .24, .95, .47, -.22, 0xd1a56f); part(g, .24, .16, .2, .95, .65, -.2, 0xc79a62);                    // ready boxes on top
+  /* chair */
+  part(g, .46, .06, .44, 0, .46, .8, 0x26292d); part(g, .44, .5, .05, 0, .76, 1.03, 0x26292d);
+  part(g, .05, .42, .05, 0, .22, .8, 0x6b7178); part(g, .5, .03, .5, 0, .02, .8, 0x3a3f45);
+  /* packer */
+  for (const sx of [-.1, .1]) { part(g, .14, .13, .42, sx, .54, .6, 0x2e3440); part(g, .12, .46, .12, sx, .28, .4, 0x2e3440); part(g, .12, .06, .2, sx, .03, .35, 0x1a1c1e); }
+  part(g, .38, .52, .22, 0, .78, .74, shirt);
+  part(g, .12, .12, .12, 0, 1.16, .73, 0, { geo: ball, mat: M(skin) });
+  part(g, .125, .09, .125, 0, 1.2, .76, 0, { geo: ball, mat: M(0x1b1712) });
+  const arm = (sx, rot) => { const p = new THREE.Group(); p.position.set(sx, .98, .74); p.rotation.x = rot; g.add(p);
+    part(p, .09, .09, .5, 0, 0, -.25, shirt); part(p, .08, .06, .09, 0, 0, -.52, 0, { mat: M(skin) }); return p; };
+  arm(-.21, -.45);                                   // left hand on the keyboard
+  const right = arm(.22, -.38);                      // right hand holds the scanner over the parcel
+  part(right, .05, .05, .15, 0, .02, -.56, 0x1f2326); part(right, .09, .06, .07, 0, .05, -.64, 0x1f2326);
+  const beam = part(right, .006, .006, .3, .02, -.08, -.72, 0, { mat: M(0, { color: 0xff2a2a, emissive: 0xff0000, emissiveIntensity: 2, transparent: true, opacity: .8 }), shadow: false });
+  beam.rotation.x = -.9;
+  const phase = n * 1.7;
+  S.anim.push(t => {
+    right.rotation.x = -.38 + .05 * Math.sin(t * 3 + phase);
+    beam.visible = Math.sin(t * 2.2 + phase) > .2;    // the scan beam blinks: one scan per cycle
+    led.visible = Math.sin(t * 4 + phase) > -.3;      // REC light
+  });
+  S.scene.add(g);
+}
+/* Desks pushed against a wall, packer's back to the room. rot = rotY of the station:
+   local -z (the screen side) points at the wall. */
+function packRoom(stations, title, tx, tz) {
+  stations.forEach(([x, z, rot], n) => {
+    packStation(x, z, rot, n);
+    label('โต๊ะ ' + (n + 1), x + Math.sin(rot) * 1.2, 1.75, z + Math.cos(rot) * 1.2, 'small');
+  });
+  label(title, tx, 2.5, tz, 'zone');
+}
+const deskRow = (n, along, from, pitch, fixed, rot) =>
+  Array.from({ length: n }, (_, i) => along === 'x' ? [from + i * pitch, fixed, rot] : [fixed, from + i * pitch, rot]);
+
+function aisleLine(x0, y0, x1, y1) { paint(Math.min(x0, x1) - 1.5, Math.min(y0, y1) - 1.5, Math.max(x0, x1) + 1.5, Math.max(y0, y1) + 1.5, 0xe8b800, 0.035); }
+
+const GHOST = 0xa9b0b7, ORPHAN = 0xe0702a, UP = 0x2f6fb5, BEAM = 0xe8742a;
+/* a rack bay = frame + slots. axis 'x': slots run along x; 'z': along z. */
+/* face = +1/-1: which side the open face looks at (axis 'x' -> +z/-z, axis 'z' -> +x/-x). Slots are
+   pushed to the front of the shelf, the way cartons sit when someone puts them away. */
+function addBay(o) {
+  const { cx, cz, len, dep, axis = 'x', levels = 4, per = 4, levelH = .55, ghost = false, orphan = false, tag, face = 1 } = o;
+  const sx = axis === 'x' ? len : dep, sz = axis === 'x' ? dep : len, H = levels * levelH + .2, th = .07;
+  const upC = ghost ? GHOST : orphan ? ORPHAN : UP, bmC = ghost ? 0xc9ced3 : orphan ? 0xf0a35e : BEAM;
+  for (const ex of [-1, 1]) for (const ez of [-1, 1]) S.frames.up.add(mat4(cx + ex * (sx / 2 - th / 2), H / 2, cz + ez * (sz / 2 - th / 2), th, H, th), upC);
+  for (let k = 0; k <= levels; k++) {
+    const y = .15 + k * levelH;
+    if (axis === 'x') for (const ez of [-1, 1]) S.frames.beam.add(mat4(cx, y, cz + ez * (sz / 2 - th / 2), sx, .07, th), bmC);
+    else for (const ex of [-1, 1]) S.frames.beam.add(mat4(cx + ex * (sx / 2 - th / 2), y, cz, th, .07, sz), bmC);
+    if (k < levels) S.frames.deck.add(mat4(cx, y + .045, cz, sx - th, .025, sz - th), ghost ? 0xdfe3e6 : 0xaeb5bc);
+  }
+  /* back panel: a thin wire-mesh look so the shelf reads as a shelf from the front */
+  if (!ghost) {
+    const bk = -face;
+    if (axis === 'x') S.frames.deck.add(mat4(cx, H / 2, cz + bk * (sz / 2 - .02), sx - th, H - .1, .02), 0x8d959c);
+    else S.frames.deck.add(mat4(cx + bk * (sx / 2 - .02), H / 2, cz, .02, H - .1, sz - th), 0x8d959c);
+  }
+  if (ghost || !o.codeAt) return;
+  const slotLen = len / per;
+  for (let l = 0; l < levels; l++) for (let p = 0; p < per; p++) {
+    const r = o.codeAt(l, p); if (!r) continue;
+    const u = (p + .5) * slotLen - len / 2;
+    const x = axis === 'x' ? cx + u : cx, z = axis === 'x' ? cz : cz + u;
+    const loc = byKey.get(r.key) || null;
+    const nx = axis === 'z' ? face : 0, nz = axis === 'x' ? face : 0;
+    const yb = .15 + l * levelH + .06;
+    S.slots.push({
+      code: r.code, loc, flag: r.flag || '', orphan, tag,
+      x, y: yb, z, nx, nz, ext: (dep - th * 2 - .05), along: slotLen * .86,
+      w: 1, d: 1, ih: levelH - .12,
+      status: !loc ? 'nodata' : (loc.qty > 0 ? 'stock' : 'empty'),
+    });
+    /* location label on the front beam: this is what the picker reads */
+    const off = dep / 2 + .012;
+    if (axis === 'x') S.frames.plate.add(mat4(x, yb - .045, cz + face * off, slotLen * .72, .05, .012), 0xffffff);
+    else S.frames.plate.add(mat4(cx + face * off, yb - .045, z, .012, .05, slotLen * .72), 0xffffff);
+  }
+}
+function addPallet(x, y, key, code, w = 2.1, d = 2.1, orphan = true, flag = '') {
+  const loc = byCode.get(code) || byKey.get(key) || null;
+  S.frames.deck.add(mat4(px(x), .08, px(y), w * 1.05, .16, d * 1.05), 0xb48a52);
+  S.slots.push({ code, loc, flag, orphan, tag: 'pallet', x: px(x), y: .16, z: px(y), nx: 0, nz: 0, ext: 0, along: 0, w, d, ih: 1.7, status: !loc ? 'nodata' : (loc.qty > 0 ? 'stock' : 'empty'), big: true });
+}
+
+/* ---------- the three floor plans ---------- */
+const SCENES = {
+  ugreen: {
+    title: 'ชั้น 3 · พื้นที่ 3FL Ugreen', short: 'ชั้น 3 Ugreen',
+    note: 'วาดจากแผ่น “3FL Ugreen” ในไฟล์ตารางวางสินค้าชั้น 3 และผูกรหัสจากไฟล์สต็อกตำแหน่ง',
+    bounds: { x0: 30, y0: 83, x1: 1250, y1: 470 },
+    cam: [0.15, 0.78, 1.0],
+    build() {
+      paint(30, 83, 1250, 457, 0xc9cdd1, 0.01);
+      walls(30, 83, 1250, 457, 2.2, 0xcfd3d7);
+      /* rooms */
+      walls(171, 280, 312, 385, .45); paint(171, 280, 312, 385, 0xe6edf3, .02);
+      stairs(171, 280, 241, 322, 'บันได'); lift(241, 280, 312, 322, 'ลิฟท์ขนของ');
+      /* the map writes ห้องแพ็คสินค้าออนไลน์ in the open area at the far-left end (x 30-171):
+         one row of 8 desks along that end wall, facing the wall; a station is 1.8 wide (desk + basket/boxes) */
+      packRoom(deskRow(8, 'z', px(270) - 8.4 + .3, 2.4, px(30) + .5, Math.PI / 2), 'ห้องแพ็คสินค้าออนไลน์ · 8 โต๊ะ', px(100), px(270));
+      walls(171, 135, 312, 238, 1.2); paint(171, 135, 241, 238, 0xefe3cf, .02); paint(241, 135, 312, 238, 0xdde8d3, .02);
+      label('รถเข็น', px(206), 1.8, px(190), 'small'); label('ตะกร้า', px(276), 1.8, px(190), 'small');
+      /* best-seller banner + marks */
+      paint(449, 114, 827, 135, 0xffe600, .04); label('ขายดีลองลงมา', px(638), 1.0, px(124), 'hot');
+      paint(425, 385, 449, 405, 0xffe600, .04); label('ขายดี', px(437), 1.0, px(396), 'hot');
+      /* upper ghost row: 9 cells x 2 numbered columns = 18, no codes in the stock file */
+      const cells = [[312, 385], [385, 449], [449, 520], [520, 608], [608, 679], [679, 750], [750, 827], [827, 897], [897, 967]];
+      /* upper row numbers 1-18 continue into 01U-20/21 on the right, so they are read as 01U-01..18 (to confirm on site).
+         Each cell has a rack on both edges facing the orange aisle arrow; bay = 11 positions (2 levels x 6). */
+      let ub = 0;
+      cells.forEach(([a, b]) => [[a + 12, 1], [b - 12, -1]].forEach(([x, face]) => { const bay = ++ub;
+        addBay({ cx: px(x), cz: px(186), len: px(100), dep: px(20), axis: 'z', face, levels: 2, per: 6, levelH: .8, tag: '01U-' + bay,
+          codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `01U|${bay}|${k}`, code: `01U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` }; } });
+        label(String(bay), px(x), 2.2, px(135), 'small'); }));
+      /* 01U-19 continues right after 01U-18, back to back with it, facing the open floor on the right */
+      { const bay = 19; addBay({ cx: px(980), cz: px(186), len: px(100), dep: px(20), axis: 'z', face: 1, levels: 2, per: 6, levelH: .8, tag: '01U-19',
+          codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `01U|19|${k}`, code: `01U-19-${String(k).padStart(2, '0')}` }; } });
+        label('19', px(980), 2.2, px(135), 'small'); }
+      label('แถวบน = 01U-01…19 (19 ต่อจาก 18)', px(640), 3.0, px(135), 'warn');
+      /* 3B: 7 columns x 5 bays, back-to-back pairs with aisles */
+      /* Each column is one rack run along z (5 bays). Faces open onto the aisles (orange arrows on the map);
+         even/odd runs sit back to back: 2|11, 12|21, 22|31. Bay = 4 levels (first digit of the code) x 4 positions (second digit). */
+      const DEP = 30, PITCH = 28, Z0 = 280;      // rack depth / bay width in sheet px (bay width stretched from 21 so a bay is not a thin tower)
+      const blocks = [
+        { back: 449, face: 1, bays: [1, 3, 5, 7, 9] }, { back: 563, face: -1, bays: [2, 4, 6, 8, 10] },
+        { back: 563, face: 1, bays: [11, 13, 15, 17, 19] }, { back: 679, face: -1, bays: [12, 14, 16, 18, 20] },
+        { back: 679, face: 1, bays: [21, 23, 25, 27, 29] }, { back: 786, face: -1, bays: [22, 24, 26, 28, 30] },
+        { back: 786, face: 1, bays: [31, 32, 33, 34, 35] }];
+      blocks.forEach(b => b.bays.forEach((bay, r) => addBay({
+        cx: px(b.back + b.face * DEP / 2), cz: px(Z0 + PITCH * r + PITCH / 2), len: px(PITCH), dep: px(DEP), axis: 'z', face: b.face,
+        levels: 4, per: 4, levelH: .5, tag: '3B-' + bay,
+        codeAt: (l, p) => { const lp = (l + 1) * 10 + (p + 1); return { key: `3B|${bay}|${lp}`, code: `3B-${String(bay).padStart(2, '0')}-${lp}` }; }
+      })));
+      const zEnd = Z0 + PITCH * 5;
+      [[484, 533], [593, 649], [709, 756]].forEach(([a, b]) => { paint(a, Z0, b, zEnd, 0xd8dbde, 0.012); aisleLine((a + b) / 2, Z0, (a + b) / 2, zEnd); });
+      blocks.forEach((b, i) => label(['1·3·5·7·9', '2·4·6·8·10', '11·13·15·17·19', '12·14·16·18·20', '21·23·25·27·29', '22·24·26·28·30', '31–35'][i], px(b.back + b.face * DEP / 2), 2.6, px(276), 'small'));
+      label('3B', px(640), 3.1, px(262), 'zone');
+      /* C-zones: 4 tall racks along z */
+      [['CW', 861, 897], ['CB', 932, 968], ['CR', 1002, 1038], ['CY', 1073, 1108]].forEach(([z, a, b]) => {
+        addBay({ cx: px((a + b) / 2), cz: px(327.5), len: px(115), dep: px(b - a), axis: 'z', levels: 4, per: 24, levelH: .55, tag: z,
+          codeAt: (l, p) => { const n = l * 24 + p + 1; return { key: `${z}|0|${n}`, code: `${z}-${String(n).padStart(3, '0')}` }; } });
+        label(z, px((a + b) / 2), 3.1, px(265), 'zone');
+      });
+      /* 01U-20/21 explicit on the map */
+      [[1143, 1178, 20], [1178, 1214, 21]].forEach(([a, b, bay]) => {
+        addBay({ cx: px((a + b) / 2), cz: px(327.5), len: px(115), dep: px(b - a), axis: 'z', levels: 2, per: 11, levelH: .8, tag: '01U-' + bay,
+          codeAt: (l, p) => l === 0 ? { key: `01U|${bay}|${p + 1}`, code: `01U-${bay}-${String(p + 1).padStart(2, '0')}` } : null });
+        label('01U-' + bay, px((a + b) / 2), 2.6, px(265), 'zone');
+      });
+      /* U01 / U02 blocks drawn on the map, codes not stated -> ghost */
+      [[312, 326], [326, 341], [355, 369], [369, 384], [384, 398], [398, 412]].forEach(([a, b]) => addBay({ cx: px((a + b) / 2), cz: px(332), len: px(100), dep: px(b - a - 2), axis: 'z', levels: 3, ghost: true }));
+      label('U01', px(326), 2.2, px(392), 'small'); label('U02-1', px(370), 2.2, px(392), 'small'); label('U02-2', px(398), 2.2, px(392), 'small');
+    },
+    finds() {
+      const miss3b = 560 - F['3B'].codes;
+      return [
+        ['ok', 'โซน 3B', `ผังมี <b>35</b> bay (7 คอลัมน์ × 5) · ข้อมูลมี <b>${F['3B'].bays}</b> bay ตรงกัน`, `ผัง 4 ชั้น × 4 ช่อง = <b>560</b> ช่อง · ข้อมูลมีรหัส <b>${F['3B'].codes}</b> (ไม่มีรหัส ${miss3b} ช่อง = ยังไม่ผูก SKU)`],
+        ['ok', 'แถว CW / CB / CR / CY', 'ผังมี <b>4</b> แถว · ข้อมูลมี <b>4</b> โซน ตรงกัน', `เลขรหัสขาด: CW ${F.CW.missing.join(',')} · CB ${F.CB.missing.join(',')} · CR ${F.CR.missing.join(',')} · CY ${F.CY.missing.join(',')}`],
+        ['ask', '01U-01…18 = แถวบน 1–18 ?', `ข้อมูลมี 01U <b>21</b> bay · ผังเขียนรหัสเฉพาะ 01U-20, 01U-21 ส่วนแถวบนมีเลข 1–18 ต่อเนื่องกัน`, `สันนิษฐานว่าแถวบนคือ 01U-01…18 (${F['01U_1_19'].codes} ตำแหน่ง รวม bay 19) · 01U-19 วางต่อจาก 01U-18 ปลายแถวบน`],
+        ['diff', '02U vs U02-1 / U02-2', `ผังวาด <b>2</b> บล็อก · ข้อมูลมี 02U <b>3</b> bay`, `02U สต็อก <b>${nf(F['02U'].qty)}</b> ชิ้น ใน ${F['02U'].codes} ตำแหน่ง · ต้องยืนยันว่า U02-1/U02-2 คือ 02U-1…3 อย่างไร`],
+        ['diff', 'สต็อกที่ไม่มีตำแหน่งหยิบ', `<b>${nf(F.noloc3.qty)}</b> ชิ้น ใน ${F.noloc3.rows} แถว SKU`, 'รหัส “001 ( ไม่มีตำแหน่งหยิบ )” ไม่อยู่ในผัง ควรจัดตำแหน่งให้ครบ'],
+      ];
+    },
+  },
+  fantech: {
+    title: 'ชั้น 3 · พื้นที่ FANTECH', short: 'FANTECH',
+    note: 'วาดจากแผ่น “FANTECH” (F01 หยิบ · F02 หยิบ · PA เก็บ · F07) และผูกรหัสจากไฟล์สต็อกตำแหน่ง',
+    bounds: { x0: 78, y0: 108, x1: 1190, y1: 470 },
+    cam: [0.0, 0.82, 1.0],
+    build() {
+      /* same building style as the Ugreen floor: light floor, thin light walls, tinted rooms, yellow floor marks */
+      paint(97, 122, 1170, 454, 0xc9cdd1, 0.01);
+      walls(97, 122, 1170, 454, 2.2, 0xcfd3d7);
+      paint(97, 122, 311, 454, 0xe6edf3, .02);
+      /* one row of 8 desks along the left wall, facing the wall */
+      packRoom(deskRow(8, 'z', px(290) - 8.4 + .3, 2.4, px(97) + .45, Math.PI / 2), 'ห้องแพ็คออฟไลน์ · 8 โต๊ะ', px(205), px(290));
+      walls(311, 327, 483, 454, 1.2); stairs(311, 327, 397, 454, 'บันได'); lift(397, 327, 483, 454, 'ลิฟท์ขนของ');
+      stairs(225, 122, 269, 148, 'บันได'); stairs(1041, 339, 1084, 454, 'บันได');
+      /* main corridor between F02 and F01: yellow edge lines; the map's colour bars become thin zone stripes */
+      aisleLine(311, 278, 1084, 278); aisleLine(311, 299, 1084, 299);
+      paint(483, 250, 1084, 256, 0x00b0f0, .04); label('F02', px(783), 3.1, px(186), 'zone'); label('ตำแหน่งหยิบ', px(783), 1.1, px(262), 'small');
+      paint(483, 321, 869, 327, 0x92d050, .04); label('F01', px(655), 3.1, px(390), 'zone'); label('ตำแหน่งหยิบ', px(676), 1.1, px(312), 'small');
+      paint(869, 321, 1041, 327, 0xf3a07a, .04); label('PA', px(955), 3.1, px(390), 'zone'); label('ตำแหน่งเก็บ', px(955), 1.1, px(312), 'small');
+      label('F07', px(1148), 3.4, px(140), 'zone');
+      /* every map cell is a picking aisle: grey floor + yellow centre line, like the 3B aisles */
+      [483, 569, 655, 741, 827, 913, 998].forEach(x => { paint(x + 30, 122, x + 86, 250, 0xd8dbde, .012); aisleLine(x + 58, 126, x + 58, 246); });
+      [483, 569, 655, 741, 827, 869, 913, 998].forEach((x, i, a) => { const e = a[i + 1] || 1041; if (e - x > 40) { paint(x + 30, 327, e, 454, 0xd8dbde, .012); aisleLine((x + 30 + e) / 2, 331, (x + 30 + e) / 2, 450); } });
+      const slotKey = (z, bay, k) => ({ key: `${z}|${bay}|${k}`, code: `${z}-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` });
+      const slotAt = (z, bay) => (l, p) => { const k = l * 4 + p + 1; const r = slotKey(z, bay, k);
+        if (z === 'F01' && bay === 6 && k === 12) { r.code = 'f01-06-12'; r.flag = 'ตัวพิมพ์เล็ก (f01)'; } return r; };
+      /* Same style as 3B: each map cell is an aisle (orange arrow); a rack run along z sits on its left edge and
+         faces the aisle. Bays are shared out over the cells in order (how many per cell is assumed, to confirm).
+         Levels follow the slot numbers in the data: F02/F07 1-12 = 3 levels x 4, F01 1-14 = 4 levels (4th holds 13-14). */
+            const RUN = 120;                                  // each run fills its cell end to end, like the 3B columns
+      const runs = (bays, counts, xs, zc, mk) => { let i = 0;
+        counts.forEach((n, c) => { const L = RUN / n; for (let r = 0; r < n && i < bays.length; r++, i++) mk(bays[i], xs[c], zc + (r - (n - 1) / 2) * L, L); }); };
+      const f02 = F.F02.bays, f01 = F.F01.bays;
+      const head = (bays, counts, xs, z, zone) => { let i = 0; counts.forEach((n, c) => {
+        const b = bays.slice(i, i + n); i += n; if (b.length) label(b.map(v => String(v).padStart(2, '0')).join('·'), px(xs[c] + 15), 2.6, px(z), 'small'); }); };
+      head(f02, [3, 3, 2, 2, 2, 2, 2], [483, 569, 655, 741, 827, 913, 998], 118, 'F02');
+      head(f01, [2, 2, 1, 1, 1], [483, 569, 655, 741, 827], 458, 'F01');
+      runs(f02, [3, 3, 2, 2, 2, 2, 2], [483, 569, 655, 741, 827, 913, 998], 186, (bay, x, z, L) =>
+        addBay({ cx: px(x + 15), cz: px(z), len: px(L), dep: px(30), axis: 'z', face: 1, levels: 3, per: 4, levelH: .7, tag: 'F02-' + bay, codeAt: slotAt('F02', bay) }));
+      runs(f01, [2, 2, 1, 1, 1], [483, 569, 655, 741, 827], 390.5, (bay, x, z, L) =>
+        addBay({ cx: px(x + 15), cz: px(z), len: px(L), dep: px(30), axis: 'z', face: 1, levels: 4, per: 4, levelH: .55, tag: 'F01-' + bay,
+          codeAt: (l, p) => l * 4 + p + 1 > 14 ? null : slotAt('F01', bay)(l, p) }));
+      [869, 913, 998].forEach(x => addBay({ cx: px(x + 15), cz: px(390.5), len: px(RUN), dep: px(30), axis: 'z', face: 1, levels: 3, per: 4, ghost: true }));
+      /* F07: 6 pads right column + F07-07 */
+      const pads = [[1126, 122, 1], [1126, 173, 2], [1126, 224, 3], [1126, 275, 4], [1126, 326, 5], [1126, 377, 6], [1084, 416, 7]];
+      pads.forEach(([x, y, bay]) => { addBay({ cx: px(x + 44 - 15), cz: px(y + 19), len: px(38), dep: px(30), axis: 'z', face: -1, levels: 3, per: 4, levelH: .7, tag: 'F07-' + bay, codeAt: slotAt('F07', bay) });
+        label('F07-' + String(bay).padStart(2, '0'), px(x + 29), 2.6, px(y + 19), 'small'); });
+    },
+    finds() {
+      return [
+        ['diff', 'F01', `ผังวาดราว <b>5</b> ช่องใต้ป้าย F01 (+3 ช่อง PA) · ข้อมูลมี <b>${F.F01.bays.length}</b> bay`, `F01 มี ${F.F01.codes} ตำแหน่ง สต็อก <b>${nf(F.F01.qty)}</b> ชิ้น — จำนวนช่องในผังไม่พอกับ bay ในข้อมูล`],
+        ['diff', 'F02', `ผังวาด <b>7</b> ช่อง · ข้อมูลมี <b>${F.F02.bays.length}</b> bay (F02-02…17, ไม่มี F02-01)`, `F02 มี ${F.F02.codes} ตำแหน่ง สต็อก <b>${nf(F.F02.qty)}</b> ชิ้น — 1 ช่องในผังน่าจะมีมากกว่า 2 bay ต้องให้หน้างานยืนยัน`],
+        ['diff', 'F03 ไม่อยู่ในผัง', `ข้อมูลมี F03 <b>${F.F03.bays.length}</b> bay · ผังไม่มีโซน F03`, `${F.F03.codes} ตำแหน่ง สต็อก <b>${nf(F.F03.qty)}</b> ชิ้น (ไม่ได้วาดใน 3D)`],
+        ['diff', 'F07', `ผังวาด <b>7</b> ช่อง (เขียนเป็น “F07-4” ไม่ใช่ F07-04) · ข้อมูลมี <b>${F.F07.bays.length}</b> bay`, `F07-08, F07-09 ไม่มีในผัง · F07-03 มีเฉพาะช่อง ${F.F07_03_slots.join('–')} · F07-08 มีช่อง ${F.F07_08_slots.join(',')} ช่องเดียว`],
+        ['ok', 'PA · ตำแหน่งเก็บ', 'ผังมี 3 ช่อง · ข้อมูลไม่มีรหัส PA', 'ไฟล์นี้ส่งออกเฉพาะ “ตำแหน่งหยิบสินค้า” จึงไม่เห็นตำแหน่งเก็บ — ไม่ใช่ข้อผิดพลาด'],
+        ['diff', 'รหัสผิดปกติ', `“f01-06-12” ตัวพิมพ์เล็ก ${F.lower.length} รหัส · หยิบของแถม <b>${nf(F.gift.qty)}</b> ชิ้น`, `ไม่มีตำแหน่งหยิบ <b>${nf(F.nolocF.qty)}</b> ชิ้น (${F.nolocF.rows} แถว SKU)`],
+        ['ask', 'Default Piling Area', `PACKAGE <b>${nf(F.pkg.qty)}</b> ชิ้น · GIFSET <b>${nf(F.gifset.qty)}</b> ชิ้น`, 'พื้นที่กองไม่มีในผังทั้งสองไฟล์ — ต้องกำหนดจุดวาง'],
+      ];
+    },
+  },
+  mezz: {
+    title: 'ชั้นลอย (แผนพาเลท)', short: 'ชั้นลอย',
+    note: 'วาดจากแผ่น “zone ชั้นลอย” — ช่องกรอบเขียว 18 ช่อง · รหัส M-A…M-D ตามแผ่น Sheet5 ยังไม่มีในข้อมูลสต็อก',
+    bounds: { x0: 20, y0: 154, x1: 1265, y1: 495 },
+    cam: [0.0, 0.82, 1.0],
+    build() {
+      paint(20, 168, 1248, 482, 0xc9cdd1, 0.01);
+      solid(20, 154, 1265, 168, 2.2, 0xbfc4c9); solid(20, 482, 1265, 495, 2.2, 0xbfc4c9); solid(1248, 154, 1265, 495, 2.2, 0xbfc4c9);
+      walls(413, 295, 511, 352, 1.4); stairs(413, 295, 511, 352, 'บันได');
+      walls(609, 295, 707, 367, 1.4); lift(609, 295, 707, 367, 'ลิฟท์ขนของ');
+      walls(707, 295, 855, 410, 1.4); paint(707, 295, 855, 410, 0xefe3cf, .02); label('ห้องประกอบกิ๊ฟเซ็ท', px(781), 2.0, px(352), 'zone');
+      aisleLine(326, 241, 1164, 238); aisleLine(310, 245, 310, 400);
+      const R = [[220, 171, 256, 224], [220, 226, 256, 279], [220, 282, 256, 335], [220, 337, 256, 391], [283, 172, 341, 205], [345, 171, 402, 204],
+        [370, 269, 406, 322], [370, 324, 406, 377], [370, 380, 406, 433], [20, 326, 78, 359], [81, 326, 138, 360], [141, 326, 198, 360],
+        [26, 445, 83, 478], [86, 445, 144, 478], [147, 445, 204, 478], [228, 445, 286, 478], [289, 445, 347, 478], [350, 445, 407, 478]];
+      R.forEach(([a, b, c, d]) => { const w = c - a, h = d - b, along = w >= h ? 'x' : 'z';
+        addBay({ cx: px((a + c) / 2), cz: px((b + d) / 2), len: px(along === 'x' ? w : h), dep: px(along === 'x' ? h : w), axis: along, levels: 3, per: 2, levelH: 1.0, ghost: true }); });
+      label('ช่องวางพาเลท 18 ช่อง (ยังไม่ผูกรหัส)', px(215), 4.0, px(300), 'warn');
+      label('แผน: M-A 10 · M-B 10 · M-C 5 · M-D 20 = 45 ตำแหน่ง', px(215), 3.4, px(315), 'warn');
+    },
+    finds() {
+      return [
+        ['ask', 'ช่องในผัง vs แผนรหัส', 'ผังวาด <b>18</b> ช่องวางพาเลท · แผน Sheet5 กำหนดรหัส <b>45</b> ตำแหน่ง', 'ยังไม่ชัดว่า 1 ช่องในผังมีกี่ตำแหน่ง (พาเลทต่อช่อง × จำนวนชั้น) ต้องยืนยันก่อนผูกรหัส'],
+        ['na', 'ข้อมูลสต็อกชั้นลอย', 'ไม่พบรหัส M-… ในไฟล์สต็อกตำแหน่ง', 'ชั้นลอยยังไม่ได้สร้างตำแหน่งใน BigSeller — ตัวอย่างนี้จึงแสดงเป็นโครงเปล่า'],
+        ['ask', 'ห้องประกอบกิ๊ฟเซ็ท', 'อยู่ติดช่องวางพาเลท', 'GIFSET ตอนนี้กองอยู่ใน Default Piling Area (' + nf(F.gifset.qty) + ' ชิ้น) — ควรย้ายมาจุดที่กำหนดในชั้นลอย'],
+      ];
+    },
+  },
+};
+
+/* ---------- modes ---------- */
+const MODES = {
+  real: { name: 'สมจริง', legend: [['#c79a62', 'มีสินค้า (ขนาดกล่องตามจำนวน)'], ['#c3c9cf', 'ช่องมีรหัสแต่สต็อก 0'], ['#e4e7ea', 'ช่องในผังไม่มีรหัสในข้อมูล']] },
+  heat: { name: 'ปริมาณสต็อก', legend: [['#d2d7dc', '0 ชิ้น'], ['#e6f2a0', '1–9'], ['#cdeb03', '10–49'], ['#9ab800', '50–199'], ['#4e5c00', '200–999'], ['#1e2400', '1,000+']] },
+  cmp: { name: 'เทียบผังกับข้อมูล', legend: [['#1a7f4e', 'ตรงผัง · มีสต็อก'], ['#ffb900', 'ตรงผัง · สต็อก 0'], ['#b7bdc3', 'ผังมีช่อง แต่ไม่มีรหัสในข้อมูล'], ['#d4511f', 'ข้อมูลมีรหัส แต่ผังไม่ได้วาด']] },
+  refill: { name: 'ช่องว่าง/ต้องเติม', legend: [['#c62828', '✗ สต็อก 0 (มี SKU)'], ['#ffb900', '! ต่ำกว่าขั้นต่ำ ต้องเติม'], ['#1a7f4e', '✓ สต็อกปกติ'], ['#5aa9e6', '○ ช่องว่าง ไม่มี SKU · วางของใหม่ได้']] },
+};
+const isLow = s => !!(s.loc && s.loc.qty > 0 && s.loc.low);
+let mode = 'real';
+const cardboard = ['#c79a62', '#bd8f58', '#d1a56f', '#b98a55', '#caa06a'];
+const heatCol = q => q <= 0 ? '#d2d7dc' : q < 10 ? '#e6f2a0' : q < 50 ? '#cdeb03' : q < 200 ? '#9ab800' : q < 1000 ? '#4e5c00' : '#1e2400';
+function slotStyle(s) {
+  const q = s.loc ? s.loc.qty : 0;
+  const sz = Math.min(1, Math.sqrt(Math.max(q, 0) / 300));
+  const plate = [.025, '#c3c9cf'];
+  if (mode === 'cmp') {
+    const c = s.orphan ? '#d4511f' : s.status === 'stock' ? '#1a7f4e' : s.status === 'empty' ? '#ffb900' : '#b7bdc3';
+    return [s.status === 'stock' ? s.ih * (.4 + .6 * sz) : .05, c];
+  }
+  if (mode === 'refill') {
+    if (s.status === 'stock') return [s.ih * (.4 + .6 * sz), isLow(s) ? '#ffb900' : '#1a7f4e'];
+    return s.status === 'empty' ? [s.ih * .35, '#c62828'] : [s.ih * .25, '#5aa9e6'];
+  }
+  if (mode === 'heat') return [s.status === 'stock' ? s.ih * (.4 + .6 * sz) : .03, heatCol(q)];
+  if (s.status === 'stock') return [s.ih * (.45 + .55 * sz), cardboard[hash(s.code) % cardboard.length]];
+  return s.status === 'empty' ? plate : [.02, '#e4e7ea'];
+}
+
+/* ---------- build / switch ---------- */
+let sceneId = 'ugreen', slotMesh = null, extraMesh = null, hoverBox = null, selBox = null, selected = null;
+function buildActive() {
+  if (S) S.scene.traverse(o => { if (o.isMesh) { o.geometry !== box && !o.geometry.userData.keep && o.geometry.dispose(); } });
+  labelsEl.innerHTML = '';
+  const def = SCENES[sceneId];
+  S = newScene(def.bounds);
+  def.build();
+  const solidsMesh = ['up', 'beam', 'deck', 'plate'].map(k => S.frames[k].build());
+  S.scene.add(...solidsMesh, S.patch.build());
+  slotMesh = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ roughness: .8, metalness: 0 }), Math.max(1, S.slots.length));
+  slotMesh.castShadow = slotMesh.receiveShadow = true; slotMesh.count = S.slots.length;
+  extraMesh = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ roughness: .85, metalness: 0 }), Math.max(1, S.slots.length));
+  extraMesh.castShadow = extraMesh.receiveShadow = true; extraMesh.count = S.slots.length; extraMesh.frustumCulled = false;
+  S.scene.add(slotMesh, extraMesh);
+  hoverBox = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0x131516 }));
+  hoverBox.visible = false; S.scene.add(hoverBox);
+  selBox = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0xcdeb03 }));
+  selBox.visible = false; S.scene.add(selBox);
+  S.labels.forEach(l => { const e = document.createElement('div'); e.className = 'lbl ' + l.cls; e.textContent = l.text; labelsEl.appendChild(e); l.el = e; });
+  applyMode(); renderSide(); setView('iso'); selected = null; renderSel();
+}
+const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+function applyMode() {
+  S.slots.forEach((s, i) => {
+    const [h, col] = slotStyle(s);
+    const q = s.loc ? s.loc.qty : 0, sz = Math.min(1, Math.sqrt(Math.max(q, 0) / 300));
+    let w = s.w, d = s.d, x = s.x, z = s.z, hh = h, extra = false;
+    if (s.ext) {                               // shelf slot: carton pushed to the front, depth follows quantity
+      const stock = s.status === 'stock', real = mode === 'real';
+      const n = stock ? (real ? .55 + .4 * sz : .92) : .9, nl = s.ext * n, al = s.along * (stock && real ? .78 + .2 * ((hash(s.code) % 7) / 6) : .96);
+      const off = s.ext / 2 - nl / 2;
+      w = s.nx ? nl : al; d = s.nz ? nl : al; x = s.x + s.nx * off; z = s.z + s.nz * off;
+      if (real && stock && sz > .5) { hh = h * .56; extra = true; }     // big stock: second carton stacked on top
+    }
+    slotMesh.setMatrixAt(i, mat4(x, s.y + hh / 2, z, w, hh, d));
+    slotMesh.setColorAt(i, tmpC.set(col));
+    if (extra) {
+      const h2 = (h - hh) * .92;
+      extraMesh.setMatrixAt(i, mat4(x, s.y + hh + h2 / 2, z, w * .92, h2, d * .9)); extraMesh.setColorAt(i, tmpC.set(cardboard[(hash(s.code) + 2) % cardboard.length]));
+    } else { extraMesh.setMatrixAt(i, ZERO); extraMesh.setColorAt(i, tmpC.set('#c79a62')); }
+    s.rx = x; s.rz = z; s.rw = w; s.rd = d; s.h = h;
+  });
+  slotMesh.instanceMatrix.needsUpdate = true; if (slotMesh.instanceColor) slotMesh.instanceColor.needsUpdate = true;
+  extraMesh.instanceMatrix.needsUpdate = true; if (extraMesh.instanceColor) extraMesh.instanceColor.needsUpdate = true;
+  const lg = document.getElementById('legend');
+  lg.innerHTML = `<b>${MODES[mode].name}</b>` + MODES[mode].legend.map(([c, t]) => `<div class="row"><i style="background:${c}"></i>${t}</div>`).join('');
+}
+function setView(v) {
+  const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const fit = Math.max((S.w / 2) / (t * camera.aspect), (S.d / 2) / t) * (v === 'top' ? 1.08 : 1.0);
+  const dir = v === 'top' ? [0.001, 1, 0.04] : SCENES[sceneId].cam;
+  const n = new THREE.Vector3(...dir).normalize().multiplyScalar(fit);
+  camera.position.set(S.cx + n.x, n.y, S.cz + n.z); controls.target.set(S.cx, 0, S.cz); controls.update();
+  S.baseDist = camera.position.distanceTo(controls.target);
+}
+
+/* ---------- UI ---------- */
+const tabsEl = document.getElementById('tabs');
+Object.entries(SCENES).forEach(([id, d]) => {
+  const b = document.createElement('button'); b.className = 'tab'; b.role = 'tab'; b.textContent = d.short; b.dataset.id = id;
+  b.onclick = () => { sceneId = id; [...tabsEl.children].forEach(x => x.setAttribute('aria-selected', x.dataset.id === id)); buildActive(); };
+  b.setAttribute('aria-selected', id === sceneId); tabsEl.appendChild(b);
+});
+const modesEl = document.getElementById('modes');
+Object.entries(MODES).forEach(([id, m]) => {
+  const b = document.createElement('button'); b.className = 'chip'; b.textContent = m.name; b.dataset.id = id; b.setAttribute('aria-pressed', id === mode);
+  b.onclick = () => { mode = id; [...modesEl.children].forEach(x => x.setAttribute('aria-pressed', x.dataset.id === id)); applyMode(); };
+  modesEl.appendChild(b);
+});
+const viewsEl = document.getElementById('views');
+[['iso', 'มุมเฉียง'], ['top', 'มุมบน']].forEach(([id, t]) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = t; b.onclick = () => setView(id); viewsEl.appendChild(b); });
+
+function renderSide() {
+  const d = SCENES[sceneId];
+  document.getElementById('sceneTitle').textContent = d.title;
+  document.getElementById('sceneNote').textContent = d.note;
+  const inMap = S.slots.filter(s => !s.orphan), st = inMap.filter(s => s.status === 'stock'), qty = st.reduce((a, s) => a + s.loc.qty, 0);
+  const orph = S.slots.filter(s => s.orphan), oq = orph.reduce((a, s) => a + (s.loc ? s.loc.qty : 0), 0);
+  document.getElementById('kpis').innerHTML = [
+    ['dark', nf(inMap.length), 'ช่องในผังที่ผูกรหัสแล้ว'],
+    ['', inMap.length ? Math.round(st.length / inMap.length * 100) + '%' : '–', `ช่องที่มีสต็อก (${nf(st.length)} ช่อง)`],
+    ['', nf(qty), 'ชิ้นในช่องที่อยู่ในผัง'],
+    ['', nf(oq), `ชิ้นนอกผัง (${nf(orph.length)} ช่อง)`],
+  ].map(([c, v, l]) => `<div class="kpi ${c}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+  const lab = { ok: 'ตรงผัง', diff: 'ไม่ตรง', ask: 'ต้องยืนยัน', na: 'ไม่มีข้อมูล' };
+  document.getElementById('finds').innerHTML = d.finds().map(([k, t, a, b]) =>
+    `<div class="find"><div class="t"><span class="pill ${k}">${lab[k]}</span>${t}</div><div class="d">${a}</div><div class="d">${b}</div></div>`).join('');
+  document.getElementById('foot').innerHTML = (DATA.locs.length ? `ข้อมูลสต็อก ณ ${esc(DATA.asof)} จากไฟล์ ${esc(DATA.file)} · ${nf(F.rows)} แถว · ${nf(F.locations)} ตำแหน่ง` : 'ยังไม่มีข้อมูลสต็อก — กด อัปไฟล์สต็อกตำแหน่ง') + ' · ขนาดและตำแหน่งในผัง 3D ประมาณจากภาพผัง ไม่ใช่สเกลหน้างาน';
+}
+function renderSel() {
+  const el = document.getElementById('sel');
+  if (!selected) { el.innerHTML = '<span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span>'; return; }
+  const s = selected, l = s.loc;
+  const pill = s.orphan ? '<span class="pill diff">ไม่มีในผัง</span>' : s.status === 'stock' ? '<span class="pill ok">มีสต็อก</span>' : s.status === 'empty' ? '<span class="pill ask">สต็อก 0</span>' : '<span class="pill na">ไม่มีรหัสในข้อมูล</span>';
+  const low = isLow(s) ? ' <span class="pill ask">! ต่ำกว่าขั้นต่ำ</span>' : '';
+  const items = l && l.items ? l.items : [];
+  el.innerHTML = `<div class="code">${esc(s.code)}</div>${pill}${low}${s.flag ? ` <span class="pill ask">${esc(s.flag)}</span>` : ''}` + (l
+    ? `<div style="margin-top:6px">คงเหลือ <b>${nf(l.qty)}</b> · พร้อมขาย <b>${nf(l.avail)}</b> · ล็อก <b>${nf(l.locked)}</b></div>`
+      + `<div class="items">${items.map(it => `<div class="item"><div><b>${esc(it.sku)}</b> · <span class="q">${nf(it.qty)} ชิ้น</span>${it.min != null && it.min > 0 ? ` <span class="hint">(ขั้นต่ำ ${nf(it.min)}${it.max != null ? ' · สูงสุด ' + nf(it.max) : ''})</span>` : ''}</div>`
+      + `<div class="hint">${esc(it.name)}</div><button type="button" class="btn sm" data-out="${esc(it.sku)}">เอา SKU นี้ออกจากช่องนี้</button></div>`).join('')}</div>`
+    : '<div class="hint" style="margin-top:6px">ช่องนี้ยังไม่มี SKU ในไฟล์สต็อก (ยังไม่ผูก SKU หรือยังไม่สร้างตำแหน่งใน BigSeller)</div>')
+    + `<div class="edit"><b>ใส่ SKU ที่ช่องนี้</b>
+      <input type="text" id="editSku" placeholder="SKU เช่น 45091HC" aria-label="SKU ที่จะใส่ช่อง ${esc(s.code)}" autocomplete="off">
+      <label><input type="radio" name="editMode" value="move" checked> ย้ายมาที่นี่ (แทนตำแหน่งเดิมของ SKU)</label>
+      <label><input type="radio" name="editMode" value="add"> เพิ่มเป็นอีกตำแหน่ง</label>
+      <div class="row"><button type="button" class="btn dark" id="editCheck">ตรวจก่อนบันทึก</button></div>
+      <div class="msg" id="editMsg" role="status"></div>
+      <div class="note">บันทึกเป็นตำแหน่งหยิบใน GV Catalog (ใบแปะลังใช้ค่านี้) · ต้องแก้ใน BigSeller ด้วย · กล่องในผังจะย้ายตามหลังอัปไฟล์สต็อกตำแหน่งรอบถัดไป</div></div>`;
+  el.querySelector('#editCheck').onclick = () => editPlan(s.code, el.querySelector('#editSku').value, el.querySelector('input[name=editMode]:checked').value);
+  el.querySelector('#editSku').onkeydown = e => { if (e.key === 'Enter') el.querySelector('#editCheck').click(); };
+  el.querySelectorAll('[data-out]').forEach(b => b.onclick = () => editPlan(s.code, b.dataset.out, 'remove'));
+}
+
+/* ---------- edit a pick location from the map (GV Catalog pick_locations, same DryRun -> confirm as its own page) ---------- */
+let pendingEdit = null;
+async function editPlan(code, skuRaw, how) {
+  const msg = document.getElementById('editMsg'), sku = String(skuRaw || '').trim();
+  if (!sku) { msg.className = 'msg bad'; msg.textContent = 'กรุณาใส่ SKU'; return; }
+  msg.className = 'msg'; msg.textContent = 'กำลังตรวจ…';
+  try {
+    const cur = await fetch('/api/receiving/pick-locations?sku=' + encodeURIComponent(sku), { cache: 'no-store' }).then(r => r.json());
+    const before = (cur.rows || []).map(r => r.position);
+    const up = c => c.toUpperCase();
+    const after = how === 'remove' ? before.filter(p => up(p) !== up(code)) : how === 'add' ? [...new Set([...before, code])] : [code];
+    const res = await fetch('/api/receiving/pick-locations/edit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sku, positions: after.join(','), dryRun: true }) });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.preview) throw Error(j.error || 'HTTP ' + res.status);
+    const p = j.preview, same = p.before.join('|') === p.after.join('|');
+    pendingEdit = { sku: p.sku, positions: p.after.join(','), before: p.before };
+    const dropped = p.before.filter(x => !p.after.includes(x));
+    msg.innerHTML = `<b>${esc(p.sku)}</b>: ${esc(p.before.join(', ') || '(ไม่มีตำแหน่ง)')} → <b>${esc(p.after.join(', ') || '(ไม่มีตำแหน่ง)')}</b>`
+      + (!p.inCatalog ? '<div class="msg bad">✗ ไม่พบ SKU นี้ใน Catalog — เพิ่มสินค้าก่อน</div>' : '')
+      + (how === 'move' && dropped.length > 1 ? `<div style="color:var(--warning)">! SKU นี้มี ${p.before.length} ตำแหน่ง จะเหลือช่องนี้ช่องเดียว (เอาออก ${esc(dropped.join(', '))}) — ถ้าจะเก็บไว้ ให้เลือก เพิ่มเป็นอีกตำแหน่ง</div>` : '')
+      + p.shared.map(x => `<div style="color:var(--warning)">! ${esc(x.position)} มี SKU อื่นอยู่แล้ว: ${esc(x.skus.slice(0, 5).join(', '))}</div>`).join('')
+      + (same ? '<div class="note">ไม่มีอะไรเปลี่ยน</div>' : (p.inCatalog || !p.after.length ? '<div class="row" style="margin-top:6px"><button type="button" class="btn dark" id="editOk">ยืนยันบันทึก</button><button type="button" class="btn" id="editNo">ยกเลิก</button></div>' : ''));
+    const ok = msg.querySelector('#editOk'); if (ok) ok.onclick = editApply;
+    const no = msg.querySelector('#editNo'); if (no) no.onclick = () => { pendingEdit = null; msg.textContent = ''; };
+  } catch (e) { msg.className = 'msg bad'; msg.textContent = e.message; }
+}
+async function editApply() {
+  const msg = document.getElementById('editMsg'), e = pendingEdit; if (!e) return;
+  msg.textContent = 'กำลังบันทึก…';
+  try {
+    const res = await fetch('/api/receiving/pick-locations/edit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...e, dryRun: false }) });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.preview) throw Error(j.error || 'HTTP ' + res.status);
+    pendingEdit = null; msg.className = 'msg ok';
+    msg.textContent = `✓ บันทึกแล้ว · ${j.preview.sku}: ${j.preview.after.join(', ') || '(ไม่มีตำแหน่ง)'} — อย่าลืมแก้ใน BigSeller`;
+  } catch (err) { msg.className = 'msg bad'; msg.textContent = err.message; }
+}
+
+/* ---------- interaction ---------- */
+let pointer = null, downAt = null;
+renderer.domElement.addEventListener('pointermove', e => { const r = renderer.domElement.getBoundingClientRect(); pointer = { x: e.clientX - r.left, y: e.clientY - r.top }; });
+renderer.domElement.addEventListener('pointerleave', () => { pointer = null; });
+renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => { if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 5) select(pick()); });
+function select(s, focus = false) {
+  selected = s; renderSel();
+  if (!s) { selBox.visible = false; return; }
+  const h = Math.max(s.h, .06);
+  selBox.position.set(s.rx, s.y + h / 2, s.rz); selBox.scale.set(s.rw * 1.12, h * 1.15, s.rd * 1.12); selBox.visible = true;
+  if (focus) {                                   // swing the camera in front of the slot's open face
+    controls.target.set(s.rx, s.y + .4, s.rz);
+    const fx = s.nx || 0, fz = s.nz || (s.nx ? 0 : 1);
+    camera.position.set(s.rx + fx * 7 + 1.5, s.y + 5, s.rz + fz * 7 + 1.5); controls.update();
+  }
+}
+
+/* ---------- search: SKU / barcode / name / position -> the slot in the map ---------- */
+const ZONE_SCENE = { '3B': 'ugreen', '01U': 'ugreen', CW: 'ugreen', CB: 'ugreen', CR: 'ugreen', CY: 'ugreen', F01: 'fantech', F02: 'fantech', F07: 'fantech' };
+function search(qRaw) {
+  const q = qRaw.trim().toUpperCase(), box = document.getElementById('searchBox'), out = document.getElementById('results');
+  if (!q) { box.hidden = true; return; }
+  const hits = DATA.locs.filter(l => l.code.toUpperCase().includes(q) || (l.items || []).some(it => it.sku.toUpperCase().includes(q) || (it.gtin || '') === q || it.name.toUpperCase().includes(q)))
+    .sort((a, b) => (b.qty > 0) - (a.qty > 0) || b.qty - a.qty).slice(0, 30);
+  box.hidden = false;
+  document.getElementById('resTitle').textContent = hits.length ? `ผลค้นหา “${qRaw.trim()}” · ${hits.length >= 30 ? '30+' : hits.length} ตำแหน่ง` : `ไม่พบ “${qRaw.trim()}” ในไฟล์สต็อกตำแหน่ง`;
+  out.innerHTML = hits.map((l, i) => { const it = (l.items || []).find(x => x.sku.toUpperCase().includes(q) || (x.gtin || '') === q) || l.items?.[0] || { sku: l.sku, name: l.name };
+    const zone = l.key ? l.key.split('|')[0] : '', inMap = !!ZONE_SCENE[zone];
+    return `<button type="button" class="res" data-i="${i}"><span class="c">${esc(l.code)} · ${nf(l.qty)} ชิ้น${l.low && l.qty > 0 ? ' · ! ต้องเติม' : ''}</span><span>${esc(it.sku)}</span><span class="n">${esc(it.name)}${inMap ? '' : ' · ไม่อยู่ในผัง'}</span></button>`; }).join('');
+  out.querySelectorAll('.res').forEach(b => b.onclick = () => goTo(hits[+b.dataset.i]));
+  if (hits.length === 1) goTo(hits[0]);
+}
+function goTo(l) {
+  const zone = l.key ? l.key.split('|')[0] : '', target = ZONE_SCENE[zone];
+  if (target && target !== sceneId) document.querySelector(`.tab[data-id=${target}]`).click();
+  const s = S.slots.find(x => x.loc === l || x.code.toUpperCase() === l.code.toUpperCase());
+  if (s) select(s, true);
+  else { selected = { code: l.code, loc: l, status: l.qty > 0 ? 'stock' : 'empty', orphan: true, flag: 'ไม่ได้วาดในผัง' }; renderSel(); selBox.visible = false; }
+}
+document.getElementById('searchForm').onsubmit = e => { e.preventDefault(); search(document.getElementById('q').value); };
+
+/* ---------- upload BigSeller สต็อกตำแหน่ง export: DryRun -> confirm -> replace snapshot -> redraw ---------- */
+const dlg = document.getElementById('importDlg'), fileIn = document.getElementById('stockFile');
+let pendingFile = null;
+const when = iso => iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : 'ไม่ระบุ';
+async function sendStock(file, dryRun) {
+  const form = new FormData(); form.set('file', file); form.set('dryRun', String(dryRun));
+  const res = await fetch('/api/warehouse/stock/import', { method: 'POST', body: form });
+  const j = await res.json().catch(() => ({})); if (!res.ok || !j.preview) throw Error(j.error || 'HTTP ' + res.status); return j.preview;
+}
+document.getElementById('uploadBtn').onclick = () => fileIn.click();
+fileIn.onchange = async () => {
+  const f = fileIn.files[0]; fileIn.value = ''; if (!f) return;
+  const btn = document.getElementById('uploadBtn'); btn.disabled = true; btn.textContent = 'กำลังอ่านไฟล์…';
+  try {
+    const p = await sendStock(f, true); pendingFile = f;
+    document.getElementById('importFile').textContent = `${f.name} · ส่งออกเมื่อ ${when(p.file_date)}`;
+    const diff = p.current_qty_total == null ? '' : ` (เดิม ${nf(p.current_qty_total)})`;
+    document.getElementById('importStats').innerHTML = [['แถว (SKU × ตำแหน่ง)', nf(p.rows_in) + (p.current_rows == null ? '' : ` (เดิม ${nf(p.current_rows)})`)], ['ตำแหน่ง', nf(p.positions)], ['SKU', nf(p.skus)], ['รวมชิ้น', nf(p.qty_total) + diff], ['แถวซ้ำ', nf(p.duplicate_count)], ['ข้อมูลในผังตอนนี้', when(p.current_file_date)]]
+      .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+    const m = document.getElementById('importMsg');
+    m.className = 'msg' + (p.older_than_current ? ' bad' : ''); m.textContent = p.older_than_current ? '✗ ไฟล์นี้เก่ากว่าข้อมูลที่อยู่ในผัง — ส่งออกไฟล์ใหม่จาก BigSeller' : 'ยืนยันแล้วข้อมูลสต็อกในผังจะถูกแทนด้วยไฟล์นี้ทั้งหมด';
+    document.getElementById('importOk').disabled = p.older_than_current;
+    dlg.showModal();
+  } catch (e) { alert('อ่านไฟล์ไม่สำเร็จ: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'อัปไฟล์สต็อกตำแหน่ง'; }
+};
+document.getElementById('importCancel').onclick = () => { pendingFile = null; dlg.close(); };
+document.getElementById('importOk').onclick = async () => {
+  const ok = document.getElementById('importOk'), m = document.getElementById('importMsg'); if (!pendingFile) return;
+  ok.disabled = true; m.className = 'msg'; m.textContent = 'กำลังอัปสต็อก…';
+  try { await sendStock(pendingFile, false); pendingFile = null; dlg.close(); await loadData(); buildActive(); }
+  catch (e) { m.className = 'msg bad'; m.textContent = e.message; ok.disabled = false; }
+};
+
+/* ---------- export: empty slots in the map, stock 0, below minimum, no pick location, not drawn ---------- */
+function slotsOfScene(id) {                     // lays out a scene off-screen just to read its slot list
+  if (id === sceneId) return S.slots;
+  if (slotCache[id]) return slotCache[id];
+  const keep = S; S = newScene(SCENES[id].bounds); SCENES[id].build();
+  const r = S.slots.map(({ code, status, orphan }) => ({ code, status, orphan }));
+  S.scene.traverse(o => { if (o.isMesh && o.geometry !== box && !o.geometry.userData.keep) o.geometry.dispose(); });
+  S = keep; return (slotCache[id] = r);
+}
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((ok, bad) => { const s = document.createElement('script'); s.src = '/tools/receiving/xlsx.full.min.js'; s.onload = ok; s.onerror = () => bad(Error('โหลดตัวสร้าง Excel ไม่สำเร็จ')); document.head.append(s); });
+}
+document.getElementById('exportBtn').onclick = async () => {
+  const btn = document.getElementById('exportBtn'); btn.disabled = true;
+  try {
+    await loadXlsx();
+    const all = Object.keys(SCENES).flatMap(id => slotsOfScene(id).map(s => ({ ...s, scene: SCENES[id].short })));
+    const drawn = new Set(all.map(s => s.code.toUpperCase()));
+    const rowsOf = (l, pick) => (l.items || []).filter(pick).map(it => ({ ตำแหน่ง: l.code, SKU: it.sku, ชื่อสินค้า: it.name, คงเหลือ: it.qty, พร้อมขาย: it.avail, ขั้นต่ำ: it.min ?? '', สูงสุด: it.max ?? '' }));
+    const sheets = [
+      ['ช่องว่างในผัง', all.filter(s => s.status === 'nodata' && !s.orphan).map(s => ({ ผัง: s.scene, ตำแหน่ง: s.code }))],
+      ['สต็อก 0', DATA.locs.filter(l => l.key && l.qty === 0).flatMap(l => rowsOf(l, () => true))],
+      ['ต่ำกว่าขั้นต่ำ', DATA.locs.filter(l => l.key).flatMap(l => rowsOf(l, it => it.min > 0 && it.qty < it.min).map(r => ({ ...r, ต้องเติมถึงสูงสุด: r.สูงสุด !== '' ? Math.max(0, r.สูงสุด - r.คงเหลือ) : '' })))],
+      ['ไม่มีตำแหน่งหยิบ', DATA.locs.filter(l => /ไม่มีตำแหน่งหยิบ/.test(l.code)).flatMap(l => rowsOf(l, () => true))],
+      ['มีในข้อมูลแต่ไม่อยู่ในผัง', DATA.locs.filter(l => l.key && !drawn.has(l.code.toUpperCase())).flatMap(l => rowsOf(l, () => true))],
+    ];
+    const wb = XLSX.utils.book_new();
+    sheets.forEach(([name, rows]) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ หมายเหตุ: 'ไม่มีรายการ' }]), name));
+    XLSX.writeFile(wb, `รายการช่อง_${(DATA.asof || 'ไม่มีข้อมูล').replace(/[: ]/g, '-')}.xlsx`);
+  } catch (e) { alert(e.message); }
+  finally { btn.disabled = false; }
+};
+function pick() {
+  if (!pointer) return null;
+  const r = renderer.domElement.getBoundingClientRect();
+  raycaster.setFromCamera(new THREE.Vector2(pointer.x / r.width * 2 - 1, -(pointer.y / r.height) * 2 + 1), camera);
+  const hit = raycaster.intersectObject(slotMesh)[0];
+  return hit ? S.slots[hit.instanceId] : null;
+}
+function updateHover() {
+  const s = pick();
+  if (!s) { tip.style.display = 'none'; hoverBox.visible = false; renderer.domElement.style.cursor = ''; return; }
+  const h = Math.max(s.h, .06);
+  hoverBox.position.set(s.rx, s.y + h / 2, s.rz); hoverBox.scale.set(s.rw * 1.04, h * 1.04, s.rd * 1.04); hoverBox.visible = true;
+  renderer.domElement.style.cursor = 'pointer';
+  const l = s.loc;
+  tip.innerHTML = `<b>${esc(s.code)}</b><br>` + (l ? `${nf(l.qty)} ชิ้น · ${l.skus > 1 ? l.skus + ' SKU' : 'SKU ' + esc(l.sku)}${isLow(s) ? ' · ! ต้องเติม' : ''}<div class="n">${esc(l.name)}</div>` : '<span class="n">ไม่มีรหัสในข้อมูล</span>') + (s.orphan ? '<div class="n">ไม่มีในผัง</div>' : '');
+  tip.style.display = 'block';
+  const W = stage.clientWidth; tip.style.left = Math.min(pointer.x + 14, W - tip.offsetWidth - 8) + 'px'; tip.style.top = Math.max(pointer.y - tip.offsetHeight - 10, 56) + 'px';
+}
+
+/* ---------- loop ---------- */
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+let first = true;
+new ResizeObserver(() => { resize(); if (S && first) { first = false; setView('iso'); } }).observe(stage); resize();
+const v3 = new THREE.Vector3();
+function loop() {
+  requestAnimationFrame(loop);
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) { const t = performance.now() / 1000; S.anim.forEach(f => f(t)); }
+  controls.update();
+  const w = stage.clientWidth, h = stage.clientHeight;
+  const close = camera.position.distanceTo(controls.target) < S.baseDist * 0.55;
+  S.labels.forEach(l => { v3.copy(l.pos).project(camera); const vis = v3.z < 1 && Math.abs(v3.x) < 1.1 && Math.abs(v3.y) < 1.1 && (close || !l.cls.includes('small'));
+    l.el.style.display = vis ? '' : 'none'; if (vis) l.el.style.transform = `translate(-50%,-50%) translate(${(v3.x * .5 + .5) * w}px,${(-v3.y * .5 + .5) * h}px)`; });
+  updateHover();
+  renderer.render(S.scene, camera);
+}
+buildActive(); loop();
+window.__wh = { camera, controls, get S() { return S; }, setScene: id => document.querySelector(`.tab[data-id=${id}]`).click(), setMode: id => document.querySelector(`.chip[data-id=${id}]`).click() };
+</script>
+</body>
+</html>

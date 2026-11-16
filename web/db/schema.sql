@@ -304,3 +304,32 @@ CREATE TABLE IF NOT EXISTS order_snapshots (
   pushed_at timestamptz NOT NULL DEFAULT now(),
   orders jsonb NOT NULL
 );
+
+-- Stock per pick location (สต็อกตำแหน่ง) for the warehouse map (public/tools/warehouse-map). Staff upload
+-- BigSeller's "สต็อกตำแหน่ง_*.xlsx" export on the map page; each upload replaces the whole snapshot (one row per
+-- SKU x position), and location_stock_imports keeps when and from which file it came.
+CREATE TABLE IF NOT EXISTS location_stock (
+  id bigserial PRIMARY KEY,
+  sku text NOT NULL,
+  gtin text,
+  name text,
+  warehouse text,
+  area text,
+  position text NOT NULL,
+  position_type text,
+  qty integer NOT NULL DEFAULT 0,
+  locked integer NOT NULL DEFAULT 0,
+  avail integer NOT NULL DEFAULT 0,
+  unshelved integer NOT NULL DEFAULT 0,
+  max_qty integer,
+  min_qty integer
+);
+CREATE INDEX IF NOT EXISTS location_stock_position_idx ON location_stock (position);
+
+CREATE TABLE IF NOT EXISTS location_stock_imports (
+  id bigserial PRIMARY KEY,
+  file_name text NOT NULL,
+  file_date timestamptz,
+  rows integer NOT NULL,
+  imported_at timestamptz NOT NULL DEFAULT now()
+);

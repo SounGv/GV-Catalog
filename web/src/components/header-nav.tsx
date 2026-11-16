@@ -47,6 +47,7 @@ const RECEIVING_TOOLS = [
   { href: "/tools/receiving/packinglist-converter.html", label: "แปลง Packing List · ใบแปะลัง", external: true },
   { href: "/tools/receiving/label-reprint.html", label: "พิมพ์ใบแปะลัง · พิมพ์เพิ่ม/แก้งาน", external: true },
   { href: "/receiving/pick-locations", label: "ตำแหน่งหยิบ · ซิงค์จาก BigSeller", external: false },
+  { href: "/tools/warehouse-map/index.html", label: "ผังคลังและสต็อก (3D)", external: true },
 ];
 
 function Chevron({ open }: { open: boolean }) {
