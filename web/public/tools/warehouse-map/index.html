@@ -414,8 +414,10 @@ function walker(name, route, n, floor = null) {
   part(armL, .09, .1, .09, 0, -.62, 0, 0, { mat: M(skin) }); part(armR, .09, .1, .09, 0, -.62, 0, 0, { mat: M(skin) });
   part(upper, .13, .14, .13, 0, .74, 0, 0, { geo: ball, mat: M(skin) });                                          // head
   part(upper, .135, .08, .135, 0, .82, -.01, 0, { geo: ball, mat: M(0x1b1712) });                                 // hair
-  const carton = part(upper, .34, .26, .28, 0, .14, .32, 0xc79a62);                                               // carton held in both arms
-  part(upper, .35, .03, .05, 0, .28, .32, 0xd9c7a3, { shadow: false });                                           // its tape
+  const carton = new THREE.Group(); carton.position.set(0, .02, .26); upper.add(carton);                         // carton against the chest
+  part(carton, .32, .24, .26, 0, 0, 0, 0xc79a62); part(carton, .33, .02, .06, 0, .125, 0, 0xd9c7a3, { shadow: false });
+  const infoTag = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, sizeAttenuation: false }));       // "SKU -> slot" while on a refill trip
+  infoTag.center.set(.5, 0); infoTag.position.set(0, 2.05, 0); infoTag.renderOrder = 7; infoTag.visible = false; g.add(infoTag);
   S.scene.add(g);
   if (name) { const st = signTexture(name), tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: st.tex, depthTest: false, sizeAttenuation: false }));
     tag.scale.set(.02 * st.aspect, .02, 1); tag.center.set(.5, 0); tag.position.set(0, 1.85, 0); tag.renderOrder = 6; g.add(tag); }
@@ -436,7 +438,9 @@ function walker(name, route, n, floor = null) {
       if (a.task === 'load') { bend = .25 + .2 * Math.abs(wave); aL = aR = -1.1 - .3 * wave; }
       else if (a.task === 'unload') { bend = .35 + .35 * Math.abs(wave); aL = aR = -1.2 + .4 * wave; carry = wave > 0; }
       else if (a.task === 'count') { bend = .8; aL = -.6; aR = -1 - .25 * Math.sin((tt - leg.t0) * 6); }
-      else if (a.task === 'refill') { carry = k < .45; aL = aR = carry ? -1.3 : -1.25 - .3 * wave; }
+      else if (a.task === 'refill') {                  // carton goes into the slot at its real height
+        const reach = -(Math.PI / 2 + Math.atan2((a.reachY ?? 1.2) - 1.4, .45)), low = (a.reachY ?? 1.2) < .7;
+        carry = k < .4; bend = low ? .7 : 0; aL = aR = (low ? reach + .5 : reach) - .12 * wave; }
       else { aL = aR = -.1; }
     } else {
       const b = leg.b;
@@ -444,9 +448,14 @@ function walker(name, route, n, floor = null) {
       g.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
       const sw = Math.sin(t * 7 + offset) * .55;
       legL.rotation.x = sw; legR.rotation.x = -sw;
-      if (pushing) aL = aR = -1.2; else if (carry) aL = aR = -1.3; else { aL = -sw * .8; aR = sw * .8; }
+      if (pushing) aL = aR = -1.2;
+      else if (carry) { aL = aR = -.75; bend = -.08; legL.rotation.x = sw * .55; legR.rotation.x = -sw * .55; }   // elbows in, hands under the carton, short steps
+      else { aL = -sw * .8; aR = sw * .8; }
     }
     upper.rotation.x = bend; armL.rotation.x = aL; armR.rotation.x = aR; carton.visible = carry && !pushing;
+    const inward = carton.visible ? .22 : 0; armL.rotation.z = inward; armR.rotation.z = -inward;
+    if (a.info) { const st = signTexture(a.info); if (infoTag.material.map !== st.tex) { infoTag.material.map = st.tex; infoTag.material.needsUpdate = true; infoTag.scale.set(.018 * st.aspect, .018, 1); } }
+    infoTag.visible = !!a.info;
     if (floor && n === 0) {                            // the first person moves the trolley
       const tr = floor.trolley;
       if (pushing) { const f = .75; tr.position.set(g.position.x + Math.sin(g.rotation.y) * f, 0, g.position.z + Math.cos(g.rotation.y) * f); tr.rotation.y = g.rotation.y; }
@@ -510,8 +519,10 @@ function addWalkers(id) {
     r.push({ x: me.x, z: me.z, wait: COUNT, task: 'count', face: faceTo(me, stack) });
     stops[n].forEach(s => {                            // one carton per trip: stack -> main aisle -> slot -> back
       const out = s.ext ? s.ext / 2 + .45 : .6, nx = s.nx || (s.ext ? 0 : 1), ax = s.x + nx * out, az = s.z + s.nz * out;
-      r.push({ x: me.x, z: me.z, carry: true, pickup: true }, { x: ax, z: mainZ, carry: true },
-             { x: ax, z: az, wait: 3, task: 'refill', face: Math.atan2(-nx, -s.nz) }, { x: ax, z: mainZ });
+      const it = (s.loc.items || []).find(i => i.min > 0 && i.qty < i.min) || s.loc.items?.[0] || { sku: s.loc.sku };
+      const info = `${it.sku} → ${s.code}`;
+      r.push({ x: me.x, z: me.z, carry: true, pickup: true, info }, { x: ax, z: mainZ, carry: true, info },
+             { x: ax, z: az, wait: 3.5, task: 'refill', info, reachY: s.y + .15, face: Math.atan2(-nx, -s.nz) }, { x: ax, z: mainZ });
     });
     r.push({ x: me.x, z: me.z });
     return r;
