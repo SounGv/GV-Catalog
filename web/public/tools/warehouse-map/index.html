@@ -437,6 +437,15 @@ function addBay(o) {
     else S.frames.plate.add(mat4(cx + face * off, yb - .045, z, .012, .05, slotLen * .72), 0xffffff);
   }
 }
+/* a floor stacking spot: yellow tape square on the floor, cartons stacked straight on it (no shelf, no pallet) */
+function floorSpot(x0, z0, x1, z1, key, code) {
+  const t = 1.1;
+  paint(x0, z0, x1, z0 + t, 0xe8b800, .035); paint(x0, z1 - t, x1, z1, 0xe8b800, .035);
+  paint(x0, z0, x0 + t, z1, 0xe8b800, .035); paint(x1 - t, z0, x1, z1, 0xe8b800, .035);
+  const loc = byKey.get(key) || null;
+  S.slots.push({ code, loc, flag: '', orphan: false, tag: 'floor', x: px((x0 + x1) / 2), y: .04, z: px((z0 + z1) / 2), nx: 0, nz: 0, ext: 0, along: 0,
+    w: px(x1 - x0) * .84, d: px(z1 - z0) * .84, ih: 1.9, status: !loc ? 'nodata' : (loc.qty > 0 ? 'stock' : 'empty') });
+}
 function addPallet(x, y, key, code, w = 2.1, d = 2.1, orphan = true, flag = '') {
   const loc = byCode.get(code) || byKey.get(key) || null;
   S.frames.deck.add(mat4(px(x), .08, px(y), w * 1.05, .16, d * 1.05), 0xb48a52);
@@ -511,14 +520,18 @@ const SCENES = {
       /* U01: drawn on the map, no codes in the data -> ghost */
       [[312, 326], [326, 341]].forEach(([a, b]) => addBay({ cx: px((a + b) / 2), cz: px(332), len: px(100), dep: px(b - a - 2), axis: 'z', levels: 3, ghost: true }));
       label('U01', px(326), 2.2, px(392), 'small');
-      /* 02U (the map's U02-1 / U02-2 area): 3 bays like 01U, 11 positions each = 2 levels x 6 (the 12th is unused),
-         side by side and facing the open floor on the left */
-      [[355, 374, 1], [374, 393, 2], [393, 412, 3]].forEach(([a, b, bay]) => {
-        addBay({ cx: px((a + b) / 2), cz: px(332), len: px(100), dep: px(b - a - 2), axis: 'z', face: -1, levels: 2, per: 6, levelH: .8, tag: '02U-' + bay,
-          codeAt: (l, p) => { const k = l * 6 + p + 1; return k > 11 ? null : { key: `02U|${bay}|${k}`, code: `02U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}` }; } });
-        label(String(bay), px((a + b) / 2), 2.2, px(276), 'small');
+      /* 02U next to the goods lift: not a rack but a floor stacking area. Yellow tape marks the spots on the floor
+         (spot number taped on the floor, e.g. 01-04) and a sign over each row (02U-01, 02U-02 ...) lists spots 1-11.
+         The stacks stand against the building wall below the stair/lift room: 3 rows parallel to the wall, 02U-01 on
+         the wall (its sign hangs deepest in the photo), 02U-02 and 02U-03 in front; 11 spots per row along the wall.
+         Cartons stack straight on the floor, stack height follows the quantity. */
+      const WALL_Z = 452, ROW_D = 19, SX0 = 176, SX1 = 310, SW = (SX1 - SX0) / 11;
+      [1, 2, 3].forEach((bay, r) => {
+        const zb = WALL_Z - r * ROW_D, za = zb - ROW_D + 3;
+        for (let k = 1; k <= 11; k++) floorSpot(SX0 + (k - 1) * SW, za, SX0 + k * SW - 1.5, zb, `02U|${bay}|${k}`, `02U-${String(bay).padStart(2, '0')}-${String(k).padStart(2, '0')}`);
+        label('02U-' + String(bay).padStart(2, '0'), px(SX1 + 9), 1.2, px((za + zb) / 2), 'small');
       });
-      label('02U', px(383), 2.9, px(276), 'zone');
+      label('02U · พื้นวางกองชิดกำแพง ใกล้ลิฟท์', px((SX0 + SX1) / 2), 3.3, px(WALL_Z - ROW_D * 3 - 8), 'zone');
     },
     finds() {
       const miss3b = 560 - F['3B'].codes;
@@ -526,7 +539,7 @@ const SCENES = {
         ['ok', 'โซน 3B', `ผังมี <b>35</b> bay (7 คอลัมน์ × 5) · ข้อมูลมี <b>${F['3B'].bays}</b> bay ตรงกัน`, `ผัง 4 ชั้น × 4 ช่อง = <b>560</b> ช่อง · ข้อมูลมีรหัส <b>${F['3B'].codes}</b> (ไม่มีรหัส ${miss3b} ช่อง = ยังไม่ผูก SKU)`],
         ['ok', 'แถว CW / CB / CR / CY', 'ผังมี <b>4</b> แถว · ข้อมูลมี <b>4</b> โซน ตรงกัน', `เลขรหัสขาด: CW ${F.CW.missing.join(',')} · CB ${F.CB.missing.join(',')} · CR ${F.CR.missing.join(',')} · CY ${F.CY.missing.join(',')}`],
         ['ask', '01U-01…18 = แถวบน 1–18 ?', `ข้อมูลมี 01U <b>21</b> bay · ผังเขียนรหัสเฉพาะ 01U-20, 01U-21 ส่วนแถวบนมีเลข 1–18 ต่อเนื่องกัน`, `สันนิษฐานว่าแถวบนคือ 01U-01…18 (${F['01U_1_19'].codes} ตำแหน่ง รวม bay 19) · 01U-19 วางต่อจาก 01U-18 ปลายแถวบน`],
-        ['ask', '02U = บล็อก U02-1 / U02-2', `วาดเป็น <b>3</b> bay ตามข้อมูล (02U-01…03 · bay ละ 11 ช่อง = 2 ชั้น × 6)`, `02U สต็อก <b>${nf(F['02U'].qty)}</b> ชิ้น ใน ${F['02U'].codes} ตำแหน่ง · ผังเดิมวาด 2 บล็อก ตำแหน่ง bay ในผังต้องให้หน้างานยืนยัน`],
+        ['ask', '02U = บล็อก U02-1 / U02-2', `พื้นวางกองใกล้ลิฟท์ ตีเส้นเทปเหลือง · <b>3</b> แถว (02U-01…03) × 11 ช่อง`, `02U สต็อก <b>${nf(F['02U'].qty)}</b> ชิ้น ใน ${F['02U'].codes} ตำแหน่ง · ทิศของแถวและลำดับเลขช่องในผังเป็นการประมาณจากรูปหน้างาน`],
         ['diff', 'สต็อกที่ไม่มีตำแหน่งหยิบ', `<b>${nf(F.noloc3.qty)}</b> ชิ้น ใน ${F.noloc3.rows} แถว SKU`, 'รหัส “001 ( ไม่มีตำแหน่งหยิบ )” ไม่อยู่ในผัง ควรจัดตำแหน่งให้ครบ'],
       ];
     },
