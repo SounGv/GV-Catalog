@@ -397,7 +397,9 @@ const PATROL = {                                  // walkways in sheet px: main 
     [[627, 288], [627, 140], [627, 288], [799, 288], [799, 140], [799, 288], [971, 288], [971, 140], [971, 288]],
   ],
 };
-function walker(name, path, n) {
+/* Staff figure. `route` is a list of world points {x, z, wait?, face?}: walk point to point, and at a point with
+   `wait` stand still for that many seconds facing `face` (the shelf) and reach in, as when refilling a slot. */
+function walker(name, route, n) {
   const g = new THREE.Group(), shirt = 0x18364c, pants = 0x2e3440, skin = SKINS[n % SKINS.length];
   const limb = (x, y, len, w, color) => { const p = new THREE.Group(); p.position.set(x, y, 0); g.add(p); part(p, w, len, w, 0, -len / 2, 0, color); return p; };
   const legL = limb(-.09, .86, .84, .13, pants), legR = limb(.09, .86, .84, .13, pants);
@@ -408,29 +410,67 @@ function walker(name, path, n) {
   part(armL, .09, .1, .09, 0, -.62, 0, 0, { mat: M(skin) }); part(armR, .09, .1, .09, 0, -.62, 0, 0, { mat: M(skin) });
   part(g, .13, .14, .13, 0, 1.6, 0, 0, { geo: ball, mat: M(skin) });                                              // head
   part(g, .135, .08, .135, 0, 1.68, -.01, 0, { geo: ball, mat: M(0x1b1712) });                                    // hair
-  part(g, .12, .14, .03, .09, 1.18, .11, 0xf2f2f2);                                                               // scanner in the shirt pocket
+  /* red picking basket held in the left hand, with a few products in it */
+  const basket = new THREE.Group(); basket.position.set(-.3, .72, .12); g.add(basket);
+  const red = 0xd23b2b;
+  part(basket, .34, .02, .24, 0, 0, 0, red); part(basket, .34, .14, .02, 0, .07, -.12, red); part(basket, .34, .14, .02, 0, .07, .12, red);
+  part(basket, .02, .14, .24, -.17, .07, 0, red); part(basket, .02, .14, .24, .17, .07, 0, red);
+  part(basket, .02, .02, .2, 0, .22, 0, red);                                                                     // handle
+  [[-.08, 0x2f6fb5, .1], [.05, 0xffffff, .13], [.1, 0xcdeb03, .08]].forEach(([x, c, h]) => part(basket, .08, h, .07, x, .01 + h / 2, 0, c));
   S.scene.add(g);
-  const pts = path.map(([x, z]) => new THREE.Vector2(px(x), px(z)));
-  const seg = pts.map((p, i) => p.distanceTo(pts[(i + 1) % pts.length])), total = seg.reduce((a, b) => a + b, 0);
-  if (name) { const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: signTexture(name).tex, depthTest: false, sizeAttenuation: false }));
-    const a = signTexture(name).aspect; tag.scale.set(.02 * a, .02, 1); tag.center.set(.5, 0); tag.position.set(0, 1.85, 0); tag.renderOrder = 6; g.add(tag); }
-  const speed = .9, offset = n * 37.3;
+  if (name) { const st = signTexture(name), tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: st.tex, depthTest: false, sizeAttenuation: false }));
+    tag.scale.set(.02 * st.aspect, .02, 1); tag.center.set(.5, 0); tag.position.set(0, 1.85, 0); tag.renderOrder = 6; g.add(tag); }
+  /* timeline: walking legs at `speed`, then waits */
+  const speed = 1.1, legs = [];
+  let T = 0;
+  route.forEach((a, i) => {
+    const b = route[(i + 1) % route.length], d = Math.hypot(b.x - a.x, b.z - a.z);
+    if (a.wait) { legs.push({ t0: T, t1: T + a.wait, wait: true, a }); T += a.wait; }
+    if (d > 1e-3) { legs.push({ t0: T, t1: T + d / speed, a, b }); T += d / speed; }
+  });
+  const offset = n * 11.7;
   S.anim.push(t => {
-    let d = ((t * speed + offset) % total + total) % total, i = 0;
-    while (d > seg[i]) { d -= seg[i]; i = (i + 1) % pts.length; }
-    const a = pts[i], b = pts[(i + 1) % pts.length], k = seg[i] ? d / seg[i] : 0;
-    g.position.set(a.x + (b.x - a.x) * k, 0, a.y + (b.y - a.y) * k);
-    g.rotation.y = Math.atan2(b.x - a.x, b.y - a.y);
+    const tt = ((t + offset) % T + T) % T, leg = legs.find(l => tt >= l.t0 && tt < l.t1) || legs[0];
+    if (leg.wait) {                                      // at the slot: face the shelf, reach in and put stock on it
+      g.position.set(leg.a.x, 0, leg.a.z); g.rotation.y = leg.a.face ?? g.rotation.y;
+      const r = Math.sin((tt - leg.t0) * 3.2);
+      legL.rotation.x = legR.rotation.x = 0; armL.rotation.x = -.35; armR.rotation.x = -1.25 - .35 * r;
+      return;
+    }
+    const k = (tt - leg.t0) / (leg.t1 - leg.t0), a = leg.a, b = leg.b;
+    g.position.set(a.x + (b.x - a.x) * k, Math.abs(Math.cos(t * 7 + offset)) * .03, a.z + (b.z - a.z) * k);
+    g.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
     const sw = Math.sin(t * 7 + offset) * .55;
-    legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -sw * .8; armR.rotation.x = sw * .8;
-    g.position.y = Math.abs(Math.cos(t * 7 + offset)) * .03;                                                    // small bob per step
+    legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -.35; armR.rotation.x = sw * .8;   // left hand keeps the basket
+  });
+}
+/* Refill route on the open floor plan: the slots below their minimum, in walking order, shared out between the floor's
+   staff. Each stop: walk along the main aisle, turn into the rack aisle, stop in front of the slot, refill, walk back. */
+const MAIN_Z = { ugreen: 250, fantech: 290 };          // main aisle, sheet px
+function refillRoutes(id, crew) {
+  const mainZ = px(MAIN_Z[id] ?? 250);
+  const stops = S.slots.filter(s => !s.orphan && s.loc && isLow(s)).sort((a, b) => a.x - b.x || a.z - b.z);
+  const per = crew.map(() => []);
+  stops.forEach((s, i) => per[i % crew.length].push(s));
+  return per.map(list => {
+    if (!list.length) return null;
+    const r = [{ x: list[0].x, z: mainZ }];
+    list.slice(0, 12).forEach(s => {
+      const out = s.ext ? s.ext / 2 + .45 : .6, ax = s.x + (s.nx || (s.ext ? 0 : 1)) * out, az = s.z + s.nz * out;
+      r.push({ x: ax, z: mainZ }, { x: ax, z: az, wait: 3, face: Math.atan2(-(s.nx || (s.ext ? 0 : 1)), -s.nz) }, { x: ax, z: mainZ });
+    });
+    return r;
   });
 }
 function addWalkers(id) {
   const paths = PATROL[id]; if (!paths) return;
   const names = STAFF.filter(x => x.scene === id).map(x => x.name);
   const crew = names.length ? names : (id === 'fantech' ? ['พนักงาน'] : ['พนักงาน', 'พนักงาน']);
-  crew.forEach((name, n) => walker(name, paths[n % paths.length], n));
+  const routes = refillRoutes(id, crew);
+  crew.forEach((name, n) => {
+    const patrol = paths[n % paths.length].map(([x, z]) => ({ x: px(x), z: px(z) }));
+    walker(name, routes[n] || patrol, n);              // nothing to refill: walk the inspection round instead
+  });
 }
 function hangSign(text, x, z, lift = 0) {
   /* the board keeps the same size on screen (readable from the overview and up close); it hangs on one wire from the ceiling */
@@ -729,10 +769,9 @@ const SCENES = {
       walls(311, 327, 483, 454, 1.2); stairs(311, 327, 397, 454, 'บันได'); lift(397, 327, 483, 454, 'ลิฟท์ขนของ');
       stairs(225, 122, 269, 148, 'บันได'); stairs(1041, 339, 1084, 454, 'บันได');
       /* main corridor between F02 and F01: yellow edge lines; the map's colour bars become thin zone stripes */
-      hazardTape(311, 276, 1084, 276); hazardTape(311, 301, 1084, 301);   // hazard tape on both edges of the main corridor
-      paint(483, 250, 1084, 256, 0x00b0f0, .04); label('F02', px(783), 3.1, px(186), 'zone'); label('ตำแหน่งหยิบ', px(783), 1.1, px(262), 'small');
-      paint(483, 321, 869, 327, 0x92d050, .04); label('F01', px(655), 3.1, px(390), 'zone'); label('ตำแหน่งหยิบ', px(676), 1.1, px(312), 'small');
-      paint(869, 321, 1041, 327, 0xf3a07a, .04); label('PA', px(955), 3.1, px(390), 'zone'); label('ตำแหน่งเก็บ', px(955), 1.1, px(312), 'small');
+      hazardTape(483, 253, 1084, 253); label('F02', px(783), 3.1, px(186), 'zone'); label('ตำแหน่งหยิบ', px(783), 1.1, px(262), 'small');
+      hazardTape(483, 324, 1041, 324); label('F01', px(655), 3.1, px(390), 'zone'); label('ตำแหน่งหยิบ', px(676), 1.1, px(312), 'small');
+      label('PA', px(955), 3.1, px(390), 'zone'); label('ตำแหน่งเก็บ', px(955), 1.1, px(312), 'small');
       label('F07', px(1148), 3.4, px(140), 'zone');
       /* every map cell is a picking aisle: grey floor + yellow centre line, like the 3B aisles */
       [483, 569, 655, 741, 827, 913, 998].forEach(x => { paint(x + 30, 122, x + 86, 250, 0xd8dbde, .012); aisleLine(x + 58, 126, x + 58, 246); });
