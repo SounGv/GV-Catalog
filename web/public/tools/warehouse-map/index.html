@@ -399,7 +399,7 @@ const PATROL = {                                  // walkways in sheet px: main 
 };
 /* Staff figure. `route` is a list of world points {x, z, wait?, face?}: walk point to point, and at a point with
    `wait` stand still for that many seconds facing `face` (the shelf) and reach in, as when refilling a slot. */
-function walker(name, route, n) {
+function walker(name, route, n, trolley = null) {
   const g = new THREE.Group(), shirt = 0x18364c, pants = 0x2e3440, skin = SKINS[n % SKINS.length];
   const limb = (x, y, len, w, color) => { const p = new THREE.Group(); p.position.set(x, y, 0); g.add(p); part(p, w, len, w, 0, -len / 2, 0, color); return p; };
   const legL = limb(-.09, .86, .84, .13, pants), legR = limb(.09, .86, .84, .13, pants);
@@ -428,25 +428,48 @@ function walker(name, route, n) {
     if (a.wait) { legs.push({ t0: T, t1: T + a.wait, wait: true, a }); T += a.wait; }
     if (d > 1e-3) { legs.push({ t0: T, t1: T + d / speed, a, b }); T += d / speed; }
   });
-  const offset = n * 11.7;
+  const offset = trolley ? 0 : n * 11.7;               // a floor crew shares one timeline so they meet at the trolley
+  basket.visible = true;
   S.anim.push(t => {
-    const tt = ((t + offset) % T + T) % T, leg = legs.find(l => tt >= l.t0 && tt < l.t1) || legs[0];
-    if (leg.wait) {                                      // at the slot: face the shelf, reach in and put stock on it
+    const tt = ((t + offset) % T + T) % T, leg = legs.find(l => tt >= l.t0 && tt < l.t1) || legs[0], pushing = !!(trolley && leg.a.push);
+    if (leg.wait) {
       g.position.set(leg.a.x, 0, leg.a.z); g.rotation.y = leg.a.face ?? g.rotation.y;
       const r = Math.sin((tt - leg.t0) * 3.2);
-      legL.rotation.x = legR.rotation.x = 0; armL.rotation.x = -.35; armR.rotation.x = -1.25 - .35 * r;
-      return;
+      legL.rotation.x = legR.rotation.x = 0;
+      if (leg.a.task === 'count') { armL.rotation.x = -.9; armR.rotation.x = -.9 - .15 * r; }       // checking the cartons on the trolley
+      else if (pushing) { armL.rotation.x = armR.rotation.x = -1.1 - .25 * r; }                     // loading at the lift
+      else { armL.rotation.x = -.35; armR.rotation.x = -1.25 - .35 * r; }                            // refilling a slot
+    } else {
+      const k = (tt - leg.t0) / (leg.t1 - leg.t0), a = leg.a, b = leg.b;
+      g.position.set(a.x + (b.x - a.x) * k, Math.abs(Math.cos(t * 7 + offset)) * .03, a.z + (b.z - a.z) * k);
+      g.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+      const sw = Math.sin(t * 7 + offset) * .55;
+      legL.rotation.x = sw; legR.rotation.x = -sw;
+      if (pushing) { armL.rotation.x = armR.rotation.x = -1.2; } else { armL.rotation.x = -.35; armR.rotation.x = sw * .8; }
     }
-    const k = (tt - leg.t0) / (leg.t1 - leg.t0), a = leg.a, b = leg.b;
-    g.position.set(a.x + (b.x - a.x) * k, Math.abs(Math.cos(t * 7 + offset)) * .03, a.z + (b.z - a.z) * k);
-    g.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
-    const sw = Math.sin(t * 7 + offset) * .55;
-    legL.rotation.x = sw; legR.rotation.x = -sw; armL.rotation.x = -.35; armR.rotation.x = sw * .8;   // left hand keeps the basket
+    basket.visible = !pushing;
+    if (trolley) {                                      // pushed: in front of the walker; otherwise parked at the floor entrance
+      if (pushing) { const f = .75; trolley.obj.position.set(g.position.x + Math.sin(g.rotation.y) * f, 0, g.position.z + Math.cos(g.rotation.y) * f); trolley.obj.rotation.y = g.rotation.y; }
+      else { trolley.obj.position.set(trolley.park.x, 0, trolley.park.z); trolley.obj.rotation.y = trolley.park.face; }
+    }
   });
+  return T;
+}
+/* flat warehouse trolley with a push handle, loaded with cartons */
+function makeTrolley() {
+  const g = new THREE.Group();
+  part(g, .62, .04, .9, 0, .22, 0, 0x8d959c);                                              // deck
+  for (const [x, z] of [[-.26, -.38], [.26, -.38], [-.26, .38], [.26, .38]]) part(g, .07, .14, .07, x, .1, z, 0x1f2326, { geo: ball });   // wheels
+  part(g, .03, .7, .03, -.29, .55, -.44, 0x6b7178); part(g, .03, .7, .03, .29, .55, -.44, 0x6b7178); part(g, .62, .03, .03, 0, .9, -.44, 0x6b7178);   // handle
+  [[-.13, .34, .2, -.2], [.14, .34, .22, -.15], [0, .34, .2, .2], [-.12, .52, .16, .02], [.12, .52, .16, .12]].forEach(([x, y, h, z], i) =>
+    part(g, .25, h, .3, x, y + h / 2 - .1, z, i % 2 ? 0xbd8f58 : 0xc79a62));
+  S.scene.add(g); return g;
 }
 /* Refill route on the open floor plan: the slots below their minimum, in walking order, shared out between the floor's
    staff. Each stop: walk along the main aisle, turn into the rack aisle, stop in front of the slot, refill, walk back. */
 const MAIN_Z = { ugreen: 250, fantech: 290 };          // main aisle, sheet px
+const LIFT_DOOR = { ugreen: [325, 300], fantech: [440, 300] };   // where stock comes up (goods lift door), sheet px
+const STAGE = { ugreen: [425, 255], fantech: [505, 290] };       // floor entrance: the trolley is parked and checked here
 function refillRoutes(id, crew) {
   const mainZ = px(MAIN_Z[id] ?? 250);
   const stops = S.slots.filter(s => !s.orphan && s.loc && isLow(s)).sort((a, b) => a.x - b.x || a.z - b.z);
@@ -454,23 +477,41 @@ function refillRoutes(id, crew) {
   stops.forEach((s, i) => per[i % crew.length].push(s));
   return per.map(list => {
     if (!list.length) return null;
-    const r = [{ x: list[0].x, z: mainZ }];
-    list.slice(0, 12).forEach(s => {
+    const r = [];
+    list.slice(0, 10).forEach(s => {
       const out = s.ext ? s.ext / 2 + .45 : .6, ax = s.x + (s.nx || (s.ext ? 0 : 1)) * out, az = s.z + s.nz * out;
       r.push({ x: ax, z: mainZ }, { x: ax, z: az, wait: 3, face: Math.atan2(-(s.nx || (s.ext ? 0 : 1)), -s.nz) }, { x: ax, z: mainZ });
     });
     return r;
   });
 }
+const routeTime = route => route.reduce((T, a, i) => { const b = route[(i + 1) % route.length]; return T + (a.wait || 0) + Math.hypot(b.x - a.x, b.z - a.z) / 1.1; }, 0);
 function addWalkers(id) {
   const paths = PATROL[id]; if (!paths) return;
   const names = STAFF.filter(x => x.scene === id).map(x => x.name);
   const crew = names.length ? names : (id === 'fantech' ? ['พนักงาน'] : ['พนักงาน', 'พนักงาน']);
-  const routes = refillRoutes(id, crew);
-  crew.forEach((name, n) => {
-    const patrol = paths[n % paths.length].map(([x, z]) => ({ x: px(x), z: px(z) }));
-    walker(name, routes[n] || patrol, n);              // nothing to refill: walk the inspection round instead
+  const stops = refillRoutes(id, crew);
+  if (!stops.some(Boolean) || !LIFT_DOOR[id]) {        // nothing to refill: walk the inspection round instead
+    crew.forEach((name, n) => walker(name, paths[n % paths.length].map(([x, z]) => ({ x: px(x), z: px(z) })), n));
+    return;
+  }
+  const [lx, lz] = LIFT_DOOR[id], [sx, sz] = STAGE[id], lift = { x: px(lx), z: px(lz) }, stage = { x: px(sx), z: px(sz) };
+  const spot = n => ({ x: stage.x + .5 + .7 * n, z: stage.z + (n % 2 ? .7 : -.7), face: Math.atan2(-(.5 + .7 * n), -(n % 2 ? .7 : -.7)) });   // around the trolley
+  const fetchTime = 4 + Math.hypot(stage.x - lift.x, stage.z - lift.z) / 1.1;      // loading at the lift + pushing to the entrance
+  const routes = crew.map((_, n) => {
+    const me = spot(n), mine = stops[n] || [];
+    const head = n === 0
+      ? [{ x: lift.x, z: lift.z, wait: 4, push: true, face: Math.atan2(lift.x - stage.x, lift.z - stage.z) },   // load at the lift, push it over
+         { x: me.x, z: me.z, wait: 6, task: 'count', face: me.face }]
+      : [{ x: me.x, z: me.z, wait: fetchTime + 6, task: 'count', face: me.face }];                            // wait for the trolley, count together
+    return [...head, ...mine, { x: me.x, z: me.z }];
   });
+  /* the trolley goes back to the lift with the first person; everyone else's loop is padded to the same length */
+  routes[0].push({ x: stage.x - .2, z: stage.z, push: true });
+  const T = Math.max(...routes.map(routeTime));
+  routes.forEach((r, n) => { if (n) { const last = r[r.length - 1]; last.wait = (last.wait || 0) + T - routeTime(r); last.face = spot(n).face; last.task = 'count'; } else { const p0 = r[r.length - 2]; p0.wait = (p0.wait || 0) + T - routeTime(r); } });
+  const trolley = { obj: makeTrolley(), park: { x: stage.x - .2, z: stage.z, face: Math.atan2(stage.x - lift.x, stage.z - lift.z) } };
+  crew.forEach((name, n) => walker(name, routes[n], n, trolley));
 }
 function hangSign(text, x, z, lift = 0) {
   /* the board keeps the same size on screen (readable from the overview and up close); it hangs on one wire from the ceiling */
