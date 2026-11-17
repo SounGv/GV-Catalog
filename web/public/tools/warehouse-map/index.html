@@ -53,6 +53,11 @@ main{flex:1;display:flex;min-height:0}
 .hud{position:absolute;display:flex;gap:4px;flex-wrap:wrap;z-index:2;padding:5px;border-radius:var(--radius-chip)}
 #modes{left:12px;top:12px}
 #views{right:12px;top:12px}
+.inv{margin:6px 0;padding:8px 10px;border-radius:8px;font-size:14px;line-height:1.5;border-left:4px solid}
+.inv .v{font-weight:700}
+.inv.ok{background:#eef6f1;border-color:#1f7a4d}
+.inv.warn{background:#fff4e0;border-color:#f0a020}.inv.warn .v{color:#8a5200}
+.inv.bad{background:#fdecec;border-color:#c62828}.inv.bad .v{color:#b3261e}
 .chip.place{appearance:auto;font:inherit;font-weight:600;padding:0 8px;max-width:230px;cursor:pointer}
 .chip{min-height:40px;padding:0 14px;border-radius:var(--radius-chip);border:1px solid transparent;background:transparent;font-weight:600;color:#2b3a46;white-space:nowrap;flex:none}
 .chip:hover{background:rgba(24,54,76,.07)}
@@ -1462,6 +1467,20 @@ document.querySelectorAll('.seg [data-pane]').forEach(b => b.onclick = () => sho
   const setSide = off => { document.body.classList.toggle('side-off', off); show.hidden = !off; try { localStorage.setItem('gv-wh-side-off', off ? '1' : ''); } catch {} };
   document.getElementById('hideSide').onclick = () => setSide(true); show.onclick = () => setSide(false);
   try { if (localStorage.getItem('gv-wh-side-off')) setSide(true); } catch {} }
+/* stock of this SKU across the warehouse: total, other positions, and what to do for a sold-out / below-minimum slot */
+function invBox(it, l) {
+  const other = DATA.locs.filter(o => o !== l).flatMap(o => (o.items || []).filter(x => x.sku === it.sku && x.qty > 0).map(x => ({ code: o.code, qty: x.qty }))).sort((a, b) => b.qty - a.qty);
+  const rest = other.reduce((t, x) => t + x.qty, 0), total = rest + Math.max(it.qty, 0);
+  const out = it.qty <= 0, low = !out && it.min > 0 && it.qty < it.min, need = Math.max(0, (it.max > 0 ? it.max : it.min) - it.qty);
+  const kind = out || low ? (rest ? 'warn' : 'bad') : 'ok';
+  const verdict = out || low
+    ? (rest ? `${out ? '✗ หมดในช่องนี้' : '! ต่ำกว่าขั้นต่ำ'} · เติมได้เลย${need ? ` ${nf(Math.min(need, rest))} ชิ้น` : ''}`
+            : `${out ? '✗ หมดในช่องนี้' : '! ต่ำกว่าขั้นต่ำ'} · ไม่มีของสำรองในคลัง ต้องโอนหรือสั่งเพิ่ม`)
+    : '✓ ช่องนี้ยังพอ';
+  return `<div class="inv ${kind}"><div class="v">${verdict}</div>
+    <div>สินค้าคงคลังทั้งหมด <b>${nf(total)}</b> ชิ้น · ในช่องนี้ <b>${nf(Math.max(it.qty, 0))}</b> · ที่อื่น <b>${nf(rest)}</b></div>
+    ${other.length ? `<div class="hint">อยู่ที่ ${other.slice(0, 4).map(x => `${esc(x.code)} (${nf(x.qty)})`).join(', ')}${other.length > 4 ? ` และอีก ${nf(other.length - 4)} ตำแหน่ง` : ''}</div>` : ''}</div>`;
+}
 function renderSel() {
   const el = document.getElementById('sel');
   if (!selected) { el.innerHTML = '<span class="hint">คลิกช่องวางสินค้าในผังเพื่อดูตำแหน่ง จำนวน และ SKU</span>'; return; }
@@ -1472,7 +1491,7 @@ function renderSel() {
   el.innerHTML = `<div class="code">${esc(s.code)}</div>${pill}${low}${s.flag ? ` <span class="pill ask">${esc(s.flag)}</span>` : ''}` + (l
     ? `<div style="margin-top:6px">คงเหลือ <b>${nf(l.qty)}</b> · พร้อมขาย <b>${nf(l.avail)}</b> · ล็อก <b>${nf(l.locked)}</b></div>`
       + `<div class="items">${items.map(it => `<div class="item"><div><b>${esc(it.sku)}</b> · <span class="q">${nf(it.qty)} ชิ้น</span>${it.min != null && it.min > 0 ? ` <span class="hint">(ขั้นต่ำ ${nf(it.min)}${it.max != null ? ' · สูงสุด ' + nf(it.max) : ''})</span>` : ''}</div>`
-      + `<div class="hint">${esc(it.name)}</div><button type="button" class="btn sm" data-out="${esc(it.sku)}">เอา SKU นี้ออกจากช่องนี้</button></div>`).join('')}</div>`
+      + `<div class="hint">${esc(it.name)}</div>${invBox(it, l)}<button type="button" class="btn sm" data-out="${esc(it.sku)}">เอา SKU นี้ออกจากช่องนี้</button></div>`).join('')}</div>`
     : '<div class="hint" style="margin-top:6px">ช่องนี้ยังไม่มี SKU ในไฟล์สต็อก (ยังไม่ผูก SKU หรือยังไม่สร้างตำแหน่งใน BigSeller)</div>')
     + assignBox(s)
     + `<div class="edit"><b>ใส่ SKU ที่ช่องนี้</b>
