@@ -53,6 +53,36 @@ main{flex:1;display:flex;min-height:0}
 .hud{position:absolute;display:flex;gap:4px;flex-wrap:wrap;z-index:2;padding:5px;border-radius:var(--radius-chip)}
 #modes{left:12px;top:12px}
 #views{right:12px;top:12px}
+.boss{display:flex;flex-direction:column;gap:14px}
+.act{background:var(--navy);border-radius:var(--radius-card);padding:12px;display:flex;flex-direction:column;gap:6px}
+.act h3{color:#fff;font-size:15px;margin:0 0 2px}
+.act button{display:grid;grid-template-columns:26px 44px 1fr;gap:8px;align-items:center;text-align:left;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:8px 10px;color:#fff;font:inherit;min-height:48px;cursor:pointer}
+.act button:hover{background:rgba(255,255,255,.14)}
+.act button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.act .n{font-size:20px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.act .t{font-size:14px;line-height:1.35}.act small{display:block;color:var(--navy-ink);font-size:12px}
+.act .calm{color:var(--navy-text);font-size:14px}
+.ic{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px}
+.ic.bad{background:#c62828;color:#fff}.ic.warn{background:#f0a020;color:#18232b}.ic.info{background:#1d5fd1;color:#fff}
+.bk{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bk div{border:1px solid var(--border);border-radius:var(--radius-card);padding:8px 10px}
+.bk .v{font-size:22px;font-weight:700;line-height:1.25;color:var(--navy);font-variant-numeric:tabular-nums}
+.bk .l{font-size:12px;color:var(--muted-foreground);line-height:1.35}
+.zn{display:grid;grid-template-columns:44px 1fr 74px;gap:8px;align-items:center;font-size:13px;padding:3px 0}
+.zn .st{display:flex;height:12px;border-radius:3px;overflow:hidden;background:#e6f4ec}
+.zn .o{background:#c62828}.zn .w{background:#f0a020}
+.zn .r{text-align:right;font-variant-numeric:tabular-nums}
+.tr{display:flex;align-items:flex-end;gap:6px;height:86px}
+.tr div{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted-foreground)}
+.tr span{width:100%;max-width:26px;background:var(--primary);border-radius:3px 3px 0 0;min-height:2px}
+.tr span.none{background:var(--border)}
+.tr b{font-size:11px;color:var(--text)}
+.mini{list-style:none;margin:6px 0 0;padding:0;font-size:13px}
+.mini li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)}
+.flowg{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px}
+.flowg div{border:1px solid var(--border);border-radius:var(--radius-card);padding:8px 10px}
+.flowg b{display:block;font-size:20px;color:var(--navy);font-variant-numeric:tabular-nums}
+.crew .done{font-size:11px;color:var(--muted-foreground);margin-left:4px}
 .inv{margin:6px 0;padding:8px 10px;border-radius:8px;font-size:14px;line-height:1.5;border-left:4px solid}
 .inv .v{font-weight:700}
 .inv.ok{background:#eef6f1;border-color:#1f7a4d}
@@ -207,7 +237,8 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
   #legend:not(.open) .row,#legend:not(.open) .lg-title{display:none}
   aside{width:auto;max-width:none;border-left:0;border-top:1px solid var(--border);overflow:visible}
   .tabs{margin-left:0}
-  #views{top:auto;bottom:12px;right:12px}
+  #views{top:auto;bottom:12px;right:12px;left:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .chip.place{max-width:170px}
   #hint{display:none}
   #legend{bottom:64px;max-width:calc(100% - 24px)}
   .badge-sample{display:none}
@@ -259,7 +290,7 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
       <button type="button" role="tab" data-pane="check" aria-selected="false">ตรวจผัง</button>
     </div>
     <section class="pane" data-pane="over">
-      <div class="kpis" id="kpis"></div>
+      <div id="boss" class="boss"></div>
       <div><div class="refill"><div class="bar"><h3 class="sub" style="margin:0">ต้องเติมวันนี้ <span id="refillCount" class="note"></span></h3><button type="button" class="btn sm" id="refillXlsx">ดาวน์โหลด (.xlsx)</button></div><div id="refill" class="refill"></div></div></div>
       <div><h3 class="sub">ทีมดูแลชั้น · งานเติมสต็อก</h3><div id="team" class="team"></div></div>
     </section>
@@ -272,6 +303,7 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
       <div id="workBody"><p class="note">เลือกชื่อตัวเองก่อน ระบบจะจัดงานเติมของและสุ่มนับของชั้นที่ดูแล เรียงตามทางเดิน</p></div>
     </section>
     <section class="pane" data-pane="check" hidden>
+      <div><h3 class="sub">ข้อมูลผังชั้นนี้</h3><div class="kpis" id="kpis"></div></div>
       <div class="note" id="sceneNote"></div>
       <div id="finds" class="finds"></div>
       <div class="note" id="foot"></div>
@@ -299,6 +331,7 @@ const byKey = new Map(), byCode = new Map();
 const MASTER = new Set();                         // positions that exist in BigSeller (empty = draw the whole drawing)
 const exists = (code, key) => !MASTER.size || MASTER.has(code.toUpperCase()) || byKey.has(key);
 let STAFF = [];
+let TASKLOG = [], OVER = null;                 // walk log · /api/warehouse/overview (discrepancy reports, pack jobs, scans today)
 let ASSIGN = [];                                  // check jobs handed out on the map (/api/warehouse/assignments)                                  // warehouse team per floor plan (from /api/warehouse/staff)
 const slotCache = {};                           // export's off-screen plan layouts, rebuilt once per data load
 async function loadData() {
@@ -327,7 +360,7 @@ function zeroFacts() {
 }
 await loadData();
 await loadStaff();
-await loadAssign();
+await Promise.all([loadAssign(), loadTaskLog(), loadOverview()]);
 const U = 1 / 16;                       // 1 px of the source sheet = 1/16 unit (schematic, not metres)
 const px = v => v * U;
 
@@ -1247,6 +1280,72 @@ function workload(id) {
     free: sl.filter(x => x.status === 'nodata').length,
   };
 }
+/* supervisor summary: what needs a decision now -> headline numbers -> zones -> count accuracy -> today's flow */
+const dayAgo = n => new Date(Date.now() - n * 864e5).toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
+function renderBoss() {
+  const el = document.getElementById('boss'); if (!el) return;
+  const sc = sceneId, inMap = S.slots.filter(x => !x.orphan && x.loc);
+  if (!inMap.length) { el.innerHTML = ''; return; }
+  const low = inMap.filter(isLow).length, out = inMap.filter(x => x.status === 'empty').length;
+  /* slots counted the same way as the numbers below: refillable = some SKU of the slot has stock at another position */
+  const fillable = new Set(refillRows(sc).filter(r => r.src.length).map(r => r.l.code));
+  const problem = inMap.filter(x => x.status === 'empty' || isLow(x)), ready = problem.filter(x => fillable.has(x.code)), order = problem.length - ready.length;
+  const from7 = dayAgo(6), d = today();
+  const counts = TASKLOG.filter(r => r.kind === 'count' && r.scene === sc && r.day >= from7 && r.counted_qty != null && r.system_qty != null);
+  const miss = counts.filter(r => r.counted_qty !== r.system_qty);
+  const acc = counts.length ? Math.round((counts.length - miss.length) / counts.length * 1000) / 10 : null;
+  const crew = STAFF.filter(x => x.scene === sc).length;
+  const todayRows = TASKLOG.filter(r => r.scene === sc && r.day === d);
+  const refDone = new Set(todayRows.filter(r => r.kind === 'refill').map(r => r.position)).size, cntDone = todayRows.filter(r => r.kind === 'count').length;
+  const cntPlan = crew * COUNT_PER_DAY, refPlan = low + out;
+  const jobs = ASSIGN.filter(x => x.status === 'open' && x.scene === sc).length;
+  const disc = OVER?.discrepancyPending ?? 0;
+  const act = [
+    [ready.length, 'bad', '✗', 'ช่องหมด/ต่ำ ที่มีของสำรองในคลัง', 'สั่งเติมได้ทันที', 'refill'],
+    [order, 'bad', '✗', 'ช่องหมด/ต่ำ ที่ไม่มีของสำรอง', 'ต้องโอนหรือแจ้งจัดซื้อ', 'order'],
+    [miss.length, 'warn', '!', 'นับแล้วไม่ตรงระบบ (7 วัน)', 'ตรวจซ้ำ / ปรับสต็อกใน BigSeller', 'acc'],
+    [jobs, 'info', 'i', 'งานมอบหมายที่ยังไม่เช็ก', 'ดูในแท็บ งานวันนี้ ของแต่ละคน', 'jobs'],
+    [disc, 'info', 'i', 'รายงานความต่างรอตรวจ', 'เปิดหน้ารายงานความต่าง', 'disc'],
+  ].filter(a => a[0] > 0);
+  const zones = new Map();
+  inMap.forEach(x => { const z = (byCode.get(x.code)?.key || '').split('|')[0] || x.code.split('-')[0]; if (!zones.has(z)) zones.set(z, { n: 0, low: 0, out: 0 });
+    const v = zones.get(z); v.n++; if (x.status === 'empty') v.out++; else if (isLow(x)) v.low++; });
+  const zl = [...zones].sort((a, b) => (b[1].low + b[1].out) - (a[1].low + a[1].out));
+  const days = Array.from({ length: 7 }, (_, i) => dayAgo(6 - i)).map(day => { const c = counts.filter(r => r.day === day), m = c.filter(r => r.counted_qty !== r.system_qty).length;
+    return { day, n: c.length, p: c.length ? Math.round((c.length - m) / c.length * 100) : null }; });
+  const wd = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  const freq = new Map(); miss.forEach(r => { const v = freq.get(r.position) || { n: 0, sku: r.sku, diff: 0 }; v.n++; v.diff = r.counted_qty - r.system_qty; freq.set(r.position, v); });
+  const top = [...freq].sort((a, b) => b[1].n - a[1].n).slice(0, 3);
+  const pj = OVER?.packToday || [], sc2 = OVER?.scansToday;
+  el.innerHTML = `<div class="act"><h3>ต้องจัดการตอนนี้ · ${esc(SCENES[sc].short)}</h3>${act.length ? act.map(a => `<button type="button" data-act="${a[5]}"><span class="ic ${a[1]}">${a[2]}</span><span class="n">${nf(a[0])}</span><span class="t">${a[3]}<small>${a[4]}</small></span></button>`).join('') : '<div class="calm">✓ ตอนนี้ไม่มีเรื่องด่วน</div>'}</div>
+    <div class="bk">
+      <div><div class="v">${nf(low)}</div><div class="l">! ช่องต่ำกว่าขั้นต่ำ</div></div>
+      <div><div class="v">${nf(out)}</div><div class="l">✗ ช่องหมด (มี SKU แต่ 0 ชิ้น)</div></div>
+      <div><div class="v">${acc == null ? '–' : acc + '%'}</div><div class="l">นับตรงระบบ 7 วัน${counts.length ? ` · ${nf(counts.length - miss.length)}/${nf(counts.length)} ช่อง` : ' · ยังไม่มีบันทึกนับ'}</div></div>
+      <div><div class="v">${nf(refDone)}<span style="font-size:14px;color:var(--muted-foreground)">/${nf(refPlan)}</span></div><div class="l">เติมแล้ววันนี้ · สุ่มนับ ${nf(cntDone)}/${nf(cntPlan)}</div></div>
+    </div>
+    <div><h3 class="sub">สุขภาพสต็อกตามโซน</h3>${zl.map(([z, v]) => `<div class="zn"><b>${esc(z)}</b><div class="st" title="${esc(z)}: หมด ${v.out} · ต่ำ ${v.low} จาก ${v.n} ช่อง"><span class="o" style="width:${v.out / v.n * 100}%"></span><span class="w" style="width:${v.low / v.n * 100}%"></span></div><span class="r">${v.low + v.out ? `ต้องเติม ${nf(v.low + v.out)}` : '✓ ปกติ'}</span></div>`).join('')}
+      <div class="note">แดง ✗ หมด · ส้ม ! ต่ำกว่าขั้นต่ำ · เขียว ✓ ปกติ</div></div>
+    <div id="bossAcc"><h3 class="sub">นับตรงระบบ 7 วันล่าสุด</h3>${counts.length ? `<div class="tr" role="img" aria-label="ความแม่นยำการนับรายวัน">${days.map(x => `<div><b>${x.p == null ? '' : x.p + '%'}</b><span class="${x.p == null ? 'none' : ''}" style="height:${x.p == null ? 2 : Math.max(4, x.p * .6)}px"></span>${x.day === d ? 'วันนี้' : wd[new Date(x.day + 'T00:00:00').getDay()]}</div>`).join('')}</div>`
+      : '<p class="note">ยังไม่มีบันทึกสุ่มนับของชั้นนี้ใน 7 วัน · ทีมบันทึกได้ในแท็บ งานวันนี้</p>'}
+      ${top.length ? `<ul class="mini">${top.map(([code, v]) => `<li><button type="button" class="linkbtn" data-go="${esc(code)}">${esc(code)}</button><span>${esc(v.sku || '')} · ${v.diff > 0 ? 'เกิน' : 'ขาด'} ${nf(Math.abs(v.diff))} · ${nf(v.n)} ครั้ง</span></li>`).join('')}</ul>` : ''}</div>
+    <div><h3 class="sub">งานแพ็ก-ยิงสแกนวันนี้ (ทุกชั้น)</h3>${OVER ? `<div class="flowg">
+      <div>งานแพ็ก PO ห้าง<b>${nf(pj.reduce((t, x) => t + x.n, 0))}</b>${pj.map(x => `${esc(x.customer)} ${nf(x.n)}`).join(' · ') || 'ยังไม่มีงานวันนี้'}</div>
+      <div>ยิงสแกน<b>${nf(sc2?.total || 0)}</b>ไม่ผ่าน ${nf(sc2?.bad || 0)} ครั้ง</div>
+      <div>รายงานความต่างรอตรวจ<b>${nf(disc)}</b><a class="linkbtn" href="/admin/reports">เปิดดู</a></div></div>` : '<p class="note">โหลดข้อมูลงานแพ็กไม่สำเร็จ · ลองรีเฟรชหน้า</p>'}</div>`;
+  el.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+    const a = b.dataset.act;
+    if (a === 'disc') { location.href = '/admin/reports'; return; }
+    if (a === 'jobs') { showPane('work'); return; }
+    if (a === 'order') { refillAll = true; renderRefill(); }
+    document.getElementById(a === 'acc' ? 'bossAcc' : 'refill')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { const l = byCode.get(b.dataset.go); if (l) goTo(l); });
+}
+function teamDone(name) {
+  const r = TASKLOG.filter(x => x.staff === name && x.day === today()), f = r.filter(x => x.kind === 'refill').length, c = r.filter(x => x.kind === 'count').length;
+  return `<span class="done">เติม ${nf(f)} · นับ ${nf(c)}/${COUNT_PER_DAY}</span>`;
+}
 function renderTeam() {
   const el = document.getElementById('team'); if (!el) return;
   const floors = [['ugreen', 'ชั้น 3 Ugreen', 2], ['fantech', 'FANTECH', 1]];
@@ -1257,7 +1356,7 @@ function renderTeam() {
     const names = STAFF.filter(x => x.scene === id);
     return `<div class="floor${busiest === id ? ' busy' : ''}"><div class="hd"><span>${title}</span>${busiest === id ? '<span class="pill ask">! งานเยอะ ช่วยกันที่นี่</span>' : ''}</div>
       <div class="work"><div class="w-low">! ต้องเติม<b>${nf(w[id].low)}</b></div><div class="w-out">✗ หมด<b>${nf(w[id].out)}</b></div><div class="w-free">○ ว่าง<b>${nf(w[id].free)}</b></div></div>
-      <div class="crew"><span class="who">ทีมดูแล</span>${names.length ? names.map(n => `<span class="name">${esc(n.name)}<button type="button" data-del="${esc(n.id)}" aria-label="เอา ${esc(n.name)} ออก">×</button></span>`).join('') : `<span class="note">ยังไม่ใส่ชื่อ (${planned} คน)</span>`}<button type="button" class="linkbtn" data-open="${id}">+ เพิ่ม</button></div>
+      <div class="crew"><span class="who">ทีมดูแล</span>${names.length ? names.map(n => `<span class="name">${esc(n.name)}${teamDone(n.name)}<button type="button" data-del="${esc(n.id)}" aria-label="เอา ${esc(n.name)} ออก">×</button></span>`).join('') : `<span class="note">ยังไม่ใส่ชื่อ (${planned} คน)</span>`}<button type="button" class="linkbtn" data-open="${id}">+ เพิ่ม</button></div>
       <form class="addname" data-add="${id}" hidden><input name="n" maxlength="40" placeholder="ชื่อพนักงานที่ดูแลชั้นนี้" aria-label="ชื่อพนักงานที่ดูแล ${title}"><button class="btn sm" type="submit">เพิ่ม</button></form></div>`;
   }).join('') + '<div class="note">ชั้นไหนงานเยอะ ทีมลงช่วยกัน · ชื่อที่ใส่ ทุกคนที่เปิดหน้านี้เห็น</div>';
   el.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { const f = el.querySelector(`[data-add=${b.dataset.open}]`); f.hidden = false; b.hidden = true; f.n.focus(); });
@@ -1320,7 +1419,7 @@ function renderSide() {
     [nf(qty), 'ชิ้นในผัง'],
     [nf(oq), `ชิ้นนอกผัง (${nf(orph.length)} ช่อง)`],
   ].map(([v, l]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join(''); }
-  renderTeam(); renderRefill();
+  renderBoss(); renderTeam(); renderRefill();
   const lab = { ok: 'ตรงผัง', diff: 'ไม่ตรง', ask: 'ต้องยืนยัน', na: 'ไม่มีข้อมูล' };
   document.getElementById('finds').innerHTML = d.finds().map(([k, t, a, b]) =>
     `<div class="find"><div class="t"><span class="pill ${k}">${lab[k]}</span>${t}</div><div class="d">${a}</div><div class="d">${b}</div></div>`).join('');
@@ -1328,7 +1427,6 @@ function renderSide() {
 }
 /* ---------- งานวันนี้: refill + cycle count (สุ่มนับ 20 ช่อง/คน/วัน) in walking order ---------- */
 let worker = (() => { try { return localStorage.getItem('gv-wh-worker') || ''; } catch { return ''; } })();
-let TASKLOG = [];
 const COUNT_PER_DAY = 20, RECOUNT_DAYS = 14;
 const ZONE_ORDER = { ugreen: ['01U', '02U', '3B', 'CW', 'CB', 'CR', 'CY'], fantech: ['F01', 'F02', 'F03', 'F07'] };
 const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
@@ -1339,6 +1437,7 @@ function routeKey(scene, code) {                 // walking order: zone, then ba
   return [z < 0 ? 99 : z, +k[1] || 0, +k[2] || 0];
 }
 const byRoute = scene => (a, b) => { const x = routeKey(scene, a.code), y = routeKey(scene, b.code); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; };
+async function loadOverview() { try { const r = await fetch('/api/warehouse/overview', { cache: 'no-store' }); OVER = r.ok ? await r.json() : null; } catch { OVER = null; } }
 async function loadTaskLog() { try { const j = await fetch('/api/warehouse/tasks', { cache: 'no-store' }).then(r => r.json()); TASKLOG = j.rows || []; } catch { TASKLOG = []; } }
 function workerScene() { return STAFF.find(x => x.name === worker)?.scene || ''; }
 function buildTasks() {
