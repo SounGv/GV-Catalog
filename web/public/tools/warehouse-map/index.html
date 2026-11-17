@@ -53,6 +53,7 @@ main{flex:1;display:flex;min-height:0}
 .hud{position:absolute;display:flex;gap:4px;flex-wrap:wrap;z-index:2;padding:5px;border-radius:var(--radius-chip)}
 #modes{left:12px;top:12px}
 #views{right:12px;top:12px}
+.chip.place{appearance:auto;font:inherit;font-weight:600;padding:0 8px;max-width:230px;cursor:pointer}
 .chip{min-height:40px;padding:0 14px;border-radius:var(--radius-chip);border:1px solid transparent;background:transparent;font-weight:600;color:#2b3a46;white-space:nowrap;flex:none}
 .chip:hover{background:rgba(24,54,76,.07)}
 .chip[aria-pressed=true]{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
@@ -241,7 +242,7 @@ dialog .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
     <div class="hud glass" id="views" role="group" aria-label="มุมมอง"></div>
     <div id="legend" class="glass"></div>
     <div id="tip"></div>
-    <div id="hint" class="glass">ลากหมุน · ล้อเมาส์ซูม · คลิกช่องเพื่อดูรายละเอียด</div>
+    <div id="hint" class="glass">ลากหมุน · คลิกขวาลากเลื่อน · ล้อเมาส์ซูมตรงจุดที่ชี้ · ดับเบิลคลิกพื้นเพื่อไปตรงนั้น</div>
     <div id="empty"><div class="box"><h2>ยังไม่มีข้อมูลสต็อก</h2><p>กด <b>ซิงค์สต็อกจาก BigSeller</b> ด้านบน (ดึงจาก Google Sheet ที่อัปเดตจาก BigSeller) หรืออัปไฟล์ “สต็อกตำแหน่ง” ที่ส่งออกจาก BigSeller</p></div></div>
   </section>
   <aside>
@@ -338,6 +339,7 @@ stage.prepend(renderer.domElement);
 const camera = new THREE.PerspectiveCamera(38, 1, 0.5, 600);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.49; controls.minDistance = 6; controls.maxDistance = 160;
+controls.screenSpacePanning = false; controls.zoomToCursor = true;   // right-drag / two fingers slide over the floor; the wheel zooms where the mouse points
 const raycaster = new THREE.Raycaster();
 const labelsEl = document.getElementById('labels');
 const tip = document.getElementById('tip');
@@ -1109,7 +1111,7 @@ function buildActive() {
   const prio = c => /zone|hot|warn/.test(c) ? 0 : /row/.test(c) ? 1 : /bay/.test(c) ? 2 : /small/.test(c) ? 4 : 3;   // signs first, bay numbers last
   S.labelsByPrio = [...S.labels].sort((a, b) => prio(a.cls) - prio(b.cls));
   renderer.domElement.setAttribute('role', 'img'); renderer.domElement.setAttribute('aria-label', 'ผัง 3D ' + SCENES[sceneId].title + ' · ใช้ช่องค้นหาเพื่อไปที่ช่อง');
-  applyMode(); renderSide(); setView(matchMedia('(max-width:860px)').matches ? 'top' : 'iso'); selected = null; renderSel();
+  applyMode(); renderSide(); setView(matchMedia('(max-width:860px)').matches ? 'top' : 'iso'); selected = null; renderSel(); fillPlaces();
 }
 /* the found slot: three lime rings spread on the floor like a drop in water, a soft glow box around the
    carton and a faint light column above it; the rings rest still (no motion) under prefers-reduced-motion */
@@ -1197,6 +1199,30 @@ Object.entries(MODES).forEach(([id, m]) => {
   modesEl.appendChild(b);
 });
 const viewsEl = document.getElementById('views');
+/* smooth camera move to a floor point, keeping the current viewing angle */
+let fly = null;
+function flyTo(x, z, dist = 26, y = 0) {
+  const off = camera.position.clone().sub(controls.target).normalize().multiplyScalar(dist);
+  const to = new THREE.Vector3(x, y, z);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { controls.target.copy(to); camera.position.copy(to).add(off); controls.update(); return; }
+  fly = { t0: performance.now(), ft: controls.target.clone(), fc: camera.position.clone(), tt: to, tc: to.clone().add(off) };
+}
+const placeSel = document.createElement('select');
+placeSel.className = 'chip place'; placeSel.setAttribute('aria-label', 'ไปที่พื้นที่');
+placeSel.onchange = () => { const l = S.labels[+placeSel.value]; if (l) flyTo(l.pos.x, l.pos.z, 22); placeSel.value = ''; };
+viewsEl.appendChild(placeSel);
+function fillPlaces() {
+  const seen = new Set();
+  placeSel.innerHTML = '<option value="">ไปที่… ▾</option>' + S.labels.map((l, i) => [l, i])
+    .filter(([l]) => l.cls.includes('zone') && !seen.has(l.text) && seen.add(l.text))
+    .map(([l, i]) => `<option value="${i}">${esc(l.text)}</option>`).join('');
+}
+renderer.domElement.addEventListener('dblclick', e => {           // double-click the floor: go there
+  const r = renderer.domElement.getBoundingClientRect();
+  raycaster.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), camera);
+  const hit = raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), new THREE.Vector3());
+  if (hit) flyTo(hit.x, hit.z, Math.min(camera.position.distanceTo(controls.target), 26));
+});
 [['iso', 'มุมเฉียง'], ['top', 'มุมบน']].forEach(([id, t]) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = t; b.onclick = () => setView(id); viewsEl.appendChild(b); });
 { const b = document.createElement('button'); b.className = 'chip'; b.textContent = 'ป้ายเตือน ใกล้หมด/หมด'; b.setAttribute('aria-pressed', 'true');
   b.onclick = () => { showMarks = !showMarks; b.setAttribute('aria-pressed', String(showMarks)); applyMode(); }; viewsEl.prepend(b); }
@@ -1658,7 +1684,11 @@ const v3 = new THREE.Vector3();
 function loop() {
   requestAnimationFrame(loop);
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) { const t = performance.now() / 1000; S.anim.forEach(f => f(t)); }
+  if (fly) { const k = Math.min((performance.now() - fly.t0) / 700, 1), e = 1 - (1 - k) ** 3;
+    controls.target.lerpVectors(fly.ft, fly.tt, e); camera.position.lerpVectors(fly.fc, fly.tc, e); if (k >= 1) fly = null; }
   controls.update();
+  { const t = controls.target, m = THREE.MathUtils, x = m.clamp(t.x, S.cx - S.w / 2, S.cx + S.w / 2), z = m.clamp(t.z, S.cz - S.d / 2, S.cz + S.d / 2), y = m.clamp(t.y, 0, 6);
+    if (x !== t.x || y !== t.y || z !== t.z) { camera.position.x += x - t.x; camera.position.y += y - t.y; camera.position.z += z - t.z; t.set(x, y, z); } }
   const w = stage.clientWidth, h = stage.clientHeight;
   const close = camera.position.distanceTo(controls.target) < S.baseDist * 0.55;
   const placed = [];
