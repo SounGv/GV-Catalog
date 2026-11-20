@@ -37,7 +37,7 @@ export function StickerForm({ sticker, log = [], error }: StickerFormProps) {
           </div>
         ) : null}
         <label className="flex flex-col gap-1">
-          <span className="text-base text-muted">{sticker?.imageUrl ? "เปลี่ยนรูป (JPG, PNG, WEBP ไม่เกิน 8MB)" : "รูป (JPG, PNG, WEBP ไม่เกิน 8MB)"}</span>
+          <span className="text-base text-muted">{sticker?.imageUrl ? "เปลี่ยนรูป (JPG, PNG, WEBP ไม่เกิน 4MB)" : "รูป (JPG, PNG, WEBP ไม่เกิน 4MB)"}</span>
           <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" className="text-base" />
         </label>
         <label className="flex flex-col gap-1">

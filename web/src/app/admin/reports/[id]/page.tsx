@@ -27,6 +27,7 @@ type ReportDetailRow = {
 
 export default async function AdminReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const { rows } = await pool.query<ReportDetailRow>(
     `SELECT r.id, r.sku, r.lot, r.reporter_name, r.issue_type, r.detail, r.status,
             r.resolution_notes, r.created_at, r.resolved_at, p.name AS product_name
@@ -68,7 +69,7 @@ export default async function AdminReportDetailPage({ params }: { params: Promis
         </div>
         <div>
           <dt className="text-muted">วันที่แจ้ง</dt>
-          <dd>{new Date(report.created_at).toLocaleString("th-TH")}</dd>
+          <dd>{new Date(report.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}</dd>
         </div>
         <div>
           <dt className="text-muted">ประเภทปัญหา</dt>
@@ -96,7 +97,7 @@ export default async function AdminReportDetailPage({ params }: { params: Promis
         <section className="flex flex-col gap-2 rounded-[10px] border border-line p-4">
           <p className="w-fit rounded-md bg-accent px-2 py-1 text-sm text-white">ตรวจแล้ว</p>
           <p className="text-base text-muted">
-            ตรวจเมื่อ {report.resolved_at ? new Date(report.resolved_at).toLocaleString("th-TH") : "—"}
+            ตรวจเมื่อ {report.resolved_at ? new Date(report.resolved_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }) : "—"}
           </p>
           {report.resolution_notes ? (
             <p className="whitespace-pre-wrap text-base">{report.resolution_notes}</p>

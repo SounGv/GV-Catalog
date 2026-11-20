@@ -41,14 +41,29 @@ export type ParsedImport = {
   missingColumns: string[];
 };
 
+/** ExcelJS returns rich-text, formula, hyperlink and Date cells as objects —
+ * unwrap them to the plain value so String() never yields "[object Object]". */
+function plainCellValue(value: unknown): unknown {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value !== "object") return value;
+  const v = value as { richText?: { text: string }[]; result?: unknown; text?: unknown };
+  if (Array.isArray(v.richText)) return v.richText.map((part) => part.text).join("");
+  if ("result" in v) return plainCellValue(v.result);
+  if ("text" in v) return plainCellValue(v.text);
+  return null;
+}
+
 function toFloatOrNull(value: unknown): number | null {
-  const n = typeof value === "number" ? value : Number(value);
+  const plain = plainCellValue(value);
+  const n = typeof plain === "number" ? plain : Number(plain);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function toStringOrNull(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  const s = String(value).trim();
+  const plain = plainCellValue(value);
+  if (plain === null) return null;
+  const s = String(plain).trim();
   return s === "" ? null : s;
 }
 
@@ -73,7 +88,7 @@ export async function parseImportWorkbook(buffer: Buffer): Promise<ParsedImport>
   const headerRow = sheet.getRow(1);
   const headerToCol = new Map<string, number>();
   headerRow.eachCell((cell, colNumber) => {
-    const header = String(cell.value ?? "").trim();
+    const header = String(plainCellValue(cell.value) ?? "").trim();
     if (header) headerToCol.set(header, colNumber);
   });
 

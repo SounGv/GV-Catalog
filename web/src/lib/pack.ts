@@ -521,7 +521,11 @@ export async function claimBranch(jobId: string, branch: string, holder: BranchH
       "SELECT 1 FROM branch_closures WHERE job_id = $1 AND branch = $2 AND reopened_at IS NULL",
       [jobId, branch],
     );
-    const heldBy = closed.length ? null : await holdBranch(client, jobId, branch, holder);
+    // Never create a claim for a branch that isn't in the job — it would also release the real branch this station holds.
+    const { rows: exists } = closed.length
+      ? { rows: [1] }
+      : await client.query("SELECT 1 FROM pack_lines WHERE job_id = $1 AND branch = $2 LIMIT 1", [jobId, branch]);
+    const heldBy = closed.length || !exists.length ? null : await holdBranch(client, jobId, branch, holder);
     await client.query(heldBy ? "ROLLBACK" : "COMMIT");
     return { heldBy, detail: heldBy ? null : await getBranchDetail(jobId, branch, client) };
   } catch (error) {
@@ -570,25 +574,33 @@ export async function recordScan(jobId: string, branch: string, barcodeRaw: stri
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const { rows: hits } = await client.query<{ id: string; part: string; description: string; qty_required: number }>(
-      `SELECT id, part, description, qty_required FROM pack_lines
-       WHERE job_id = $1 AND branch = $2 AND $3 = ANY(barcodes) ORDER BY id FOR UPDATE`,
-      [jobId, branch, barcode],
-    );
-    const { rows: closed } = await client.query(
-      "SELECT 1 FROM branch_closures WHERE job_id = $1 AND branch = $2 AND reopened_at IS NULL",
-      [jobId, branch],
-    );
-    if (closed.length) {
+    const isClosed = async () =>
+      ((
+        await client.query(
+          "SELECT 1 FROM branch_closures WHERE job_id = $1 AND branch = $2 AND reopened_at IS NULL",
+          [jobId, branch],
+        )
+      ).rowCount ?? 0) > 0;
+    const closedReply = async (): Promise<ScanOutcome> => {
       await client.query("ROLLBACK");
       return { result: "closed", message: "สาขานี้บันทึกครบแพ็คแล้ว — กดแก้ไขก่อนจึงจะสแกนได้", part: null, detail: await getBranchDetail(jobId, branch, client) };
-    }
+    };
+    if (await isClosed()) return closedReply();
+    // Lock order is branch claim first, pack lines second — the same order closeBranch uses.
+    // Taking the lines first made a scan and a "save complete" on one branch deadlock each other.
     const holder = toHolder(context.stationId, context.scannedBy);
     const heldBy = holder ? await holdBranch(client, jobId, branch, holder) : null;
     if (!holder || heldBy) {
       await client.query("ROLLBACK");
       return { result: "held", message: heldBy ? heldMessage(heldBy) : "ต้องใส่ชื่อผู้สแกนก่อน", part: null, detail: null };
     }
+    const { rows: hits } = await client.query<{ id: string; part: string; description: string; qty_required: number }>(
+      `SELECT id, part, description, qty_required FROM pack_lines
+       WHERE job_id = $1 AND branch = $2 AND $3 = ANY(barcodes) ORDER BY id FOR UPDATE`,
+      [jobId, branch, barcode],
+    );
+    // A close that committed while this scan waited for the locks above must still win.
+    if (await isClosed()) return closedReply();
 
     let result: ScanOutcome["result"];
     let message: string;

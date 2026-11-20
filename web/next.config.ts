@@ -13,7 +13,7 @@ const imageHosts = [
 
 const nextConfig: NextConfig = {
   // Photo uploads go through a server action (default limit is only 1 MB).
-  experimental: { serverActions: { bodySizeLimit: "4mb" } },
+  experimental: { serverActions: { bodySizeLimit: "4.5mb" } },
   turbopack: {
     root: process.cwd(),
   },

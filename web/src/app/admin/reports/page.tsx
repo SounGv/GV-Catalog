@@ -85,6 +85,7 @@ export default async function AdminReportsPage({ searchParams }: ReportsPageProp
                       year: "numeric",
                       month: "short",
                       day: "numeric",
+                      timeZone: "Asia/Bangkok",
                     })}
                   </td>
                   <td className="px-3 py-2">{ISSUE_LABELS[report.issue_type] ?? report.issue_type}</td>

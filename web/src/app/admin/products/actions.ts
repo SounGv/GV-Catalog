@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { pool } from "@/lib/db";
-import { skuPath } from "@/lib/catalog-query";
+import { adminProductEditPath, skuPath } from "@/lib/catalog-query";
 import { replaceBarcodesForSku, type RetailerBarcode } from "@/lib/barcodes";
 import type { Brand } from "@/lib/types";
 
@@ -89,15 +89,13 @@ export async function updateProductAction(originalSku: string, formData: FormDat
   const p = readProductForm(formData);
   const barcodes = readRetailerBarcodes(formData);
   if (!p.sku) {
-    redirect(`/admin/products/${encodeURIComponent(originalSku)}/edit?error=${encodeURIComponent("กรุณากรอก SKU")}`);
+    redirect(`${adminProductEditPath(originalSku)}?error=${encodeURIComponent("กรุณากรอก SKU")}`);
   }
 
   if (p.sku !== originalSku) {
     const { rowCount } = await pool.query("SELECT 1 FROM products WHERE sku = $1", [p.sku]);
     if (rowCount && rowCount > 0) {
-      redirect(
-        `/admin/products/${encodeURIComponent(originalSku)}/edit?error=${encodeURIComponent(`SKU "${p.sku}" มีอยู่แล้วในระบบ`)}`,
-      );
+      redirect(`${adminProductEditPath(originalSku)}?error=${encodeURIComponent(`SKU "${p.sku}" มีอยู่แล้วในระบบ`)}`);
     }
   }
 

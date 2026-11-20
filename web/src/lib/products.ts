@@ -127,7 +127,8 @@ export async function filterProducts(
     conditions.push(`category = ANY($${params.length}::text[])`);
   }
   if (query.q) {
-    params.push(`%${query.q}%`);
+    // Escape LIKE wildcards so typing "%" or "_" searches for the character itself.
+    params.push(`%${query.q.replace(/[\\%_]/g, "\\$&")}%`);
     const p = params.length;
     // Retailer codes too (Jaymart part code, AIS material code, ...), so scanning a store's barcode finds the product.
     conditions.push(
@@ -136,7 +137,8 @@ export async function filterProducts(
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  const offset = (query.page - 1) * PAGE_SIZE;
+  // Clamp so a huge ?page= value can't produce an out-of-range OFFSET (500) — it just shows an empty page.
+  const offset = Math.min(Math.max(query.page - 1, 0), 1_000_000) * PAGE_SIZE;
 
   const [{ rows: countRows }, { rows: shownRows }] = await Promise.all([
     pool.query<{ n: string }>(`SELECT count(*)::text AS n FROM products ${where}`, params),

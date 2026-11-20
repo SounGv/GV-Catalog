@@ -6,8 +6,9 @@ import { put, del } from "@vercel/blob";
 import { pool } from "@/lib/db";
 import { STICKER_ID_PATTERN } from "@/lib/stickers";
 
-const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 4 * 1024 * 1024; // Vercel rejects request bodies over ~4.5MB, so a larger limit here could never be reached
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_QTY = 1_000_000_000; // well inside int4, so a typo can never overflow the column
 
 function text(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();
@@ -17,9 +18,13 @@ function failTo(path: string, message: string): never {
   redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(message)}`);
 }
 
-async function uploadPhoto(file: File, id: string, backTo: string): Promise<string> {
-  if (file.size > MAX_PHOTO_BYTES) failTo(backTo, "ไฟล์รูปใหญ่เกินไป (จำกัด 8MB)");
+function checkPhoto(file: File, backTo: string) {
+  if (file.size > MAX_PHOTO_BYTES) failTo(backTo, "ไฟล์รูปใหญ่เกินไป (จำกัด 4MB)");
   if (!ALLOWED_TYPES.has(file.type)) failTo(backTo, "รองรับเฉพาะไฟล์ JPG, PNG, WEBP");
+}
+
+async function uploadPhoto(file: File, id: string, backTo: string): Promise<string> {
+  checkPhoto(file, backTo);
   const blob = await put(`stickers/${id}-${Date.now()}`, file, { access: "public", contentType: file.type });
   return blob.url;
 }
@@ -42,10 +47,12 @@ export async function saveStickerAction(id: string, formData: FormData): Promise
   const name = text(formData, "name");
   if (!name) failTo(backTo, "กรุณากรอกชื่อรายการ");
   const qty = Number(text(formData, "qty") || "0");
-  if (!Number.isInteger(qty) || qty < 0) failTo(backTo, "จำนวนต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป");
+  if (!Number.isInteger(qty) || qty < 0 || qty > MAX_QTY) failTo(backTo, "จำนวนต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป");
   const detail = text(formData, "detail") || null;
   const photo = formData.get("photo");
   const hasPhoto = photo instanceof File && photo.size > 0;
+  // Reject a bad photo before anything is written, so a failed save leaves no half-created sticker behind.
+  if (hasPhoto) checkPhoto(photo, backTo);
 
   if (isNew) {
     const {
@@ -117,7 +124,7 @@ export async function changeStickerQtyAction(
   const direction = text(formData, "direction");
   const amount = Number(text(formData, "amount"));
   if (direction !== "add" && direction !== "remove") return { ok: false, message: "เลือกเพิ่มหรือลด", at: Date.now() };
-  if (!Number.isInteger(amount) || amount < 1) return { ok: false, message: "ใส่จำนวนที่จะเพิ่ม/ลด (เลขจำนวนเต็ม 1 ขึ้นไป)", at: Date.now() };
+  if (!Number.isInteger(amount) || amount < 1 || amount > MAX_QTY) return { ok: false, message: "ใส่จำนวนที่จะเพิ่ม/ลด (เลขจำนวนเต็ม 1 ขึ้นไป)", at: Date.now() };
 
   const delta = direction === "add" ? amount : -amount;
   const { rows } = await pool.query<{ qty: number }>(

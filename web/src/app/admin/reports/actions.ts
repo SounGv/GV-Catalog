@@ -5,10 +5,15 @@ import { revalidatePath } from "next/cache";
 import { pool } from "@/lib/db";
 import { skuPath } from "@/lib/catalog-query";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function resolveReportAction(reportId: string, formData: FormData): Promise<void> {
+  if (!UUID_PATTERN.test(reportId)) redirect("/admin/reports");
   const resolutionNotes = String(formData.get("resolutionNotes") ?? "").trim() || null;
+  // Only a pending report can be reviewed — a stale tab re-submitting must not overwrite a finished review.
   await pool.query(
-    `UPDATE discrepancy_reports SET status = 'reviewed', resolution_notes = $1, resolved_at = now() WHERE id = $2`,
+    `UPDATE discrepancy_reports SET status = 'reviewed', resolution_notes = $1, resolved_at = now()
+     WHERE id = $2 AND status = 'pending'`,
     [resolutionNotes, reportId],
   );
   revalidatePath("/admin/reports");
@@ -26,23 +31,40 @@ export async function resolveReportAction(reportId: string, formData: FormData):
  * note, and marks the report reviewed in one step.
  */
 export async function applyAsCurrentLotAction(reportId: string): Promise<void> {
-  const { rows } = await pool.query<{ sku: string; detail: string; lot: string | null }>(
-    "SELECT sku, detail, lot FROM discrepancy_reports WHERE id = $1",
-    [reportId],
-  );
-  const report = rows[0];
-  if (!report) redirect("/admin/reports");
-
-  const note = report.detail.trim() || `พนักงานแจ้งว่าล็อต${report.lot ? ` ${report.lot}` : ""}นี้แพ็กเกจต่างจากล็อตก่อนหน้า`;
-
-  await pool.query("UPDATE products SET current_lot_note = $1, current_lot_updated_at = now() WHERE sku = $2", [
-    note,
-    report.sku,
-  ]);
-  await pool.query(
-    `UPDATE discrepancy_reports SET status = 'reviewed', resolution_notes = $1, resolved_at = now() WHERE id = $2`,
-    ["ยืนยันว่าเป็นความต่างของล็อตปกติ — บันทึกเป็นหมายเหตุล็อตปัจจุบันของสินค้าแล้ว", reportId],
-  );
+  if (!UUID_PATTERN.test(reportId)) redirect("/admin/reports");
+  // One transaction, and only for a still-pending report: a repeated submit from an old tab
+  // can't overwrite the product's lot note with an older report, and the two writes stay together.
+  const client = await pool.connect();
+  let sku: string | null = null;
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query<{ sku: string; detail: string; lot: string | null }>(
+      "SELECT sku, detail, lot FROM discrepancy_reports WHERE id = $1 AND status = 'pending' FOR UPDATE",
+      [reportId],
+    );
+    const report = rows[0];
+    if (report) {
+      const note =
+        report.detail.trim() || `พนักงานแจ้งว่าล็อต${report.lot ? ` ${report.lot}` : ""}นี้แพ็กเกจต่างจากล็อตก่อนหน้า`;
+      await client.query("UPDATE products SET current_lot_note = $1, current_lot_updated_at = now() WHERE sku = $2", [
+        note,
+        report.sku,
+      ]);
+      await client.query(
+        `UPDATE discrepancy_reports SET status = 'reviewed', resolution_notes = $1, resolved_at = now() WHERE id = $2`,
+        ["ยืนยันว่าเป็นความต่างของล็อตปกติ — บันทึกเป็นหมายเหตุล็อตปัจจุบันของสินค้าแล้ว", reportId],
+      );
+      sku = report.sku;
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+  if (!sku) redirect("/admin/reports");
+  const report = { sku };
 
   revalidatePath("/admin/reports");
   revalidatePath(`/admin/reports/${reportId}`);
@@ -52,6 +74,7 @@ export async function applyAsCurrentLotAction(reportId: string): Promise<void> {
 }
 
 export async function reopenReportAction(reportId: string): Promise<void> {
+  if (!UUID_PATTERN.test(reportId)) redirect("/admin/reports");
   await pool.query(
     `UPDATE discrepancy_reports SET status = 'pending', resolved_at = NULL WHERE id = $1`,
     [reportId],

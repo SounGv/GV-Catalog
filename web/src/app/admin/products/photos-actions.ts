@@ -8,7 +8,7 @@ import { adminProductEditPath, skuPath } from "@/lib/catalog-query";
 import { pool } from "@/lib/db";
 import { removeBackground, RemoveBgNotConfiguredError } from "@/lib/remove-bg";
 
-const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 4 * 1024 * 1024; // Vercel rejects request bodies over ~4.5MB, so a larger limit here could never be reached
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function revalidateProductPages(sku: string) {
@@ -26,8 +26,12 @@ function photoErrorRedirect(sku: string, angle: string, message: string): never 
 async function savePhoto(sku: string, angle: PhotoAngle, formData: FormData): Promise<string | null> {
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) return null; // nothing selected — no-op, not an error
-  if (file.size > MAX_PHOTO_BYTES) return "ไฟล์รูปใหญ่เกินไป (จำกัด 8MB)";
+  if (file.size > MAX_PHOTO_BYTES) return "ไฟล์รูปใหญ่เกินไป (จำกัด 4MB)";
   if (!ALLOWED_TYPES.has(file.type)) return "รองรับเฉพาะไฟล์ JPG, PNG, WEBP";
+
+  // Check the SKU first so an unknown one never costs a remove.bg call or leaves an orphaned blob.
+  const { rowCount } = await pool.query("SELECT 1 FROM products WHERE sku = $1", [sku]);
+  if (!rowCount) return `ไม่พบสินค้า ${sku}`;
 
   // Default "auto" matches the README's photo-intake spec ("Default: auto").
   const wantsBackgroundRemoval = String(formData.get("backgroundRemoval") ?? "auto") === "auto";

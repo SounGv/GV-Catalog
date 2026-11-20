@@ -34,13 +34,21 @@ export async function POST(request: Request) {
   const customer = String(body.customer ?? "").trim();
   const sourceFile = String(body.sourceFile ?? "").trim();
   const lines = Array.isArray(body.lines) ? body.lines : [];
+  if (sourceFile.length > 200) return Response.json({ error: "ชื่อไฟล์ PO ยาวเกินไป" }, { status: 400 });
+  if (lines.some((line) => line === null || typeof line !== "object")) return Response.json({ error: "รูปแบบรายการไม่ถูกต้อง" }, { status: 400 });
   if (!PACK_CUSTOMERS.includes(customer)) return Response.json({ error: `รองรับเฉพาะลูกค้า ${PACK_CUSTOMERS.join(", ")}` }, { status: 400 });
   if (!sourceFile) return Response.json({ error: "ไม่มีชื่อไฟล์ PO" }, { status: 400 });
   if (!lines.length || lines.length > MAX_LINES) return Response.json({ error: "จำนวนรายการไม่ถูกต้อง" }, { status: 400 });
 
-  if (body.dryRun) return Response.json({ preview: await previewPackJob(sourceFile, lines) });
+  if (body.dryRun) {
+    try {
+      return Response.json({ preview: await previewPackJob(sourceFile, lines) });
+    } catch (error) {
+      return Response.json({ error: error instanceof Error ? error.message : "ตรวจรายการไม่สำเร็จ" }, { status: 400 });
+    }
+  }
   try {
-    const jobId = await createPackJob(customer, sourceFile, String(body.createdBy ?? "").trim() || null, lines);
+    const jobId = await createPackJob(customer, sourceFile, String(body.createdBy ?? "").trim().slice(0, 80) || null, lines);
     return Response.json({ jobId });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "สร้างงานไม่สำเร็จ" }, { status: 400 });

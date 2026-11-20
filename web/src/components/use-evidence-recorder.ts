@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/** Thrown inside openCamera when stop() or a newer start() took over while it was still opening. */
+class StaleStartError extends Error {}
+
 /**
  * Packing-station evidence video, recorded in the browser and saved straight to
  * a folder on the station's own disk (Chrome File System Access API) — nothing
@@ -135,6 +138,9 @@ export function useEvidenceRecorder() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawTimerRef = useRef<number | null>(null);
+  // Bumped by every stop(). A start()/openCamera() still awaiting the camera or the file sees a stale
+  // number once someone stopped or restarted meanwhile, and releases what it opened instead of leaking it.
+  const generationRef = useRef(0);
   const overlayRef = useRef<{ lines: string[]; tone: OverlayTone; highlight: string[] }>({ lines: [], tone: "info", highlight: [] });
   const recorderRef = useRef<MediaRecorder | null>(null);
   /** The clip being recorded: its open file and the queue of writes into it, in order. */
@@ -249,6 +255,7 @@ export function useEvidenceRecorder() {
   }, []);
 
   const stop = useCallback(async () => {
+    generationRef.current += 1;
     const recorder = recorderRef.current;
     const clip = clipRef.current;
     recorderRef.current = null;
@@ -276,17 +283,23 @@ export function useEvidenceRecorder() {
 
   const openCamera = useCallback(
     async (cameraId: string) => {
+      const generation = generationRef.current;
       const stream = await navigator.mediaDevices.getUserMedia({
         // Ask for Full HD: the box labels and barcodes in the clip need the detail.
         video: { deviceId: { exact: cameraId }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
         audio: false,
       });
+      if (generation !== generationRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        throw new StaleStartError();
+      }
       streamRef.current = stream;
       const video = (videoRef.current ??= document.createElement("video"));
       video.muted = true;
       video.playsInline = true;
       video.srcObject = stream;
       await video.play();
+      if (generation !== generationRef.current) throw new StaleStartError(); // stop() already released the stream
       const track = stream.getVideoTracks()[0];
       // Sharp picture: autofocus where the camera has it, or the focus this station saved last time.
       const caps = (track?.getCapabilities?.() ?? {}) as FocusCapabilities;
@@ -310,6 +323,7 @@ export function useEvidenceRecorder() {
             ? { min: caps.focusDistance.min, max: caps.focusDistance.max, step: caps.focusDistance.step || 1, value: focusValue, canAuto }
             : null,
       });
+      if (drawTimerRef.current !== null) window.clearInterval(drawTimerRef.current);
       drawTimerRef.current = window.setInterval(draw, 1000 / FPS);
     },
     [draw, patch],
@@ -350,6 +364,7 @@ export function useEvidenceRecorder() {
       writeLocal(CONFIRMED_KEY, cameraId);
       patch({ isConfirmed: true, needsFolderPermission: false, error: null });
     } catch (error) {
+      if (error instanceof StaleStartError) return; // a newer stop/start owns the camera now
       await stop();
       patch({ isConfirmed: false, error: `เปิดกล้องไม่ได้: ${error instanceof Error ? error.message : String(error)}` });
     }
@@ -359,6 +374,7 @@ export function useEvidenceRecorder() {
   const start = useCallback(
     async (label: { branch: string; reference: string }) => {
       await stop();
+      const generation = generationRef.current;
       const folder = folderRef.current;
       if (!folder || !status.cameraId) return;
       if ((await folder.queryPermission({ mode: "readwrite" })) !== "granted") {
@@ -366,12 +382,19 @@ export function useEvidenceRecorder() {
         return;
       }
       try {
+        if (generation !== generationRef.current) return;
         await openCamera(status.cameraId);
         const canvas = canvasRef.current!;
 
         const fileName = `${stamp(new Date())}_${safeName(label.branch)}_${safeName(label.reference || "ไม่มีเลข")}.webm`;
         const handle = await folder.getFileHandle(fileName, { create: true });
-        const clip = { fileName, startedAt: Date.now(), writable: await handle.createWritable(), writes: Promise.resolve() };
+        const writable = await handle.createWritable();
+        if (generation !== generationRef.current) {
+          // Stopped or restarted while the file was opening: close it and leave the camera to the newer owner.
+          await writable.close().catch(() => undefined);
+          return;
+        }
+        const clip = { fileName, startedAt: Date.now(), writable, writes: Promise.resolve() };
 
         const mimeType = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((t) => MediaRecorder.isTypeSupported(t));
         const recorder = new MediaRecorder(canvas.captureStream(FPS), { mimeType, videoBitsPerSecond: canvas.width >= 1920 ? 4_000_000 : 2_000_000 });
@@ -386,6 +409,7 @@ export function useEvidenceRecorder() {
         clipRef.current = clip;
         patch({ isRecording: true, fileName, error: null });
       } catch (error) {
+        if (error instanceof StaleStartError) return;
         patch({ error: `เริ่มบันทึกวิดีโอไม่ได้: ${error instanceof Error ? error.message : String(error)}` });
         await stop();
       }

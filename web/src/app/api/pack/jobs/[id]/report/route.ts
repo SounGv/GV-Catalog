@@ -32,9 +32,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: ws.columnCount } };
   };
 
-  const branches = new Map<string, { name: string; po: string; trb: string; required: number; scanned: number; over: number; closedAt: Date | null; closedBy: string | null }>();
+  // A branch can carry several POs / TRBs across its lines, so collect every distinct one rather than the first line's.
+  const branches = new Map<string, { name: string; po: Set<string>; trb: Set<string>; required: number; scanned: number; over: number; closedAt: Date | null; closedBy: string | null }>();
   for (const r of rows) {
-    const b = branches.get(r.branch) ?? { name: r.branchName, po: r.poNumber ?? "", trb: r.trb ?? "", required: 0, scanned: 0, over: 0, closedAt: r.closedAt, closedBy: r.closedBy };
+    const b = branches.get(r.branch) ?? { name: r.branchName, po: new Set<string>(), trb: new Set<string>(), required: 0, scanned: 0, over: 0, closedAt: r.closedAt, closedBy: r.closedBy };
+    if (r.poNumber) b.po.add(r.poNumber);
+    if (r.trb) b.trb.add(r.trb);
     b.required += r.required;
     b.scanned += r.scanned;
     b.over += r.overScans;
@@ -56,7 +59,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     { header: "ปิดโดย", width: 16 },
   ];
   for (const [code, b] of branches) {
-    summary.addRow([code, b.name, b.po, b.trb, b.required, b.scanned, b.required - b.scanned, b.over, b.closedAt ? "ปิดแล้ว" : b.scanned >= b.required ? "ครบ" : "ยังไม่ครบ", bangkok(b.closedAt), b.closedBy ?? ""]);
+    summary.addRow([code, b.name, [...b.po].join(", "), [...b.trb].join(", "), b.required, b.scanned, b.required - b.scanned, b.over, b.closedAt ? "ปิดแล้ว" : b.scanned >= b.required ? "ครบ" : "ยังไม่ครบ", bangkok(b.closedAt), b.closedBy ?? ""]);
   }
   header(summary);
 
