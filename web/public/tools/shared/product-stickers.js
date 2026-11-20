@@ -308,16 +308,20 @@
    return`<span style="${sp};margin-right:.2mm">฿</span><span style="font-size:${iS}pt;letter-spacing:-.2mm">${(+i).toLocaleString('en-US')}</span><span style="font-size:${dS}pt">.${d}</span>`;
   }
   function labelPrice(it,p){
+   // the nudge pad of the sticker page works here too: เส้นบาร์โค้ด moves/sizes the bars, ข้อความ moves/sizes the model and the price
+   const cl=(v,m)=>Math.max(-m,Math.min(m,Number(v)||0)),tS=(p.txS??100)/100,bS=(p.bcS??100)/100;
+   const tx=cl(p.txX,4),ty=cl(p.txY,3),bx=cl(p.bcX,3),by=cl(p.bcY,3),T=`transform:translate(${tx}mm,${ty}mm)`,dat=`data-ex="${tx}" data-ey="${ty}"`;
    const box=`width:${p.dieW}mm;height:${p.dieH}mm`,row='display:flex;align-items:baseline;justify-content:center;font-weight:900;line-height:1;white-space:nowrap';
    if(it.pstyle==='a')return`<div class="st-label" style="${box}"><div class="st-in" style="top:${p.shift}mm;padding:1.4mm .8mm 0;align-items:center">`
-    +`<div style="font-weight:800;font-size:9.6pt;line-height:1;letter-spacing:.1mm">${esc(it.model)}</div>`
-    +`<div style="font-weight:700;font-size:4.8pt;line-height:1;margin-top:1.2mm;color:#000">ราคา</div>`
-    +`<div style="${row};margin-top:.6mm">${priceHtml(it.price,it.cents,21,8.5)}</div></div></div>`;
-   const q={...p,eanBarH:4,bcH:4.6,digits:7.6};
+    +`<div class="st-tx" ${dat} style="${T};display:flex;flex-direction:column;align-items:center"><div style="font-weight:800;font-size:${(9.6*tS).toFixed(2)}pt;line-height:1;letter-spacing:.1mm">${esc(it.model)}</div>`
+    +`<div style="font-weight:700;font-size:${(4.8*tS).toFixed(2)}pt;line-height:1;margin-top:1.2mm;color:#000">ราคา</div>`
+    +`<div style="${row};margin-top:.6mm">${priceHtml(it.price,it.cents,21*tS,8.5*tS)}</div></div></div></div>`;
+   const q={...p,eanBarH:4*bS,bcH:4.6*bS,digits:7.6};
    const bars=useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:7pt;font-weight:700">${esc(it.code)}</div>`;
    return`<div class="st-label" style="${box}"><div class="st-in" style="top:${p.shift}mm;padding:.8mm .8mm 0;align-items:center">`
-    +`<div style="font-weight:800;font-size:8.5pt;line-height:1;letter-spacing:.1mm;margin-bottom:.4mm">${esc(it.model)}</div>${bars}`
-    +`<div style="${row};position:absolute;left:0;right:0;bottom:.8mm;gap:.8mm"><span style="font-size:4.8pt;font-weight:700">ราคา</span><span style="${row}">${priceHtml(it.price,it.cents,16,6.8)}</span></div></div></div>`;
+    +`<div class="st-tx" ${dat} style="${T};font-weight:800;font-size:${(8.5*tS).toFixed(2)}pt;line-height:1;letter-spacing:.1mm;margin-bottom:.4mm">${esc(it.model)}</div>`
+    +`<div class="st-bc" data-ex="${bx}" data-ey="${by}" style="transform:translate(${bx}mm,${by}mm)">${bars}</div>`
+    +`<div class="st-tx" ${dat} style="${row};position:absolute;left:0;right:0;bottom:.8mm;gap:.8mm;${T}"><span style="font-size:${(4.8*tS).toFixed(2)}pt;font-weight:700">ราคา</span><span style="${row}">${priceHtml(it.price,it.cents,16*tS,6.8*tS)}</span></div></div></div>`;
   }
   function label(it,p){
    if(it.price!=null&&it.price!=='')return labelPrice(it,p);
