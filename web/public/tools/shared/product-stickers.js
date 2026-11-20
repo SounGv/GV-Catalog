@@ -173,7 +173,7 @@
    const by=new Map();
    for(const r of lines){
     const code=String(r.code||'').trim();if(!code)continue;
-    const g=by.get(code)||{code,model:r.model||'',desc:r.desc||'',qty:0,status:r.status||'unknown',pick:!!r.pick,mc:r.mc||'',brandHint:r.brand||''};
+    const g=by.get(code)||{code,model:r.model||'',desc:r.desc||'',qty:0,status:r.status||'unknown',pick:!!r.pick,mc:r.mc||'',brandHint:r.brand||'',price:r.price,pstyle:r.pstyle,cents:r.cents};
     g.qty+=Number(r.qty)||0;if(rank[r.status]>rank[g.status])g.status=r.status;if(!g.model&&r.model)g.model=r.model;
     by.set(code,g);
    }
@@ -298,7 +298,29 @@
    const bcX=Math.max(-bcSpace,Math.min(bcSpace,rawBX)),bcY=Math.max(-gapAbove,Math.min(1.3-margin,rawBY));
    return`<div class="st-label" style="width:${p.dieW}mm;height:${p.dieH}mm"><div class="st-in" style="top:${upMove}mm;padding:${F.pad+down}mm ${F.pad}mm 0"><div class="st-tx" data-ex="${txX}" data-ey="${txY}" style="transform:translate(${txX}mm,${txY}mm);flex:none;width:${effW}mm;margin:0 auto"><div class="st-line" style="font-size:${f.size.toFixed(2)}pt;line-height:1.1"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(line1)}</span></div>${d?`<div class="st-detail" style="font-weight:400;font-size:${d.size.toFixed(1)}pt;line-height:1.2;padding:0;flex:none;margin:${big?.8:.5}mm 0 ${big?0:.7}mm;-webkit-line-clamp:${Math.max(d.lines,Math.floor(Math.max(2.4,room)/(d.size*1.2*.3528)))};max-height:none">${d&&d.rows&&d.rows.length>1?d.rows.map(r=>`<span style="display:block;white-space:nowrap">${esc(r)}</span>`).join(''):esc(it.text)}</div>`:''}</div><div class="st-bc" data-ex="${bcX}" data-ey="${bcY}" style="transform:translate(${bcX}mm,${bcY}mm)">${barSvg}</div></div></div>`;
   }
+  // Shelf price tag (sticker page, "ป้ายราคา จากไฟล์"): style 'b' = model above the barcode, price at the bottom;
+  // style 'a' = model and a big price, no barcode. cents: 'low' small satang on the baseline · 'full' same size · 'round' whole baht.
+  function priceHtml(n,cents,big,small){
+   const v=Number(n)||0,sp=`font-size:${small}pt`;
+   if(cents==='round')return`<span style="font-size:${small}pt">฿</span><span style="font-size:${big}pt">${Math.round(v).toLocaleString('en-US')}</span><span style="${sp}">.-</span>`;
+   const [i,d]=v.toFixed(2).split('.');
+   const dS=cents==='full'?big*.82:small*1.25,iS=cents==='full'?big*.82:big;
+   return`<span style="${sp};margin-right:.2mm">฿</span><span style="font-size:${iS}pt;letter-spacing:-.2mm">${(+i).toLocaleString('en-US')}</span><span style="font-size:${dS}pt">.${d}</span>`;
+  }
+  function labelPrice(it,p){
+   const box=`width:${p.dieW}mm;height:${p.dieH}mm`,row='display:flex;align-items:baseline;justify-content:center;font-weight:900;line-height:1;white-space:nowrap';
+   if(it.pstyle==='a')return`<div class="st-label" style="${box}"><div class="st-in" style="top:${p.shift}mm;padding:1.4mm .8mm 0;align-items:center">`
+    +`<div style="font-weight:800;font-size:9.6pt;line-height:1;letter-spacing:.1mm">${esc(it.model)}</div>`
+    +`<div style="font-weight:700;font-size:4.8pt;line-height:1;margin-top:1.2mm;color:#000">ราคา</div>`
+    +`<div style="${row};margin-top:.6mm">${priceHtml(it.price,it.cents,21,8.5)}</div></div></div>`;
+   const q={...p,eanBarH:4,bcH:4.6,digits:7.6};
+   const bars=useEan(it.code)?ean13(it.code,q):barcode(it.code,q)+`<div class="st-digits" style="font-size:7pt;font-weight:700">${esc(it.code)}</div>`;
+   return`<div class="st-label" style="${box}"><div class="st-in" style="top:${p.shift}mm;padding:.8mm .8mm 0;align-items:center">`
+    +`<div style="font-weight:800;font-size:8.5pt;line-height:1;letter-spacing:.1mm;margin-bottom:.4mm">${esc(it.model)}</div>${bars}`
+    +`<div style="${row};position:absolute;left:0;right:0;bottom:.8mm;gap:.8mm"><span style="font-size:4.8pt;font-weight:700">ราคา</span><span style="${row}">${priceHtml(it.price,it.cents,16,6.8)}</span></div></div></div>`;
+  }
   function label(it,p){
+   if(it.price!=null&&it.price!=='')return labelPrice(it,p);
    if(design==='factory')return labelFactory(it,p);
    const maxPx=Math.min(p.dieW-p.padX*2,p.bcW-1)*PX,title=[it.brand,it.model].filter(Boolean).join(' '),f=fit(title,maxPx,p.nameBase,p.nameMin);
    const lines=(title?`<div class="st-line"><span style="font-size:${f.size.toFixed(2)}pt;transform:scaleX(${f.scale.toFixed(4)})">${esc(title)}</span></div>`:'')+(it.text?`<div class="st-detail" style="font-size:${p.detail}pt;-webkit-line-clamp:${p.detailLines||2};max-height:${(p.detailLines||2)*1.15}em">${esc(it.text)}</div>`:'');

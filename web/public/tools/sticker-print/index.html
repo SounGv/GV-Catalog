@@ -6,6 +6,23 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Sarabun,"Segoe UI",sans-serif}
 .one{max-width:720px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.mtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--soft);border-radius:12px;padding:4px}
+.mtabs button{min-height:48px;border:0;border-radius:9px;background:transparent;font:inherit;font-weight:700;color:var(--muted);cursor:pointer}.mtabs button.on{background:var(--accent);color:#fff}
+body.pmode .one-only{display:none!important}body:not(.pmode) .price-only{display:none!important}
+.pfile{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pfile .fn{font-weight:700;overflow-wrap:anywhere;min-width:0}
+.psum{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.psum span{border-radius:99px;padding:0 10px;font-size:.85rem;font-weight:700;line-height:26px}
+.psum .ok{background:var(--soft);color:var(--accent)}.psum .w{background:var(--warn-bg);color:var(--warn)}.psum .b{background:#fdecec;color:var(--bad)}
+.ptw{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.ptw table{width:100%;border-collapse:collapse;font-size:.92rem}.ptw th,.ptw td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.ptw th{position:sticky;top:0;background:#f1f4f6;font-size:.78rem;color:var(--muted);z-index:1}.ptw td.r,.ptw th.r{text-align:right;font-variant-numeric:tabular-nums}
+.ptw tr.off td{color:#9aa5ae}.ptw .mono{font-family:ui-monospace,Consolas,monospace;font-size:.85rem}
+.ptw input[type=number]{width:70px;min-height:40px;border:1px solid #cfd8de;border-radius:8px;text-align:center;font:inherit;font-weight:700}
+.ptw select{font:inherit;font-size:.8rem;min-height:36px;border-radius:8px;border:1px solid var(--warn)}
+.pall{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:.92rem}.pall input{width:80px;min-height:44px;border:1px solid #cfd8de;border-radius:10px;text-align:center;font:inherit;font-weight:700}
+.pall button{min-height:44px;padding:0 14px;border:1px solid var(--accent);border-radius:10px;background:#fff;color:var(--accent);font-weight:700;cursor:pointer}
+.pchoice{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.pchoice.two{grid-template-columns:1fr 1fr}
+.pchoice button{border:2px solid #cfd8de;background:#fff;border-radius:10px;padding:8px 4px;font:inherit;font-weight:800;cursor:pointer;line-height:1.3;min-height:56px}
+.pchoice button span{display:block;font-weight:400;font-size:.75rem;color:var(--muted)}.pchoice button.on{border-color:var(--accent);background:var(--soft)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(21,32,24,.06)}
 .steps{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:.9rem}
 .steps b{background:var(--accent);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:.85rem}
@@ -62,12 +79,23 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
 <a class="back" href="/">&lsaquo; กลับหน้าหลัก</a>
 <header class="app-header"><img src="logo.jpeg" alt="Gadget Villa"><div><h1>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h1><span>พิมพ์ทีละรุ่น · ระบบเติมชื่อกับบาร์โค้ดจาก Catalog ให้</span></div></header>
 <main class="one">
- <section class="card"><div class="steps"><b>1</b> พิมพ์เลข SKU</div>
+ <div class="mtabs" id="mtabs" role="tablist"><button type="button" data-m="one" class="on">พิมพ์ทีละรุ่น</button><button type="button" data-m="price">ป้ายราคา จากไฟล์</button></div>
+ <section class="card price-only" id="priceCard"><div class="steps"><b>1</b> อัปไฟล์ราคา (.xlsx)</div>
+  <div class="pfile"><label class="btn" style="display:inline-flex;align-items:center;cursor:pointer">เลือกไฟล์<input type="file" id="pFile" accept=".xlsx,.xls" hidden></label><div class="fn" id="pName">ไฟล์ที่มีคอลัมน์ SKU และราคา เช่น "SKU ผ่านอนุมัติ_ราคา In-VAT ใหม่"</div></div>
+  <p class="msg" id="pMsg" role="status"></p>
+  <div class="psum" id="pSum"></div>
+  <div class="ptw" id="pTw" hidden><table><thead><tr><th><input type="checkbox" id="pAll" checked aria-label="เลือกทั้งหมด"></th><th>รุ่น</th><th>SKU</th><th class="r">ราคา</th><th>บาร์โค้ด</th><th class="r">ดวง</th></tr></thead><tbody id="pBody"></tbody></table></div>
+  <div class="pall" id="pAllQty" hidden>ใส่จำนวนเท่ากันทุกรุ่นที่เลือก <input type="number" id="pQ" min="0" max="2000" value="3" aria-label="จำนวนดวงทุกรุ่น"><button type="button" id="pQApply">ใช้กับทุกแถว</button></div>
+  <div class="steps" style="margin-top:14px"><b>2</b> เลือกแบบสติกเกอร์</div>
+  <div class="pchoice two" id="pStyle"><button type="button" data-v="b" class="on">รุ่น + บาร์โค้ด + ราคา<span>รุ่นบนบาร์โค้ด ราคาด้านล่าง</span></button><button type="button" data-v="a">รุ่น + ราคา<span>ไม่มีบาร์โค้ด ราคาตัวใหญ่</span></button></div>
+  <div class="pchoice" id="pCents"><button type="button" data-v="low" class="on">฿1,335<small>.99</small><span>สตางค์ตัวเล็ก</span></button><button type="button" data-v="full">฿1,335.99<span>ตัวเท่ากัน</span></button><button type="button" data-v="round">฿1,336.-<span>ปัดเต็มบาท</span></button></div>
+ </section>
+ <section class="card one-only"><div class="steps"><b>1</b> พิมพ์เลข SKU</div>
   <form class="add" id="addForm"><input id="skuInput" autocomplete="off" inputmode="text" placeholder="เลข SKU 4–5 หลัก เช่น 35501" aria-label="เลข SKU" autofocus><button class="btn" type="submit">ค้นหา</button></form>
   <p class="hint">หรือยิงบาร์โค้ดสินค้าลงช่องนี้ก็ได้ · รุ่นกล่องใช้ -BOX เช่น 60131-BOX</p>
   <p class="msg" id="msg" role="status"></p><div class="pick" id="pick"></div>
  </section>
- <section class="card" id="foundCard" hidden><div class="steps"><b>2</b> ตรวจข้อมูลสินค้า</div>
+ <section class="card one-only" id="foundCard" hidden><div class="steps"><b>2</b> ตรวจข้อมูลสินค้า</div>
   <div class="fhead"><span class="sku" id="fSku"></span><span class="badge">✓ พบใน Catalog</span><span class="badge" id="fType"></span></div>
   <div class="bc" id="fInfo"></div>
   <label class="fld">เลขบาร์โค้ด (แก้ได้)<input id="codeInput" class="mono" autocomplete="off" inputmode="text" aria-label="เลขบาร์โค้ดที่จะพิมพ์"></label><p class="note" id="codeNote"></p><button type="button" class="link" id="codeReset" hidden>ใช้เลขบาร์โค้ดจาก Catalog</button>
@@ -76,8 +104,8 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  <section class="card" id="printCard" hidden><div class="steps"><b>3</b> เลือกขนาดและจำนวน</div>
   <label class="fld">เครื่องพิมพ์ที่ใช้<select id="printer"><option value="birch">Birch DP-4432B</option><option value="tsc">TSC TE210</option></select></label>
   <div class="row2">
-   <div class="seg" id="seg"><button type="button" data-s="s3">3 ดวง/แถว<small>32.3 × 20 มม.</small></button><button type="button" data-s="s2">2 ดวง/แถว<small>50 × 30 มม.</small></button></div>
-   <div><div class="qbox"><button class="s" type="button" id="qMinus" aria-label="ลดจำนวน">−</button><input id="qty" type="number" inputmode="numeric" min="1" max="20000" value="" placeholder="ใส่จำนวน" aria-label="จำนวนดวง"><button class="s" type="button" id="qPlus" aria-label="เพิ่มจำนวน">+</button><span class="bc" style="margin:0">ดวง</span></div>
+   <div class="seg one-only" id="seg"><button type="button" data-s="s3">3 ดวง/แถว<small>32.3 × 20 มม.</small></button><button type="button" data-s="s2">2 ดวง/แถว<small>50 × 30 มม.</small></button></div>
+   <div class="one-only"><div class="qbox"><button class="s" type="button" id="qMinus" aria-label="ลดจำนวน">−</button><input id="qty" type="number" inputmode="numeric" min="1" max="20000" value="" placeholder="ใส่จำนวน" aria-label="จำนวนดวง"><button class="s" type="button" id="qPlus" aria-label="เพิ่มจำนวน">+</button><span class="bc" style="margin:0">ดวง</span></div>
     <div class="chips" id="qChips"><button type="button" data-q="10">10</button><button type="button" data-q="30">30</button><button type="button" data-q="50">50</button><button type="button" data-q="100">100</button></div></div>
   </div>
   <p class="paper" id="paper"></p>
@@ -92,7 +120,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
    <div class="readout" id="readout"></div><p class="edge" id="edge" hidden>ถึงขอบสติกเกอร์แล้ว ขยับต่อไม่ได้</p>
    <p class="note" style="text-align:center">กด "พิมพ์ทดสอบ" แล้วกดลูกศรตามที่เห็นบนสติกเกอร์จริง · ค่าจำไว้ในเครื่องนี้ แยกตามขนาด</p>
    <div class="prow2"><button type="button" class="test" id="testBtn2">พิมพ์ทดสอบ 2 แถว</button><button type="button" class="test" id="resetBtn2">ล้างค่า</button></div></div>
-  <label class="fld">บาร์โค้ดที่จะพิมพ์<select id="source"></select></label>
+  <label class="fld one-only">บาร์โค้ดที่จะพิมพ์<select id="source"></select></label>
   <details class="set" id="setBox"><summary>ตั้งค่าอื่นๆ (พิมพ์ตัวเลขเอง · ช่องว่างระหว่างดวง/แถว)</summary>
    <div class="grid"><label>ช่องว่างระหว่างดวง (มม.)<input id="gapX" type="number" min="0" max="6" step="0.1"></label><label>เลื่อนซ้าย–ขวา (มม.)<input id="shiftX" type="number" min="-4" max="6" step="0.5"></label><label>เลื่อนขึ้น–ลง (มม.)<input id="shift" type="number" min="-6" max="8" step="0.5"></label><label>ช่องว่างระหว่างแถว (มม.)<input id="pitch" type="number" min="0" max="6" step="0.5"></label></div>
    <h4 class="grp">เส้นบาร์โค้ด</h4><div class="grid"><label>ซ้าย–ขวา (มม.) · ค่าบวก = ไปทางขวา<input id="bcX" type="number" min="-8" max="8" step="0.5"></label><label>ขึ้น–ลง (มม.) · ค่าบวก = ลงล่าง<input id="bcY" type="number" min="-8" max="8" step="0.5"></label><label>ความสูงเส้น (%)<input id="bcS" type="number" min="50" max="150" step="5"></label></div>
@@ -119,7 +147,9 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  const gtinsOf=p=>String(p.gtin||'').split(/[\s,;|/]+/).filter(g=>/^\d{8,14}$/.test(g));
  const eanOk=c=>{if(!/^\d{13}$/.test(c))return false;let s=0;for(let i=0;i<12;i++)s+=Number(c[i])*(i%2?3:1);return(10-s%10)%10===Number(c[12])};
  const msg=(t,cls)=>{$('msg').textContent=t||'';$('msg').className='msg'+(cls?' '+cls:'')};
- const qtyNow=()=>Math.max(0,Math.min(20000,Math.floor(Number($('qty').value)||0))); // empty = 0: staff type how many to print
+ let mode='one',P=[],pStyle='b',pCents='low';           // ป้ายราคา จากไฟล์: rows of the price file
+ const pTotal=()=>P.filter(r=>r.on&&r.code).reduce((a,r)=>a+r.qty,0);
+ const qtyNow=()=>mode==='price'?pTotal():Math.max(0,Math.min(20000,Math.floor(Number($('qty').value)||0))); // empty = 0: staff type how many to print
  const qtyPreview=()=>Math.max(1,qtyNow()); // the preview row always needs at least one sticker
  const eng=s=>$('engine').querySelector(s);
  let agentUp=false;const sizeH=()=>engSet('size').value==='s2'?30:20;
@@ -149,7 +179,12 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  function codeNote(){const c=codeOverride||(current?barcodeOf(current).code:'');const ean=eanOk(c);$('fType').textContent=(c?(ean?'EAN-13':'Code 128'):'ไม่มีเลขบาร์โค้ด')+' · อัตโนมัติ';$('fType').className='badge'+(c?'':' warn');$('codeNote').textContent=!c?'ใส่เลขบาร์โค้ดก่อนจึงพิมพ์ได้':/^\d{13}$/.test(c)&&!ean?'เลข 13 หลักนี้ตรวจเลขท้ายไม่ผ่าน จึงพิมพ์เป็น Code 128 (ไม่ใช่ EAN-13) ตรวจเลขอีกครั้ง':ean?'เลข 13 หลักถูกต้อง พิมพ์เป็น EAN-13':'พิมพ์เป็น Code 128 (ตัวเลข/ตัวอักษรได้)';$('codeReset').hidden=!(current&&codeOverride&&codeOverride!==barcodeOf(current).code);$('goBtn').disabled=$('testBtn').disabled=!c}
  function barcodeOf(p){const src=$('source').value,mains=gtinsOf(p),own=src?(p.retailerBarcodes||{})[src]:'';return{code:own||mains[0]||'',fromShop:!!own}}
 
+ function pushPrice(){
+  if(engine.reset)engine.reset();
+  engine.update(P.filter(r=>r.on&&r.code&&r.qty>0).map(r=>({code:r.code,model:r.sku,qty:r.qty,status:'same',pick:true,price:r.price,pstyle:pStyle,cents:pCents})));
+ }
  function pushToEngine(keepText){
+  if(mode==='price'){pushPrice();return}
   if(!current)return;
   const code=printedCode(current);
   if(!code){engine.update([]);return}
@@ -185,13 +220,13 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   $('paper').innerHTML=pp?(direct?`🖨 พิมพ์ตรงเข้า <b>${pn}</b> ผ่านโปรแกรมพิมพ์ ✓ · สติกเกอร์ <b>${+pp.w.toFixed(1)} × ${+sizeH().toFixed(1)} มม.</b> · Gap <b>3 มม.</b> <small>(ไม่ต้องตั้งกระดาษในไดรเวอร์หรือในหน้าต่างพิมพ์)</small>`:`🖨 ตอนกดพิมพ์ เลือกเครื่อง <b>${pn}</b> · กระดาษ <b>${+pp.w.toFixed(1)} × ${+pp.h.toFixed(1)} มม.</b> <small>(หน้านี้ส่งขนาดกระดาษให้เอง)</small><span class="pset">ค่าไดรเวอร์: สเกล <b>100%</b> · ขอบ <b>None</b> · ${tip}${$('printer').value==='tsc'?' · <small>เปิดโปรแกรมพิมพ์ (print-agent) จะพิมพ์ตรงโดยไม่ต้องตั้งค่านี้</small>':''}</span>`):'';
   const lk=engine.locked();$('nudgeBox').hidden=lk;$('setBox').hidden=lk;
   $('lockbar').innerHTML=lk?'<span>🔒 ใช้ค่ามาตรฐาน · ทุกคอมพิมพ์ตรงกัน</span><button type="button" id="lockBtn">ปลดล็อกเพื่อปรับตำแหน่ง</button>':'<span>🔓 ปรับตำแหน่งได้ · ค่าที่ปรับจำไว้เฉพาะคอมนี้</span><button type="button" id="lockBtn">ล็อกกลับเป็นค่ามาตรฐาน</button>';
-  const ready=!!current&&!!eng('tbody tr');
+  const ready=mode==='price'?pTotal()>0&&!!eng('tbody tr'):!!current&&!!eng('tbody tr');
   $('goBtn').innerHTML=n>0?`พิมพ์สติกเกอร์ <b id="goN">${n}</b> ดวง`:'ใส่จำนวนดวงก่อน';$('goBtn').disabled=!ready||n===0;$('testBtn').disabled=!ready;
   if(!prevRow){host.innerHTML='';$('cap').textContent='';return}
   host.innerHTML='';host.style.transform='none';host.style.width='auto';const row=prevRow.cloneNode(true);host.append(row);
   const box=$('prevBox'),avail=box.clientWidth-28,w=row.getBoundingClientRect().width||1,h=row.getBoundingClientRect().height,k=Math.min(2.2,avail/w);
   host.style.transform=`scale(${k})`;host.style.width=w+'px';box.style.height=(h*k+28)+'px';
-  $('cap').textContent=n>0?`ตัวอย่างสติกเกอร์ 1 แถว · พิมพ์ ${n} ดวง = ${rows} แถว`:'ตัวอย่างสติกเกอร์ 1 แถว · ใส่จำนวนดวงที่จะพิมพ์ในช่องด้านบน';
+  $('cap').textContent=n>0?`ตัวอย่างสติกเกอร์ 1 แถว · พิมพ์ ${n} ดวง = ${rows} แถว${mode==='price'?` · ${P.filter(r=>r.on&&r.code&&r.qty>0).length} รุ่น`:''}`:'ตัวอย่างสติกเกอร์ 1 แถว · ใส่จำนวนดวงที่จะพิมพ์ในช่องด้านบน';
   for(const el of row.querySelectorAll(tgt==='bc'?'.st-bc':tgt==='tx'?'.st-tx':'.st-in'))el.classList.add('hl');
   readout();
  }
@@ -247,6 +282,53 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  $('szbar').addEventListener('click',e=>{const b=e.target.closest('[data-z]');if(!b)return;nudge('txS',Number(b.dataset.z),60,150)});
  $('testBtn2').addEventListener('click',()=>$('testBtn').click());$('resetBtn2').addEventListener('click',()=>$('resetAdj').click());
  $('resetAdj').addEventListener('click',()=>{const s3=engSet('size').value==='s3';const def={gapX:s3?'1.5':'0',shiftX:s3?'-1.5':'0',shift:'0',pitch:'0',bcX:'0',bcY:'0',bcS:'100',txX:'0',txY:'0',txS:'100'};for(const k of KEYS){$(k).value=def[k];setEngine(k,def[k])}refresh()});
+ /* ---------- ป้ายราคา จากไฟล์ ---------- */
+ const money=n=>'฿'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const escH=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ function loadXlsx(){if(window.XLSX)return Promise.resolve();return new Promise((ok,bad)=>{const s=document.createElement('script');s.src='/tools/receiving/xlsx.full.min.js';s.onload=ok;s.onerror=()=>bad(Error('โหลดตัวอ่าน Excel ไม่สำเร็จ'));document.head.append(s)})}
+ function setMode(m){mode=m;document.body.classList.toggle('pmode',m==='price');for(const b of $('mtabs').children)b.classList.toggle('on',b.dataset.m===m);
+  if(m==='price'){if(engSet('size').value!=='s3'){setEngine('size','s3');for(const k of KEYS)$(k).value=engSet(k).value;syncSeg()}const has=P.length>0;$('printCard').hidden=!has;$('goBox').hidden=!has;pushPrice()}
+  else{if(engine.reset)engine.reset();if(current)show(current);else{engine.update([]);$('printCard').hidden=$('goBox').hidden=true}}
+  refresh()}
+ async function readPriceFile(f){
+  const pm=t=>{$('pMsg').textContent=t||'';$('pMsg').className='msg'+(t&&/ไม่/.test(t)?' bad':'')};
+  try{
+   pm('กำลังอ่านไฟล์…');await loadXlsx();
+   const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+   const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+   // header row = the first row with a SKU column and a price column (ราคา / In-VAT / Price)
+   const hi=rows.findIndex(r=>r.some(c=>/^\s*sku\s*$/i.test(String(c)))&&r.some(c=>/ราคา|in-?vat|price/i.test(String(c))));
+   if(hi<0)throw Error('ไม่พบหัวคอลัมน์ SKU และราคาในไฟล์นี้');
+   const h=rows[hi].map(c=>String(c).trim()),cs=h.findIndex(c=>/^sku$/i.test(c)),cp=h.findIndex(c=>/ราคา|in-?vat|price/i.test(c)),cm=h.findIndex(c=>/^รุ่น$|model/i.test(c));
+   if(!ready)await GVProductStickers.ready();
+   P=rows.slice(hi+1).filter(r=>String(r[cs]).trim()).map(r=>{
+    const sku=String(r[cs]).trim(),price=Number(String(r[cp]).replace(/[^\d.]/g,'')),p=catalog.get(norm(sku)),codes=p?gtinsOf(p):[];
+    return{sku,model:cm>=0?String(r[cm]).trim():'',price,codes,code:codes[0]||'',found:!!p,on:codes.length>0&&price>0,qty:codes.length&&price>0?3:0};
+   });
+   $('pName').textContent=f.name;pm('');drawPrice();setMode('price');
+  }catch(e){P=[];drawPrice();pm(e.message||'อ่านไฟล์ไม่สำเร็จ')}
+ }
+ function drawPrice(){
+  const ok=P.filter(r=>r.codes.length===1&&r.price>0).length,two=P.filter(r=>r.codes.length>1).length,nf=P.filter(r=>!r.found).length,nb=P.filter(r=>r.found&&!r.codes.length).length,np=P.filter(r=>r.codes.length&&!(r.price>0)).length;
+  $('pSum').innerHTML=P.length?`<span class="ok">✓ พร้อมพิมพ์ ${ok} รุ่น</span>`+(two?`<span class="w">! มีบาร์โค้ด 2 ตัว ${two} รุ่น · เลือกตัวที่ใช้</span>`:'')+(nf?`<span class="b">✗ ไม่มีใน Catalog ${nf} รุ่น · ข้ามไป</span>`:'')+(nb?`<span class="b">✗ ไม่มีบาร์โค้ด ${nb} รุ่น</span>`:'')+(np?`<span class="b">✗ ไม่มีราคา ${np} รุ่น</span>`:''):'';
+  $('pTw').hidden=$('pAllQty').hidden=!P.length;
+  $('pBody').innerHTML=P.map((r,i)=>{const can=r.codes.length>0&&r.price>0;
+   return`<tr class="${can?'':'off'}"><td><input type="checkbox" data-c="${i}" ${r.on?'checked':''} ${can?'':'disabled'} aria-label="เลือก ${escH(r.sku)}"></td><td>${escH(r.model)}</td><td class="mono"><b>${escH(r.sku)}</b></td><td class="r">${r.price>0?money(r.price):'–'}</td>
+    <td class="mono">${!r.found?'ไม่มีใน Catalog':!r.codes.length?'ไม่มีบาร์โค้ด':r.codes.length>1?`<select data-b="${i}" aria-label="เลือกบาร์โค้ด ${escH(r.sku)}">${r.codes.map(c=>`<option ${c===r.code?'selected':''}>${c}</option>`).join('')}</select>`:r.code}</td>
+    <td class="r"><input type="number" min="0" max="2000" value="${r.qty}" data-q="${i}" ${can?'':'disabled'} aria-label="จำนวนดวง ${escH(r.sku)}"></td></tr>`}).join('');
+ }
+ const afterPrice=()=>{pushPrice();const has=P.length>0;$('printCard').hidden=!has;$('goBox').hidden=!has;refresh()};
+ $('mtabs').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b)setMode(b.dataset.m)});
+ $('pFile').addEventListener('change',e=>{const f=e.target.files[0];if(f)readPriceFile(f);e.target.value=''});
+ $('pBody').addEventListener('input',e=>{const t=e.target,i=+(t.dataset.q??t.dataset.c??t.dataset.b);if(Number.isNaN(i))return;
+  if(t.dataset.q!=null)P[i].qty=Math.max(0,Math.min(2000,Math.floor(Number(t.value)||0)));
+  if(t.dataset.c!=null)P[i].on=t.checked;
+  if(t.dataset.b!=null)P[i].code=t.value;
+  afterPrice()});
+ $('pAll').addEventListener('change',e=>{for(const r of P)if(r.codes.length&&r.price>0)r.on=e.target.checked;drawPrice();afterPrice()});
+ $('pQApply').addEventListener('click',()=>{const q=Math.max(0,Math.min(2000,Math.floor(Number($('pQ').value)||0)));for(const r of P)if(r.on)r.qty=q;drawPrice();afterPrice()});
+ $('pStyle').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;pStyle=b.dataset.v;for(const x of $('pStyle').children)x.classList.toggle('on',x===b);afterPrice()});
+ $('pCents').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;pCents=b.dataset.v;for(const x of $('pCents').children)x.classList.toggle('on',x===b);afterPrice()});
  addEventListener('resize',refresh);
  window.addEventListener('DOMContentLoaded',init);
 })();
