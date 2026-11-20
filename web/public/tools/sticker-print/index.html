@@ -10,7 +10,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Sarabun,"Segoe
 .mtabs button{min-height:48px;border:0;border-radius:9px;background:transparent;font:inherit;font-weight:700;color:var(--muted);cursor:pointer}.mtabs button.on{background:var(--accent);color:#fff}
 body.pmode .one-only{display:none!important}body:not(.pmode) .price-only{display:none!important}
 .pfile{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pfile .fn{font-weight:700;overflow-wrap:anywhere;min-width:0}
-.padd{display:flex;gap:8px;flex-wrap:wrap}.padd input,.padd select{min-height:44px;border:1px solid var(--border-strong,#cfd6dc);border-radius:10px;padding:0 12px;font:inherit;background:#fff}.padd #pSku{flex:2 1 200px}.padd #pPrice{flex:1 1 100px;font-variant-numeric:tabular-nums}.padd select{flex:1 1 140px}
+.padd{display:flex;gap:8px;flex-wrap:wrap}.padd input,.padd select{min-height:44px;border:1px solid var(--border-strong,#cfd6dc);border-radius:10px;padding:0 12px;font:inherit;background:#fff}.padd #pSku{flex:2 1 200px}.padd #pPrice{flex:1 1 100px;font-variant-numeric:tabular-nums}.padd select{flex:1 1 140px}.padd .ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
 .psum{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.psum span{border-radius:99px;padding:0 10px;font-size:.85rem;font-weight:700;line-height:26px}
 .psum .ok{background:var(--soft);color:var(--accent)}.psum .w{background:var(--warn-bg);color:var(--warn)}.psum .b{background:#fdecec;color:var(--bad)}
 .ptw{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
@@ -19,6 +19,7 @@ body.pmode .one-only{display:none!important}body:not(.pmode) .price-only{display
 .ptw tr.off td{color:#9aa5ae}.ptw .mono{font-family:ui-monospace,Consolas,monospace;font-size:.85rem}
 .ptw input[type=number]{width:70px;min-height:40px;border:1px solid #cfd8de;border-radius:8px;text-align:center;font:inherit;font-weight:700}
 .ptw select{font:inherit;font-size:.8rem;min-height:36px;border-radius:8px;border:1px solid var(--warn)}
+.pall[hidden],.ptw[hidden]{display:none}
 .pall{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:.92rem}.pall input{width:80px;min-height:44px;border:1px solid #cfd8de;border-radius:10px;text-align:center;font:inherit;font-weight:700}
 .pall button{min-height:44px;padding:0 14px;border:1px solid var(--accent);border-radius:10px;background:#fff;color:var(--accent);font-weight:700;cursor:pointer}
 .pchoice{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}.pchoice.two{grid-template-columns:1fr 1fr}
@@ -81,9 +82,9 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
 <header class="app-header"><img src="logo.jpeg" alt="Gadget Villa"><div><h1>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h1><span>พิมพ์ทีละรุ่น · ระบบเติมชื่อกับบาร์โค้ดจาก Catalog ให้</span></div></header>
 <main class="one">
  <div class="mtabs" id="mtabs" role="tablist"><button type="button" data-m="one" class="on">พิมพ์ทีละรุ่น</button><button type="button" data-m="price">ป้ายราคา</button></div>
- <section class="card price-only" id="priceCard"><div class="steps"><b>1</b> ใส่รุ่นกับราคา หรืออัปไฟล์ราคา</div>
-  <form class="padd" id="pAdd"><input id="pSku" autocomplete="off" placeholder="SKU / รุ่น / ยิงบาร์โค้ด เช่น 75701HC" aria-label="SKU หรือรุ่น" required><input id="pPrice" inputmode="decimal" autocomplete="off" placeholder="ราคา" aria-label="ราคา" required><select id="pVat" aria-label="ราคาที่ใส่"><option value="in">รวม VAT แล้ว</option><option value="ex">ก่อน VAT (+7%)</option></select><button class="btn" type="submit">เพิ่ม</button></form>
-  <div class="pfile" style="margin-top:8px"><label class="btn" style="display:inline-flex;align-items:center;cursor:pointer">เลือกไฟล์<input type="file" id="pFile" accept=".xlsx,.xls" hidden></label><div class="fn" id="pName">ไฟล์ที่มีคอลัมน์ SKU และราคา เช่น "SKU ผ่านอนุมัติ_ราคา In-VAT ใหม่"</div></div>
+ <section class="card price-only" id="priceCard"><div class="steps"><b>1</b> ใส่รุ่นกับราคา แล้วกดพิมพ์ (หลายรุ่นกด + เพิ่มอีกรุ่น)</div>
+  <form class="padd" id="pAdd"><input id="pSku" autocomplete="off" placeholder="SKU / รุ่น / ยิงบาร์โค้ด เช่น 75701HC" aria-label="SKU หรือรุ่น"><input id="pPrice" inputmode="decimal" autocomplete="off" placeholder="ราคา" aria-label="ราคา"><select id="pVat" aria-label="ราคาที่ใส่"><option value="in">รวม VAT แล้ว</option><option value="ex">ก่อน VAT (+7%)</option></select><button class="btn ghost" type="submit" data-a="add">+ เพิ่มอีกรุ่น</button><button class="btn" type="submit" data-a="print">พิมพ์</button></form>
+  <div class="pfile" style="margin-top:6px;font-size:.88rem;color:var(--muted,#5b6670)">มีหลายรุ่นในไฟล์ Excel? <label style="color:var(--accent);font-weight:700;text-decoration:underline;cursor:pointer;min-height:32px;display:inline-flex;align-items:center">อัปไฟล์แทน<input type="file" id="pFile" accept=".xlsx,.xls" hidden></label><span class="fn" id="pName"></span></div>
   <p class="msg" id="pMsg" role="status"></p>
   <div class="psum" id="pSum"></div>
   <div class="ptw" id="pTw" hidden><table><thead><tr><th><input type="checkbox" id="pAll" checked aria-label="เลือกทั้งหมด"></th><th>รุ่น</th><th>SKU</th><th class="r">ราคา</th><th>บาร์โค้ด</th><th class="r">ดวง</th></tr></thead><tbody id="pBody"></tbody></table></div>
@@ -330,14 +331,17 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  const afterPrice=()=>{pushPrice();const has=P.length>0;$('printCard').hidden=!has;$('goBox').hidden=!has;refresh()};
  $('mtabs').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b)setMode(b.dataset.m)});
  // type a SKU (or scan) + price: adds to the list, an Ex-VAT price gets 7% VAT (971.96 -> 1,040.00)
+ // "พิมพ์" adds what is typed (if anything) and prints the list straight away; "+ เพิ่มอีกรุ่น" / Enter only adds
  $('pAdd').addEventListener('submit',async e=>{e.preventDefault();const sku=$('pSku').value.trim(),raw=Number($('pPrice').value.replace(/[^\d.]/g,''));
-  const bad=t=>{$('pMsg').textContent=t;$('pMsg').className='msg bad'};
+  const bad=t=>{$('pMsg').textContent=t;$('pMsg').className='msg bad'},go=e.submitter&&e.submitter.dataset.a==='print';
+  if(go&&!sku&&!$('pPrice').value.trim()){if(!P.length)return bad('ใส่ SKU กับราคาก่อน');$('goBtn').click();return}
   if(!sku)return bad('ใส่ SKU หรือรุ่นก่อน');if(!(raw>0))return bad('ใส่ราคาเป็นตัวเลข');
   if(!ready)await GVProductStickers.ready();
   const price=$('pVat').value==='ex'?Math.round(raw*107)/100:raw,rows=priceRows(sku,price,'');
   for(const r of rows){const i=P.findIndex(x=>norm(x.sku)===norm(r.sku));if(i>=0)P[i]={...r,qty:P[i].qty||r.qty};else P.push(r)}
   $('pMsg').textContent=rows[0].found?`เพิ่ม ${rows.map(r=>r.label||r.sku).join(', ')} ราคา ${money(price)} แล้ว`:`ไม่พบ ${sku} ใน Catalog · เพิ่มแบบไม่มีบาร์โค้ดไว้ ใส่บาร์โค้ดในตารางได้`;$('pMsg').className='msg'+(rows[0].found?'':' bad');
-  $('pSku').value='';$('pPrice').value='';$('pSku').focus();drawPrice();setMode('price')});
+  $('pSku').value='';$('pPrice').value='';$('pSku').focus();drawPrice();setMode('price');
+  if(go){if($('goBtn').disabled)return bad(rows[0].found||pStyle==='a'?'ใส่จำนวนดวงก่อน':`${sku} ไม่มีบาร์โค้ด · ใส่บาร์โค้ดในตาราง หรือเลือกแบบ รุ่น + ราคา`);$('goBtn').click()}});
  $('pFile').addEventListener('change',e=>{const f=e.target.files[0];if(f)readPriceFile(f);e.target.value=''});
  $('pBody').addEventListener('input',e=>{const t=e.target,i=+(t.dataset.q??t.dataset.c??t.dataset.b);if(Number.isNaN(i))return;
   if(t.dataset.q!=null)P[i].qty=Math.max(0,Math.min(2000,Math.floor(Number(t.value)||0)));
