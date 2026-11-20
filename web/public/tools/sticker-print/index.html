@@ -10,6 +10,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Sarabun,"Segoe
 .mtabs button{min-height:48px;border:0;border-radius:9px;background:transparent;font:inherit;font-weight:700;color:var(--muted);cursor:pointer}.mtabs button.on{background:var(--accent);color:#fff}
 body.pmode .one-only{display:none!important}body:not(.pmode) .price-only{display:none!important}
 .pfile{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pfile .fn{font-weight:700;overflow-wrap:anywhere;min-width:0}
+.padd{display:flex;gap:8px;flex-wrap:wrap}.padd input,.padd select{min-height:44px;border:1px solid var(--border-strong,#cfd6dc);border-radius:10px;padding:0 12px;font:inherit;background:#fff}.padd #pSku{flex:2 1 200px}.padd #pPrice{flex:1 1 100px;font-variant-numeric:tabular-nums}.padd select{flex:1 1 140px}
 .psum{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.psum span{border-radius:99px;padding:0 10px;font-size:.85rem;font-weight:700;line-height:26px}
 .psum .ok{background:var(--soft);color:var(--accent)}.psum .w{background:var(--warn-bg);color:var(--warn)}.psum .b{background:#fdecec;color:var(--bad)}
 .ptw{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
@@ -79,9 +80,10 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
 <a class="back" href="/">&lsaquo; กลับหน้าหลัก</a>
 <header class="app-header"><img src="logo.jpeg" alt="Gadget Villa"><div><h1>พิมพ์สติกเกอร์บาร์โค้ดสินค้า</h1><span>พิมพ์ทีละรุ่น · ระบบเติมชื่อกับบาร์โค้ดจาก Catalog ให้</span></div></header>
 <main class="one">
- <div class="mtabs" id="mtabs" role="tablist"><button type="button" data-m="one" class="on">พิมพ์ทีละรุ่น</button><button type="button" data-m="price">ป้ายราคา จากไฟล์</button></div>
- <section class="card price-only" id="priceCard"><div class="steps"><b>1</b> อัปไฟล์ราคา (.xlsx)</div>
-  <div class="pfile"><label class="btn" style="display:inline-flex;align-items:center;cursor:pointer">เลือกไฟล์<input type="file" id="pFile" accept=".xlsx,.xls" hidden></label><div class="fn" id="pName">ไฟล์ที่มีคอลัมน์ SKU และราคา เช่น "SKU ผ่านอนุมัติ_ราคา In-VAT ใหม่"</div></div>
+ <div class="mtabs" id="mtabs" role="tablist"><button type="button" data-m="one" class="on">พิมพ์ทีละรุ่น</button><button type="button" data-m="price">ป้ายราคา</button></div>
+ <section class="card price-only" id="priceCard"><div class="steps"><b>1</b> ใส่รุ่นกับราคา หรืออัปไฟล์ราคา</div>
+  <form class="padd" id="pAdd"><input id="pSku" autocomplete="off" placeholder="SKU / รุ่น / ยิงบาร์โค้ด เช่น 75701HC" aria-label="SKU หรือรุ่น" required><input id="pPrice" inputmode="decimal" autocomplete="off" placeholder="ราคา" aria-label="ราคา" required><select id="pVat" aria-label="ราคาที่ใส่"><option value="in">รวม VAT แล้ว</option><option value="ex">ก่อน VAT (+7%)</option></select><button class="btn" type="submit">เพิ่ม</button></form>
+  <div class="pfile" style="margin-top:8px"><label class="btn" style="display:inline-flex;align-items:center;cursor:pointer">เลือกไฟล์<input type="file" id="pFile" accept=".xlsx,.xls" hidden></label><div class="fn" id="pName">ไฟล์ที่มีคอลัมน์ SKU และราคา เช่น "SKU ผ่านอนุมัติ_ราคา In-VAT ใหม่"</div></div>
   <p class="msg" id="pMsg" role="status"></p>
   <div class="psum" id="pSum"></div>
   <div class="ptw" id="pTw" hidden><table><thead><tr><th><input type="checkbox" id="pAll" checked aria-label="เลือกทั้งหมด"></th><th>รุ่น</th><th>SKU</th><th class="r">ราคา</th><th>บาร์โค้ด</th><th class="r">ดวง</th></tr></thead><tbody id="pBody"></tbody></table></div>
@@ -292,6 +294,15 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
   if(m==='price'){if(engSet('size').value!=='s3'){setEngine('size','s3');for(const k of KEYS)$(k).value=engSet(k).value;syncSeg()}const has=P.length>0;$('printCard').hidden=!has;$('goBox').hidden=!has;pushPrice()}
   else{if(engine.reset)engine.reset();if(current)show(current);else{engine.update([]);$('printCard').hidden=$('goBox').hidden=true}}
   refresh()}
+ // one SKU / scanned barcode / model code -> price-tag rows. A model code that is not a SKU itself (e.g. "T2A") opens into
+ // every Catalog SKU of that model (FAN-POW-T2A-GEAR5, -LUFFY ...), one row per colour, same price; the sticker shows "T2A GEAR5"
+ function priceRows(sku,price,model){
+  const t=norm(sku),p=catalog.get(t)||byGtin.get(String(sku).trim());
+  const row=(q,label)=>{const codes=q?gtinsOf(q):[];return{sku:q?q.sku:sku,label,model,price,codes,code:codes[0]||'',found:!!q,on:price>0,qty:price>0?3:0}};
+  if(p)return[row(p)];
+  const vs=t.length<2?[]:[...catalog.values()].filter(q=>norm(q.sku).split('-').includes(t));
+  return vs.length?vs.map(q=>row(q,t+' '+norm(q.sku).split(t+'-').slice(1).join('-').replace(/-/g,' ').trim())):[row(null)];
+ }
  async function readPriceFile(f){
   const pm=t=>{$('pMsg').textContent=t||'';$('pMsg').className='msg'+(t&&/ไม่/.test(t)?' bad':'')};
   try{
@@ -303,16 +314,7 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
    if(hi<0)throw Error('ไม่พบหัวคอลัมน์ SKU และราคาในไฟล์นี้');
    const h=rows[hi].map(c=>String(c).trim()),cs=h.findIndex(c=>/^sku$/i.test(c)),cp=h.findIndex(c=>/ราคา|in-?vat|price/i.test(c)),cm=h.findIndex(c=>/^รุ่น$|model/i.test(c));
    if(!ready)await GVProductStickers.ready();
-   // a model code in the SKU column (e.g. "T2A") that is not a SKU itself opens into every Catalog SKU of that model
-   // (FAN-POW-T2A-GEAR5, -LUFFY, -NAMI ...), one row per colour, same price; the sticker shows "T2A GEAR5"
-   const variants=t=>t.length<2?[]:[...catalog.values()].filter(p=>norm(p.sku).split('-').includes(t));
-   P=rows.slice(hi+1).filter(r=>String(r[cs]).trim()).flatMap(r=>{
-    const sku=String(r[cs]).trim(),price=Number(String(r[cp]).replace(/[^\d.]/g,'')),model=cm>=0?String(r[cm]).trim():'',p=catalog.get(norm(sku));
-    const row=(q,label)=>{const codes=q?gtinsOf(q):[];return{sku:q?q.sku:sku,label,model,price,codes,code:codes[0]||'',found:!!q,on:price>0,qty:price>0?3:0}};
-    if(p)return[row(p)];
-    const vs=variants(norm(sku));
-    return vs.length?vs.map(q=>row(q,norm(sku)+' '+norm(q.sku).split(norm(sku)+'-').slice(1).join('-').replace(/-/g,' ').trim())):[row(null)];
-   });
+   P=rows.slice(hi+1).filter(r=>String(r[cs]).trim()).flatMap(r=>priceRows(String(r[cs]).trim(),Number(String(r[cp]).replace(/[^\d.]/g,'')),cm>=0?String(r[cm]).trim():''));
    $('pName').textContent=f.name;pm('');drawPrice();setMode('price');
   }catch(e){P=[];drawPrice();pm(e.message||'อ่านไฟล์ไม่สำเร็จ')}
  }
@@ -327,6 +329,15 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
  }
  const afterPrice=()=>{pushPrice();const has=P.length>0;$('printCard').hidden=!has;$('goBox').hidden=!has;refresh()};
  $('mtabs').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b)setMode(b.dataset.m)});
+ // type a SKU (or scan) + price: adds to the list, an Ex-VAT price gets 7% VAT (971.96 -> 1,040.00)
+ $('pAdd').addEventListener('submit',async e=>{e.preventDefault();const sku=$('pSku').value.trim(),raw=Number($('pPrice').value.replace(/[^\d.]/g,''));
+  const bad=t=>{$('pMsg').textContent=t;$('pMsg').className='msg bad'};
+  if(!sku)return bad('ใส่ SKU หรือรุ่นก่อน');if(!(raw>0))return bad('ใส่ราคาเป็นตัวเลข');
+  if(!ready)await GVProductStickers.ready();
+  const price=$('pVat').value==='ex'?Math.round(raw*107)/100:raw,rows=priceRows(sku,price,'');
+  for(const r of rows){const i=P.findIndex(x=>norm(x.sku)===norm(r.sku));if(i>=0)P[i]={...r,qty:P[i].qty||r.qty};else P.push(r)}
+  $('pMsg').textContent=rows[0].found?`เพิ่ม ${rows.map(r=>r.label||r.sku).join(', ')} ราคา ${money(price)} แล้ว`:`ไม่พบ ${sku} ใน Catalog · เพิ่มแบบไม่มีบาร์โค้ดไว้ ใส่บาร์โค้ดในตารางได้`;$('pMsg').className='msg'+(rows[0].found?'':' bad');
+  $('pSku').value='';$('pPrice').value='';$('pSku').focus();drawPrice();setMode('price')});
  $('pFile').addEventListener('change',e=>{const f=e.target.files[0];if(f)readPriceFile(f);e.target.value=''});
  $('pBody').addEventListener('input',e=>{const t=e.target,i=+(t.dataset.q??t.dataset.c??t.dataset.b);if(Number.isNaN(i))return;
   if(t.dataset.q!=null)P[i].qty=Math.max(0,Math.min(2000,Math.floor(Number(t.value)||0)));
