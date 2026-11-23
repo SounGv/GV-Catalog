@@ -1689,6 +1689,13 @@ function goTo(l) {
 }
 document.getElementById('searchForm').onsubmit = e => { e.preventDefault(); search(document.getElementById('q').value); };
 document.getElementById('q').addEventListener('search', e => { if (!e.target.value) search(''); });      // the input's own × clears the result
+(() => {
+  const q = new URLSearchParams(location.search).get('q');
+  if (!q) return;
+  const input = document.getElementById('q');
+  input.value = q;
+  setTimeout(() => search(q), 400);
+})();
 document.getElementById('moreBtn').onclick = e => { const on = document.body.classList.toggle('tools-open'); e.currentTarget.setAttribute('aria-expanded', on); };
 document.getElementById('legend').addEventListener('click', e => { if (!e.target.closest('.lg-toggle')) return; const lg = e.currentTarget; lg.classList.toggle('open'); e.target.setAttribute('aria-expanded', lg.classList.contains('open')); });
 addEventListener('keydown', e => { if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') { e.preventDefault(); document.getElementById('q').focus(); } });

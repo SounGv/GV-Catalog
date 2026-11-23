@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>GV Offline PO Trace — Mockup</title>
+  <title>GV Offline PO Trace</title>
   <style>
     :root {
       --brand-lime:#CDEB03; --brand-charcoal:#18364C;
@@ -65,7 +65,7 @@
         <button data-view="stage"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8h14v13M8 12h3v3H8zm5 0h3v3h-3zM9 8V4h6v4"/></svg><span>จุดพักสินค้า</span></button>
         <button data-view="report"><svg viewBox="0 0 24 24"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg><span>รายงาน</span></button>
       </nav>
-      <div class="sidebar-foot"><div class="online">เชื่อมต่อระบบแล้ว</div><div style="margin-top:7px">สต๊อกล่าสุด 09:15 น.</div></div>
+      <div class="sidebar-foot"><div class="online" id="stockOnline">กำลังเช็กสต็อก…</div><div style="margin-top:7px" id="stockAsOfFoot">สต๊อก —</div></div>
     </aside>
 
     <div class="main">
@@ -79,56 +79,116 @@
       </header>
 
       <main>
-        <div class="title-row"><div><div class="eyebrow">คลังสินค้า STOCK_5</div><h1>รายการ PO และงานหยิบ</h1></div><div><span class="example">● ข้อมูลตัวอย่าง</span><div class="as-of">สต๊อกล่าสุด 09:15 น. · 23 พ.ย. 2569</div></div></div>
+        <div class="title-row"><div><div class="eyebrow">คลังสินค้า STOCK_5</div><h1 id="pageTitle">รายการ PO และงานหยิบ</h1></div><div><span class="example">● รายการ PO = ตัวอย่าง · สต็อกซิงค์จริง</span><div class="as-of" id="stockAsOf">กำลังดึงเวลาซิงค์สต็อก…</div></div></div>
 
-        <section class="card workflow" aria-label="ตัวกรองสถานะ PO">
+        <section class="card workflow" aria-label="ตัวกรองสถานะ PO" data-panel="inbox">
           <div class="status-tabs">
-            <button class="status-tab active">ทั้งหมด <b>11</b></button>
-            <button class="status-tab">กำลังหยิบ <b>3</b></button>
-            <button class="status-tab">รอเปิดบิล <b>7</b></button>
-            <button class="status-tab">เสร็จสิ้น <b>1</b></button>
+            <button class="status-tab active" data-filter="all">ทั้งหมด <b id="cntAll">4</b></button>
+            <button class="status-tab" data-filter="picking">กำลังหยิบ <b id="cntPicking">2</b></button>
+            <button class="status-tab" data-filter="pending">รอเปิดบิล <b id="cntPending">1</b></button>
+            <button class="status-tab" data-filter="done">เสร็จสิ้น <b id="cntDone">1</b></button>
           </div>
           <div class="filter-wrap">
             <div class="filters">
-              <button class="control"><span>ลูกค้า</span><b>ทั้งหมด⌄</b></button>
-              <button class="control"><span>กำหนดส่ง</span><b>ทุกวัน⌄</b></button>
-              <button class="control"><span>ผู้หยิบ</span><b>ทุกคน⌄</b></button>
-              <button class="control"><span>จุดพัก</span><b>ทั้งหมด⌄</b></button>
-              <button class="control"><span>สถานะสต๊อก</span><b>ทั้งหมด⌄</b></button>
+              <button class="control" type="button" data-filter-note="ลูกค้า"><span>ลูกค้า</span><b>ทั้งหมด⌄</b></button>
+              <button class="control" type="button" data-filter-note="กำหนดส่ง"><span>กำหนดส่ง</span><b>ทุกวัน⌄</b></button>
+              <button class="control" type="button" data-filter-note="ผู้หยิบ"><span>ผู้หยิบ</span><b>ทุกคน⌄</b></button>
+              <button class="control" type="button" data-filter-note="จุดพัก"><span>จุดพัก</span><b>ทั้งหมด⌄</b></button>
+              <button class="control" type="button" data-filter-note="สถานะสต๊อก"><span>สถานะสต๊อก</span><b>ทั้งหมด⌄</b></button>
             </div>
           </div>
           <div class="action-row">
             <div class="action-buttons">
               <button class="btn btn-soft" id="printPickBtn">พิมพ์ Pick List</button>
-              <button class="btn btn-soft">มอบหมายคนหยิบ</button>
-              <button class="btn">ตรวจสต๊อกตำแหน่ง</button>
+              <button class="btn btn-soft" id="assignPickBtn">มอบหมายคนหยิบ</button>
+              <button class="btn" id="checkStockBtn">ตรวจสต๊อกตำแหน่ง</button>
             </div>
-            <div class="action-meta">เลือกแล้ว 0 ใบ · 0 SKU</div>
+            <div class="action-meta" id="actionMeta">แสดง 4 ใบ</div>
           </div>
         </section>
 
-        <section class="grid">
+        <section class="grid" data-panel="inbox">
           <article class="card">
-            <div class="panel-head"><div><h2>รายการ PO</h2><p>เรียงตามกำหนดส่งและสถานะงาน</p></div><div class="chips"><button class="chip active">ทั้งหมด 11</button><button class="chip">เร่งด่วน 6</button></div></div>
+            <div class="panel-head"><div><h2>รายการ PO</h2><p>เรียงตามกำหนดส่งและสถานะงาน</p></div><div class="chips"><button class="chip active" data-urgency="all">ทั้งหมด</button><button class="chip" data-urgency="urgent">เร่งด่วน</button></div></div>
             <div class="desktop-table table-wrap">
               <table class="table"><thead><tr><th>PO / ลูกค้า</th><th>สถานะ</th><th>ชื่อพนักงานหยิบ</th><th>กำหนดส่ง</th><th class="num">SKU</th><th class="num">จำนวนชิ้น</th><th class="num">หยิบแล้ว</th><th>จุดพัก</th></tr></thead>
-                <tbody>
-                  <tr><td><div class="customer"><b class="mono">PR2026112221</b><small>JIB · Purchase Request</small></div></td><td><span class="status warning">⚠ หยิบบางส่วน</span></td><td><div class="picker">กิตติ (ตัวอย่าง)<small>เริ่มหยิบ 08:42 น.</small></div></td><td>23 พ.ย. 2569</td><td class="num">4</td><td class="num">402</td><td class="num"><b>318</b></td><td><button class="location-edit" data-po="PR2026112221" data-location="STAGE-A03">STAGE-A03 ✎</button></td></tr>
-                  <tr><td><div class="customer"><b class="mono">QS2611005591</b><small>ลูกค้าโครงการ · Quotation</small></div></td><td><span class="status danger">✕ สินค้าขาด</span></td><td><div class="picker">พิมพ์ชนก (ตัวอย่าง)<small>เริ่มหยิบ 09:16 น.</small></div></td><td>24 พ.ย. 2569</td><td class="num">4</td><td class="num">64</td><td class="num"><b>36</b></td><td><button class="location-edit" data-po="QS2611005591" data-location="PICK-07">PICK-07 ✎</button></td></tr>
-                  <tr><td><div class="customer"><b class="mono">88-13</b><small>iHAVECPU · Purchase Order</small></div></td><td><span class="status success">✓ หยิบครบ</span></td><td><div class="picker">ธนา (ตัวอย่าง)<small>หยิบครบ 09:28 น.</small></div></td><td>25 พ.ย. 2569</td><td class="num">1</td><td class="num">1</td><td class="num"><b>1</b></td><td><button class="location-edit" data-po="88-13" data-location="STAGE-B02">STAGE-B02 ✎</button></td></tr>
-                  <tr><td><div class="customer"><b class="mono">QS2611005522</b><small>ลูกค้าโครงการ · Quotation</small></div></td><td><span class="status info">ℹ รอเปิดบิล</span></td><td><div class="picker">ยังไม่มอบหมาย</div></td><td>ยังไม่ระบุ</td><td class="num">34</td><td class="num">430</td><td class="num">—</td><td>—</td></tr>
+                <tbody id="poTableBody">
+                  <tr data-status="picking" data-urgent="1"><td><div class="customer"><b class="mono">PR2026112221</b><small>JIB · Purchase Request</small></div></td><td><span class="status warning">⚠ หยิบบางส่วน</span></td><td><div class="picker" data-picker>กิตติ<small>เริ่มหยิบ 08:42 น.</small></div></td><td>23 พ.ย. 2569</td><td class="num">4</td><td class="num">402</td><td class="num"><b>318</b></td><td><button class="location-edit" data-po="PR2026112221" data-location="STAGE-A03">STAGE-A03 ✎</button></td></tr>
+                  <tr data-status="picking" data-urgent="1"><td><div class="customer"><b class="mono">QS2611005591</b><small>ลูกค้าโครงการ · Quotation</small></div></td><td><span class="status danger">✕ สินค้าขาด</span></td><td><div class="picker" data-picker>พิมพ์ชนก<small>เริ่มหยิบ 09:16 น.</small></div></td><td>24 พ.ย. 2569</td><td class="num">4</td><td class="num">64</td><td class="num"><b>36</b></td><td><button class="location-edit" data-po="QS2611005591" data-location="PICK-07">PICK-07 ✎</button></td></tr>
+                  <tr data-status="done" data-urgent="0"><td><div class="customer"><b class="mono">88-13</b><small>iHAVECPU · Purchase Order</small></div></td><td><span class="status success">✓ หยิบครบ</span></td><td><div class="picker" data-picker>ธนา<small>หยิบครบ 09:28 น.</small></div></td><td>25 พ.ย. 2569</td><td class="num">1</td><td class="num">1</td><td class="num"><b>1</b></td><td><button class="location-edit" data-po="88-13" data-location="STAGE-B02">STAGE-B02 ✎</button></td></tr>
+                  <tr data-status="pending" data-urgent="1"><td><div class="customer"><b class="mono">QS2611005522</b><small>ลูกค้าโครงการ · Quotation</small></div></td><td><span class="status info">ℹ รอเปิดบิล</span></td><td><div class="picker" data-picker>ยังไม่มอบหมาย</div></td><td>ยังไม่ระบุ</td><td class="num">34</td><td class="num">430</td><td class="num">—</td><td>—</td></tr>
                 </tbody>
               </table>
             </div>
-            <div class="mobile-cards">
-              <article class="po-card"><div class="po-card-head"><div><b class="mono">PR2026112221</b><div style="color:var(--muted);font-size:13px">JIB · คลัง Stock6</div></div><span class="status warning">⚠ บางส่วน</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd>กิตติ (ตัวอย่าง)</dd></div><div><dt>เริ่มหยิบ</dt><dd>08:42 น.</dd></div><div><dt>กำหนดส่ง</dt><dd>23 พ.ย. 2569</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="PR2026112221" data-location="STAGE-A03">STAGE-A03 ✎</button></dd></div><div><dt>ต้องการ</dt><dd>402 ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>318 ชิ้น</dd></div></dl></article>
-              <article class="po-card"><div class="po-card-head"><div><b class="mono">QS2611005591</b><div style="color:var(--muted);font-size:13px">ลูกค้าโครงการ · UGREEN</div></div><span class="status danger">✕ สินค้าขาด</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd>พิมพ์ชนก (ตัวอย่าง)</dd></div><div><dt>เริ่มหยิบ</dt><dd>09:16 น.</dd></div><div><dt>กำหนดส่ง</dt><dd>24 พ.ย. 2569</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="QS2611005591" data-location="PICK-07">PICK-07 ✎</button></dd></div><div><dt>ต้องการ</dt><dd>64 ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>36 ชิ้น</dd></div></dl></article>
+            <div class="mobile-cards" id="poMobileCards">
+              <article class="po-card" data-status="picking" data-urgent="1"><div class="po-card-head"><div><b class="mono">PR2026112221</b><div style="color:var(--muted);font-size:13px">JIB · คลัง Stock6</div></div><span class="status warning">⚠ บางส่วน</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd data-picker>กิตติ</dd></div><div><dt>เริ่มหยิบ</dt><dd>08:42 น.</dd></div><div><dt>กำหนดส่ง</dt><dd>23 พ.ย. 2569</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="PR2026112221" data-location="STAGE-A03">STAGE-A03 ✎</button></dd></div><div><dt>ต้องการ</dt><dd>402 ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>318 ชิ้น</dd></div></dl></article>
+              <article class="po-card" data-status="picking" data-urgent="1"><div class="po-card-head"><div><b class="mono">QS2611005591</b><div style="color:var(--muted);font-size:13px">ลูกค้าโครงการ · UGREEN</div></div><span class="status danger">✕ สินค้าขาด</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd data-picker>พิมพ์ชนก</dd></div><div><dt>เริ่มหยิบ</dt><dd>09:16 น.</dd></div><div><dt>กำหนดส่ง</dt><dd>24 พ.ย. 2569</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="QS2611005591" data-location="PICK-07">PICK-07 ✎</button></dd></div><div><dt>ต้องการ</dt><dd>64 ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>36 ชิ้น</dd></div></dl></article>
+              <article class="po-card" data-status="done" data-urgent="0"><div class="po-card-head"><div><b class="mono">88-13</b><div style="color:var(--muted);font-size:13px">iHAVECPU</div></div><span class="status success">✓ หยิบครบ</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd data-picker>ธนา</dd></div><div><dt>เริ่มหยิบ</dt><dd>09:28 น.</dd></div><div><dt>กำหนดส่ง</dt><dd>25 พ.ย. 2569</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="88-13" data-location="STAGE-B02">STAGE-B02 ✎</button></dd></div><div><dt>ต้องการ</dt><dd>1 ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>1 ชิ้น</dd></div></dl></article>
+              <article class="po-card" data-status="pending" data-urgent="1"><div class="po-card-head"><div><b class="mono">QS2611005522</b><div style="color:var(--muted);font-size:13px">ลูกค้าโครงการ</div></div><span class="status info">ℹ รอเปิดบิล</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd data-picker>ยังไม่มอบหมาย</dd></div><div><dt>เริ่มหยิบ</dt><dd>—</dd></div><div><dt>กำหนดส่ง</dt><dd>ยังไม่ระบุ</dd></div><div><dt>จุดพัก</dt><dd>—</dd></div><div><dt>ต้องการ</dt><dd>430 ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>—</dd></div></dl></article>
             </div>
           </article>
+        </section>
 
+        <section class="card" data-panel="dashboard" hidden>
+          <div class="panel-head"><div><h2>ภาพรวมคลัง</h2><p>ตัวเลขจากสต็อกที่ซิงค์จริง + งานตัวอย่างในหน้านี้</p></div></div>
+          <div class="panel-body">
+            <div class="kpis">
+              <div class="card kpi"><div class="kpi-label">ตำแหน่งในคลัง</div><div class="kpi-value" id="kpiLocs">—</div><div class="kpi-note">จาก BigSeller / Sheet</div></div>
+              <div class="card kpi"><div class="kpi-label">สต๊อกล่าสุด</div><div class="kpi-value" id="kpiAsOf" style="font-size:22px">—</div><div class="kpi-note" id="kpiFile">—</div></div>
+              <div class="card kpi"><div class="kpi-label">งานหยิบเปิดอยู่</div><div class="kpi-value" id="kpiOpen">2</div><div class="kpi-note">ข้อมูลตัวอย่างในตาราง</div></div>
+              <div class="card kpi kpi-alert"><div class="kpi-label">รอเปิดบิล</div><div class="kpi-value" id="kpiPending">1</div><div class="kpi-note">ต้องตรวจก่อนจ่ายงาน</div></div>
+            </div>
+            <p class="audit-note">ผัง 3D และการเติมสต็อกใช้หน้า <a href="/tools/warehouse-map/index.html" target="_blank" rel="noopener">ผังคลังและสต็อก</a></p>
+          </div>
+        </section>
+
+        <section class="card" data-panel="pick" hidden>
+          <div class="panel-head"><div><h2>แผนหยิบ</h2><p>เปิดพิมพ์ Pick List หรือไปผังคลังเพื่อดูตำแหน่งจริง</p></div></div>
+          <div class="panel-body" style="display:flex;flex-wrap:wrap;gap:10px">
+            <button class="btn btn-primary" id="pickPrintBtn">พิมพ์ Pick List</button>
+            <a class="btn" href="/tools/warehouse-map/index.html" target="_blank" rel="noopener">เปิดผังคลัง 3D</a>
+          </div>
+        </section>
+
+        <section class="card" data-panel="trace" hidden>
+          <div class="panel-head"><div><h2>ค้นหาสินค้าในคลัง</h2><p>ค้นจากสต็อกที่ซิงค์จริง</p></div></div>
+          <div class="panel-body">
+            <label class="field-label" for="traceSku">SKU / บาร์โค้ด / ชื่อ</label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <input class="text-field" id="traceSku" style="flex:1;min-width:220px" placeholder="เช่น 10106 หรือ UGREEN" />
+              <button class="btn btn-primary" id="traceSearchBtn">ค้นในผังคลัง</button>
+            </div>
+            <p class="audit-note" id="traceHint">จะเปิดผังคลังพร้อมคำค้น</p>
+          </div>
+        </section>
+
+        <section class="card" data-panel="stage" hidden>
+          <div class="panel-head"><div><h2>จุดพักสินค้า</h2><p>แก้จุดพักจากปุ่ม ✎ ในรายการ PO</p></div></div>
+          <div class="panel-body" id="stageList"></div>
+        </section>
+
+        <section class="card" data-panel="report" hidden>
+          <div class="panel-head"><div><h2>รายงาน</h2><p>ลิงก์ไปรายงานที่มีอยู่จริงในระบบ</p></div></div>
+          <div class="panel-body" style="display:grid;gap:10px">
+            <a class="btn" href="/admin/reports">รายงานความต่าง</a>
+            <a class="btn" href="/pack">ยิงสแกนลงลัง</a>
+            <a class="btn" href="/tools/warehouse-map/index.html" target="_blank" rel="noopener">ภาพรวมผังคลัง</a>
+          </div>
         </section>
       </main>
     </div>
+  </div>
+
+  <div class="modal-backdrop" id="assignModal" aria-hidden="true">
+    <section class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="assignTitle">
+      <div class="modal-head"><div><h2 id="assignTitle">มอบหมายคนหยิบ</h2><p>เลือกพนักงานแล้วระบบจะใส่ชื่อในแถวที่ยังไม่มอบหมาย</p></div><button class="modal-close" id="closeAssignBtn" aria-label="ปิดหน้าต่าง">×</button></div>
+      <div class="modal-body">
+        <label class="field-label" for="assignName">ชื่อพนักงาน</label>
+        <input class="text-field" id="assignName" list="assignNames" placeholder="เช่น กิตติ" autocomplete="off" />
+        <datalist id="assignNames"><option value="กิตติ"></option><option value="พิมพ์ชนก"></option><option value="ธนา"></option><option value="heng"></option><option value="Ter"></option><option value="boom"></option></datalist>
+        <div class="modal-actions"><button class="btn" id="cancelAssignBtn">ยกเลิก</button><button class="btn btn-primary" id="saveAssignBtn">มอบหมาย</button></div>
+      </div>
+    </section>
   </div>
 
   <div class="modal-backdrop" id="uploadModal" aria-hidden="true">
@@ -322,17 +382,22 @@
     function insertPoRow(data){
       const skuCount=data.lines.length;
       const qty=data.lines.reduce((s,r)=>s+(Number(r.qty)||0),0);
-      const tbody=document.querySelector('.desktop-table tbody');
+      const tbody=document.getElementById('poTableBody');
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td><div class="customer"><b class="mono">${data.po}</b><small>${data.customer} · จากไฟล์</small></div></td><td><span class="status info">ℹ รอเปิดบิล</span></td><td><div class="picker">ยังไม่มอบหมาย</div></td><td>${data.due}</td><td class="num">${skuCount}</td><td class="num">${qty}</td><td class="num">—</td><td><button class="location-edit" data-po="${data.po}" data-location="">ตั้งจุดพัก ✎</button></td>`;
+      tr.dataset.status='pending';
+      tr.dataset.urgent='1';
+      tr.innerHTML=`<td><div class="customer"><b class="mono">${data.po}</b><small>${data.customer} · จากไฟล์</small></div></td><td><span class="status info">ℹ รอเปิดบิล</span></td><td><div class="picker" data-picker>ยังไม่มอบหมาย</div></td><td>${data.due}</td><td class="num">${skuCount}</td><td class="num">${qty}</td><td class="num">—</td><td><button class="location-edit" data-po="${data.po}" data-location="">ตั้งจุดพัก ✎</button></td>`;
       tbody.prepend(tr);
       bindLocationButtons(tr);
-      const cards=document.querySelector('.mobile-cards');
+      const cards=document.getElementById('poMobileCards');
       const card=document.createElement('article');
       card.className='po-card';
-      card.innerHTML=`<div class="po-card-head"><div><b class="mono">${data.po}</b><div style="color:var(--muted);font-size:13px">${data.customer} · จากไฟล์</div></div><span class="status info">ℹ รอเปิดบิล</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd>ยังไม่มอบหมาย</dd></div><div><dt>เริ่มหยิบ</dt><dd>—</dd></div><div><dt>กำหนดส่ง</dt><dd>${data.due}</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="${data.po}" data-location="">ตั้งจุดพัก ✎</button></dd></div><div><dt>ต้องการ</dt><dd>${qty} ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>—</dd></div></dl>`;
+      card.dataset.status='pending';
+      card.dataset.urgent='1';
+      card.innerHTML=`<div class="po-card-head"><div><b class="mono">${data.po}</b><div style="color:var(--muted);font-size:13px">${data.customer} · จากไฟล์</div></div><span class="status info">ℹ รอเปิดบิล</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd data-picker>ยังไม่มอบหมาย</dd></div><div><dt>เริ่มหยิบ</dt><dd>—</dd></div><div><dt>กำหนดส่ง</dt><dd>${data.due}</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="${data.po}" data-location="">ตั้งจุดพัก ✎</button></dd></div><div><dt>ต้องการ</dt><dd>${qty} ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>—</dd></div></dl>`;
       cards.prepend(card);
       bindLocationButtons(card);
+      if(typeof refreshCounts==='function'){refreshCounts();applyFilters()}
     }
 
     document.getElementById('confirmOcrBtn').addEventListener('click',()=>{
@@ -366,12 +431,137 @@
     document.getElementById('saveLocationBtn').addEventListener('click',()=>{const value=locationInput.value.trim().toUpperCase();if(!value){locationInput.focus();showToast('กรอกรหัสจุดพักก่อนบันทึก');return}document.querySelectorAll(`.location-edit[data-po="${activeLocationPo}"]`).forEach(btn=>{btn.dataset.location=value;btn.textContent=`${value} ✎`});closeLocation();showToast(`บันทึกจุดพัก ${value} ให้ PO ${activeLocationPo} แล้ว`)});
     locationInput.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('saveLocationBtn').click()});
     locationModal.addEventListener('click',e=>{if(e.target===locationModal)closeLocation()});
-    document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(uploadModal.classList.contains('open'))closeUpload();if(ocrModal.classList.contains('open'))closeOcr();if(printModal.classList.contains('open'))closePrint();if(locationModal.classList.contains('open'))closeLocation()}});
-    document.querySelectorAll('.nav button').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');showToast(`เปิดเมนู ${btn.textContent.trim()} — Mockup`)}));
-    document.querySelectorAll('.status-tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.status-tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');showToast(`กรองสถานะ ${btn.textContent.trim()} — ข้อมูลตัวอย่าง`)}));
-    document.querySelectorAll('.control').forEach(btn=>btn.addEventListener('click',()=>showToast(`เปิดตัวกรอง ${btn.querySelector('span').textContent} — Mockup`)));
-    document.querySelectorAll('.chip').forEach(btn=>btn.addEventListener('click',()=>{if(btn.closest('.chips')){btn.closest('.chips').querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}}));
-    document.getElementById('globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter')showToast(`ค้นหา “${e.target.value || 'ทั้งหมด'}” — ข้อมูลตัวอย่าง`)});
+    const assignModal=document.getElementById('assignModal');
+    const openAssign=()=>{assignModal.classList.add('open');assignModal.setAttribute('aria-hidden','false');document.getElementById('assignName').focus()};
+    const closeAssign=()=>{assignModal.classList.remove('open');assignModal.setAttribute('aria-hidden','true')};
+    document.getElementById('assignPickBtn').addEventListener('click',openAssign);
+    document.getElementById('closeAssignBtn').addEventListener('click',closeAssign);
+    document.getElementById('cancelAssignBtn').addEventListener('click',closeAssign);
+    assignModal.addEventListener('click',e=>{if(e.target===assignModal)closeAssign()});
+    document.getElementById('saveAssignBtn').addEventListener('click',()=>{
+      const name=document.getElementById('assignName').value.trim();
+      if(!name){document.getElementById('assignName').focus();showToast('กรอกชื่อพนักงานก่อน');return}
+      let n=0;
+      document.querySelectorAll('#poTableBody tr[data-status="pending"] [data-picker], #poMobileCards .po-card[data-status="pending"] [data-picker]').forEach(el=>{
+        if(/ยังไม่มอบหมาย/.test(el.textContent)){
+          if(el.tagName==='DIV')el.innerHTML=`${name}<small>มอบหมายแล้ว</small>`;
+          else el.textContent=name;
+          n++;
+        }
+      });
+      closeAssign();
+      showToast(n?`มอบหมาย ${name} ให้ ${n} ใบแล้ว`:`ไม่มีใบรอเปิดบิลที่ยังไม่มอบหมาย`);
+    });
+
+    document.getElementById('checkStockBtn').addEventListener('click',()=>{window.open('/tools/warehouse-map/index.html','_blank','noopener')});
+    document.getElementById('pickPrintBtn')?.addEventListener('click',()=>document.getElementById('printPickBtn').click());
+    document.getElementById('traceSearchBtn').addEventListener('click',()=>{
+      const q=document.getElementById('traceSku').value.trim();
+      const url='/tools/warehouse-map/index.html'+(q?`?q=${encodeURIComponent(q)}`:'');
+      window.open(url,'_blank','noopener');
+    });
+
+    let activeFilter='all', activeUrgency='all';
+    function refreshCounts(){
+      const rows=[...document.querySelectorAll('#poTableBody tr')];
+      const count=f=>rows.filter(r=>f==='all'||r.dataset.status===f).length;
+      document.getElementById('cntAll').textContent=String(rows.length);
+      document.getElementById('cntPicking').textContent=String(count('picking'));
+      document.getElementById('cntPending').textContent=String(count('pending'));
+      document.getElementById('cntDone').textContent=String(count('done'));
+      document.getElementById('kpiOpen').textContent=String(count('picking'));
+      document.getElementById('kpiPending').textContent=String(count('pending'));
+    }
+    function applyFilters(){
+      let shown=0;
+      document.querySelectorAll('#poTableBody tr, #poMobileCards .po-card').forEach(el=>{
+        const okStatus=activeFilter==='all'||el.dataset.status===activeFilter;
+        const okUrgent=activeUrgency==='all'||el.dataset.urgent==='1';
+        const show=okStatus&&okUrgent;
+        el.style.display=show?'':'none';
+        if(show&&el.tagName==='TR')shown++;
+      });
+      document.getElementById('actionMeta').textContent=`แสดง ${shown} ใบ`;
+    }
+    document.querySelectorAll('.status-tab').forEach(btn=>btn.addEventListener('click',()=>{
+      document.querySelectorAll('.status-tab').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter=btn.dataset.filter||'all';
+      applyFilters();
+    }));
+    document.querySelectorAll('.chip[data-urgency]').forEach(btn=>btn.addEventListener('click',()=>{
+      btn.closest('.chips').querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+      activeUrgency=btn.dataset.urgency||'all';
+      applyFilters();
+    }));
+    document.querySelectorAll('.control[data-filter-note]').forEach(btn=>btn.addEventListener('click',()=>showToast(`ตัวกรอง “${btn.dataset.filterNote}” ใช้แท็บสถานะด้านบนก่อน — ตัวกรองละเอียดยังไม่เปิด`)));
+
+    const viewTitles={dashboard:'ภาพรวมคลัง',inbox:'รายการ PO และงานหยิบ',pick:'แผนหยิบ',trace:'ค้นหาสินค้า',stage:'จุดพักสินค้า',report:'รายงาน'};
+    function showView(view){
+      document.querySelectorAll('[data-panel]').forEach(el=>{el.hidden=el.dataset.panel!==view});
+      document.getElementById('pageTitle').textContent=viewTitles[view]||view;
+      if(view==='stage'){
+        const items=[...document.querySelectorAll('.location-edit')].map(b=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)"><b class="mono">${b.dataset.po}</b><button class="location-edit" data-po="${b.dataset.po}" data-location="${b.dataset.location||''}">${b.dataset.location||'ตั้งจุดพัก'} ✎</button></div>`);
+        document.getElementById('stageList').innerHTML=items.length?items.join(''):'<p class="audit-note">ยังไม่มีจุดพัก</p>';
+        bindLocationButtons(document.getElementById('stageList'));
+      }
+    }
+    document.querySelectorAll('.nav button').forEach(btn=>btn.addEventListener('click',()=>{
+      document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+      showView(btn.dataset.view||'inbox');
+    }));
+    document.querySelectorAll('.mobile-nav button').forEach((btn,i)=>{
+      const map=['dashboard','inbox','pick','trace'];
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('.mobile-nav button').forEach(x=>x.classList.remove('active'));
+        btn.classList.add('active');
+        const view=map[i]||'inbox';
+        document.querySelectorAll('.nav button').forEach(x=>{x.classList.toggle('active',x.dataset.view===view)});
+        showView(view);
+      });
+    });
+
+    document.getElementById('globalSearch').addEventListener('keydown',e=>{
+      if(e.key!=='Enter')return;
+      const q=e.target.value.trim().toLowerCase();
+      let shown=0;
+      document.querySelectorAll('#poTableBody tr').forEach(tr=>{
+        const hit=!q||tr.textContent.toLowerCase().includes(q);
+        tr.style.display=hit?'':'none';
+        if(hit)shown++;
+      });
+      document.querySelectorAll('#poMobileCards .po-card').forEach(card=>{
+        card.style.display=!q||card.textContent.toLowerCase().includes(q)?'':'none';
+      });
+      document.getElementById('actionMeta').textContent=q?`ค้นหา “${e.target.value.trim()}” · พบ ${shown} ใบ`:`แสดง ${shown} ใบ`;
+    });
+
+    async function syncStockClock(){
+      try{
+        const res=await fetch('/api/warehouse/stock',{cache:'no-store'});
+        const j=await res.json();
+        const asof=j?.data?.asof||'—';
+        const locs=j?.data?.locs?.length||0;
+        const file=j?.data?.file||'—';
+        const imported=j?.data?.importedAt?new Date(j.data.importedAt).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}):'—';
+        document.getElementById('stockAsOf').textContent=`สต๊อกซิงค์จริง ณ ${asof} · ${locs.toLocaleString('th-TH')} ตำแหน่ง · นำเข้า ${imported}`;
+        document.getElementById('stockAsOfFoot').textContent=`สต๊อก ณ ${asof}`;
+        document.getElementById('stockOnline').textContent='สต็อกเชื่อมต่อแล้ว';
+        document.getElementById('kpiLocs').textContent=locs?locs.toLocaleString('th-TH'):'—';
+        document.getElementById('kpiAsOf').textContent=asof;
+        document.getElementById('kpiFile').textContent=file;
+      }catch{
+        document.getElementById('stockAsOf').textContent='ดึงเวลาซิงค์สต็อกไม่สำเร็จ — เปิดผังคลังเพื่อซิงค์ใหม่';
+        document.getElementById('stockOnline').textContent='สต็อกออฟไลน์';
+      }
+    }
+
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(uploadModal.classList.contains('open'))closeUpload();if(ocrModal.classList.contains('open'))closeOcr();if(assignModal.classList.contains('open'))closeAssign();if(printModal.classList.contains('open'))closePrint();if(locationModal.classList.contains('open'))closeLocation()}});
+    refreshCounts();
+    applyFilters();
+    syncStockClock();
   </script>
 </body>
 </html>
