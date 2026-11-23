@@ -208,6 +208,7 @@
         <div class="ocr-status" id="ocrStatus">กำลังอ่านเอกสาร…</div>
         <p class="ocr-file" id="ocrFileMeta">—</p>
         <img class="ocr-preview" id="ocrPreview" alt="" hidden />
+        <details id="ocrRawWrap" hidden style="margin:0 0 14px"><summary style="cursor:pointer;color:var(--muted);font-size:13px">ข้อความที่ OCR อ่านได้</summary><pre id="ocrRawText" style="white-space:pre-wrap;font-size:12px;background:var(--sunken);padding:12px;border-radius:10px;max-height:160px;overflow:auto;margin:8px 0 0"></pre></details>
         <div class="ocr-grid">
           <div><label for="ocrPo">เลข PO</label><input class="text-field" id="ocrPo" autocomplete="off" /></div>
           <div><label for="ocrCustomer">ลูกค้า</label><input class="text-field" id="ocrCustomer" autocomplete="off" /></div>
@@ -447,21 +448,72 @@
       return{po:guessPo(file.name+' '+text),customer:guessCustomer(file.name+' '+text),due:'ยังไม่ระบุ',lines,method:'อ่านข้อความจาก PDF'};
     }
 
-    async function parseImageOcr(file){
-      setOcrStatus('กำลัง OCR ภาพใบจัดของ…');
-      await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
-      const result=await window.Tesseract.recognize(file,'tha+eng',{
+    async function preprocessImageForOcr(file){
+      const bmp=await createImageBitmap(file);
+      const scale=bmp.width<1600?2.2:bmp.width<2200?1.6:1.25;
+      const w=Math.round(bmp.width*scale),h=Math.round(bmp.height*scale);
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+      ctx.drawImage(bmp,0,0,w,h);
+      const img=ctx.getImageData(0,0,w,h),d=img.data;
+      // grayscale + contrast stretch
+      let min=255,max=0;
+      for(let i=0;i<d.length;i+=4){
+        const g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+        if(g<min)min=g;if(g>max)max=g;
+        d[i]=d[i+1]=d[i+2]=g;
+      }
+      const span=Math.max(1,max-min);
+      for(let i=0;i<d.length;i+=4){
+        let v=((d[i]-min)/span)*255;
+        v=Math.max(0,Math.min(255,(v-128)*1.45+128));
+        d[i]=d[i+1]=d[i+2]=v;
+      }
+      ctx.putImageData(img,0,0);
+      bmp.close?.();
+      return await new Promise((resolve)=>canvas.toBlob(b=>resolve(b||file),'image/png'));
+    }
+
+    async function runTesseract(blob,lang,label){
+      const result=await window.Tesseract.recognize(blob,lang,{
         logger:m=>{
-          if(m.status==='recognizing text'&&m.progress!=null)setOcrStatus(`กำลัง OCR ภาพ… ${Math.round(m.progress*100)}%`);
+          if(m.status==='recognizing text'&&m.progress!=null)setOcrStatus(`${label} ${Math.round(m.progress*100)}%`);
         }
       });
-      const text=result?.data?.text||'';
-      let lines=window.PoMatch.parseTextLines(text);
-      if(!lines.length){
-        // Fallback: keep empty so staff can still type, but surface raw OCR snippet
-        throw new Error('OCR อ่านภาพแล้วแต่ยังแยกแถวสินค้าไม่ได้ — ลองไฟล์ Excel/PDF หรือถ่ายใหม่ให้ชัดขึ้น');
+      return result?.data?.text||'';
+    }
+
+    async function parseImageOcr(file){
+      setOcrStatus('กำลังเตรียมภาพใบจัดของ…');
+      await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+      const prep=await preprocessImageForOcr(file);
+      // English-first: product codes + model names on JIB PRs are Latin digits/letters
+      setOcrStatus('กำลัง OCR รหัสสินค้า (eng)…');
+      let textEng=await runTesseract(prep,'eng','OCR รหัสสินค้า');
+      let lines=window.PoMatch.parseTextLines(textEng);
+      let text=textEng;
+      if(lines.length<2){
+        setOcrStatus('กำลัง OCR ภาษาไทย+อังกฤษ…');
+        const textTh=await runTesseract(prep,'tha+eng','OCR ไทย+อังกฤษ');
+        text=textEng+'\n'+textTh;
+        const more=window.PoMatch.parseTextLines(text);
+        if(more.length>lines.length)lines=more;
       }
-      return{po:guessPo(file.name+' '+text),customer:guessCustomer(file.name+' '+text),due:'ยังไม่ระบุ',lines,method:'OCR จากภาพใบจัดของ',rawText:text};
+      const meta=window.PoMatch.extractMeta(text);
+      lines=lines.filter(l=>!window.PoMatch.isJunkName(l.name)||/^10\d{8}$/.test(l.sku));
+      if(!lines.length){
+        throw new Error('OCR อ่านภาพแล้วแต่ยังแยกแถวสินค้าไม่ได้ — กด “+ เพิ่มรายการ” แล้วค้น SKU เอง หรืออัปไฟล์ Excel/PDF');
+      }
+      return{
+        po:meta.po||guessPo(file.name+' '+text),
+        customer:meta.customer||guessCustomer(file.name+' '+text),
+        due:meta.due||'ยังไม่ระบุ',
+        lines,
+        method:'OCR จากภาพใบจัดของ',
+        rawText:text,
+      };
     }
 
     async function extractFromFile(file){
@@ -490,7 +542,10 @@
       document.getElementById('ocrDue').value='';
       ocrLinesBody.innerHTML='';
       const preview=document.getElementById('ocrPreview');
+      const rawWrap=document.getElementById('ocrRawWrap');
+      const rawText=document.getElementById('ocrRawText');
       preview.hidden=true;preview.removeAttribute('src');
+      rawWrap.hidden=true;rawText.textContent='';
       openOcr();
       try{
         const first=list[0];
@@ -503,6 +558,7 @@
         document.getElementById('ocrCustomer').value=result.customer;
         document.getElementById('ocrDue').value=result.due;
         renderOcrLines(matched);
+        if(result.rawText){rawText.textContent=result.rawText;rawWrap.hidden=false}
         const ok=matched.filter(r=>r.sku&&['exact','barcode','fuzzy'].includes(String(r.matchStatus).toLowerCase())).length;
         const miss=matched.filter(r=>!r.sku||String(r.matchStatus).toLowerCase()==='none').length;
         const amb=matched.filter(r=>String(r.matchStatus).toLowerCase()==='ambiguous').length;
@@ -511,6 +567,8 @@
         else setOcrStatus(summary);
       }catch(err){
         setOcrStatus(err.message||'อ่านไฟล์ไม่สำเร็จ','err');
+        // Still allow manual entry
+        renderOcrLines([{customerSku:'',customerName:'',sku:'',name:'',qty:1,conf:0,matchStatus:'none',matchReason:'กรอกมือ',alts:[]}]);
         pendingOcr=null;
       }
       document.getElementById('fileUpload').value='';
