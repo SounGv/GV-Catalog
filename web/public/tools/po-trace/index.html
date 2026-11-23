@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>GV Offline PO Trace — Mockup</title>
+  <style>
+    :root {
+      --brand-lime:#CDEB03; --brand-charcoal:#18364C;
+      --primary:#185C45; --primary-hover:#124A38; --primary-fg:#FFFFFF;
+      --accent:#185C45; --accent-fg:#FFFFFF; --link:#185C45; --accent-soft:#E8F2ED; --accent-border:#CFE2D8;
+      --bg:#F7F8FA; --surface:#FFFFFF; --sunken:#F1F4F6; --inverse:#18364C;
+      --inverse-panel:#21445D; --inverse-hover:#244B66; --inverse-border:#31556D;
+      --on-inverse:#FFFFFF; --on-inverse-muted:#D6E3EC; --fg:#18232B; --muted:#64748B;
+      --border:#E5E9ED; --border-strong:#D7DEE4;
+      --success:#1A7F4E; --success-soft:#E3F4EA;
+      --warning:#8A6100; --warning-soft:#FFF6DB;
+      --danger:#C62828; --danger-soft:#FCE8E8; --danger-border:#F3B3B3;
+      --info:#1D5FD1; --info-soft:#E6EEFC;
+      --shadow:0 1px 2px rgb(21 32 24 / .08),0 10px 30px rgb(24 54 76 / .05);
+      --radius-control:12px; --radius-card:14px; --radius-sheet:24px;
+    }
+    *{box-sizing:border-box} html{background:var(--bg)} body{margin:0;color:var(--fg);background:var(--bg);font-family:"IBM Plex Sans Thai","Noto Sans Thai",Tahoma,system-ui,sans-serif;line-height:1.62}
+    button,input{font:inherit} button{cursor:pointer} a{color:inherit;text-decoration:none}
+    :focus-visible{outline:2px solid var(--brand-charcoal);outline-offset:2px}
+    .app{min-height:100vh;display:grid;grid-template-columns:254px minmax(0,1fr)}
+    .sidebar{position:sticky;top:0;height:100vh;padding:18px 14px;background:var(--inverse);color:var(--on-inverse);display:flex;flex-direction:column;gap:18px}
+    .brand{padding:18px 16px;border:1px solid var(--inverse-border);border-radius:18px;background:var(--inverse-panel);box-shadow:inset 0 1px 0 rgb(255 255 255 / .08)}
+    .brand-name{font-size:12px;letter-spacing:.22em;color:var(--on-inverse-muted);font-weight:700}.brand-line{height:2px;background:linear-gradient(90deg,transparent,var(--brand-lime),transparent);margin:12px 0}.product-name{display:inline-flex;padding:5px 10px;border-radius:999px;background:var(--surface);color:var(--primary);font-size:13px;font-weight:800}
+    .nav{display:grid;gap:6px}.nav button{min-height:46px;border:0;border-radius:12px;background:transparent;color:var(--on-inverse-muted);display:flex;align-items:center;gap:12px;padding:0 14px;text-align:left}.nav button:hover{background:var(--inverse-hover);color:var(--on-inverse)}.nav button.active{background:var(--surface);color:var(--primary);font-weight:700}.nav svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9}
+    .sidebar-foot{margin-top:auto;border-top:1px solid var(--inverse-border);padding:14px 10px 0;color:var(--on-inverse-muted);font-size:13px}.online{display:flex;align-items:center;gap:8px}.online::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--brand-lime);box-shadow:0 0 0 3px rgb(205 235 3 / .14)}
+    .main{min-width:0}.topbar{height:72px;background:rgb(255 255 255 / .94);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:18px;padding:0 28px;position:sticky;top:0;z-index:5;backdrop-filter:blur(12px)}
+    .menu-btn{display:none}.search{display:flex;align-items:center;gap:10px;width:min(560px,55vw);height:46px;border:2px solid var(--brand-charcoal);border-radius:var(--radius-control);padding:0 14px;background:var(--surface)}.search svg{width:20px;stroke:var(--muted);fill:none;stroke-width:2}.search input{border:0;outline:0;width:100%;color:var(--fg);background:transparent}.topbar-actions{display:flex;align-items:center;gap:14px;margin-left:auto}.top-upload-btn{min-height:44px;border:1px solid var(--primary);border-radius:12px;background:var(--primary);color:var(--primary-fg);display:inline-flex;align-items:center;gap:9px;padding:0 16px;font-weight:800;box-shadow:0 5px 14px rgb(24 92 69 / .16)}.top-upload-btn:hover{filter:brightness(.94)}.top-upload-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}.user{display:flex;align-items:center;gap:10px}.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--accent);font-weight:800}.user-meta{font-size:13px;line-height:1.3}.user-meta span{color:var(--muted)}
+    main{padding:28px;max-width:1500px;margin:auto}.eyebrow{font-size:13px;color:var(--link);font-weight:700}.title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}h1{font-size:30px;line-height:1.35;margin:2px 0 0;letter-spacing:-.02em}.as-of{font-size:13px;color:var(--muted)}
+    .approval{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;background:var(--accent-soft);color:var(--fg);border:1px solid var(--accent-border);border-radius:18px;padding:22px 24px;box-shadow:var(--shadow)}.approval h2{font-size:20px;margin:0 0 4px}.approval p{margin:0;color:var(--muted)}.approval strong{color:var(--accent);font-size:28px;margin-right:7px}.btn{min-height:44px;border:1px solid var(--border-strong);border-radius:var(--radius-control);padding:0 16px;background:var(--surface);color:var(--fg);font-weight:700}.btn:hover{background:var(--sunken)}.btn-primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}.btn-lime{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+    .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);box-shadow:var(--shadow)}.kpi{padding:18px}.kpi-label{color:var(--muted);font-size:14px}.kpi-value{font-size:31px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.25;margin:5px 0}.kpi-note{font-size:13px;color:var(--muted)}.kpi-alert{border-color:var(--danger-border)}.kpi-alert .kpi-value{color:var(--danger)}
+    .grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px;border-bottom:1px solid var(--border)}.panel-head h2{font-size:18px;margin:0}.panel-head p{font-size:13px;color:var(--muted);margin:2px 0 0}.panel-body{padding:16px 20px}.chips{display:flex;gap:8px;overflow:auto;padding-bottom:2px}.chip{white-space:nowrap;min-height:38px;border:1px solid var(--border-strong);border-radius:999px;background:var(--surface);padding:0 13px}.chip.active{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+    .workflow{margin-bottom:18px;overflow:hidden}.status-tabs{display:flex;gap:24px;overflow-x:auto;border-bottom:1px solid var(--border);padding:0 20px}.status-tab{position:relative;min-height:52px;border:0;background:transparent;color:var(--muted);white-space:nowrap;font-weight:600;padding:0}.status-tab.active{color:var(--primary)}.status-tab.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px 3px 0 0;background:var(--primary)}.status-tab b{margin-left:5px;font-variant-numeric:tabular-nums}.filter-wrap{padding:14px 20px;background:var(--bg)}.filters{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr 1.5fr;gap:10px}.control{min-height:44px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);color:var(--fg);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px;text-align:left}.control span{color:var(--muted)}.action-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-top:1px solid var(--border)}.action-buttons{display:flex;flex-wrap:wrap;gap:9px}.action-meta{color:var(--muted);font-size:13px}.btn-soft{background:var(--accent-soft);color:var(--primary);border-color:var(--accent-border)}
+    .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:920px;font-size:14px}.table th{position:sticky;top:0;background:var(--sunken);color:var(--muted);font-size:12px;text-align:left;padding:11px 12px;white-space:nowrap}.table td{padding:13px 12px;border-top:1px solid var(--border);vertical-align:middle}.table tr:hover td{background:var(--bg)}.num{text-align:right;font-variant-numeric:tabular-nums}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:700}.customer{display:flex;flex-direction:column}.customer small{color:var(--muted)}.picker{display:flex;flex-direction:column;font-weight:700}.picker small{color:var(--muted);font-weight:400}.status{display:inline-flex;align-items:center;gap:6px;width:max-content;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700}.status.warning{background:var(--warning-soft);color:var(--warning)}.status.danger{background:var(--danger-soft);color:var(--danger)}.status.success{background:var(--success-soft);color:var(--success)}.status.info{background:var(--info-soft);color:var(--info)}
+    .location-edit{min-height:36px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface);color:var(--primary);padding:0 9px;font-weight:800;white-space:nowrap}.location-edit:hover{background:var(--accent-soft)}.field-label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}.text-field{width:100%;min-height:46px;border:1px solid var(--border-strong);border-radius:10px;padding:0 12px;color:var(--fg);background:var(--surface)}.quick-locations{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.audit-note{margin:12px 0 0;color:var(--muted);font-size:12px}
+    .upload{display:block;border:2px dashed var(--border-strong);border-radius:14px;padding:22px;text-align:center;background:var(--bg)}.upload-icon{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:var(--accent);margin:0 auto 10px}.upload-icon svg{width:26px;stroke:var(--accent-fg);fill:none;stroke-width:2}.upload h3{margin:0;font-size:17px}.upload p{margin:4px 0 14px;color:var(--muted);font-size:13px}.upload input{display:none}
+    .modal-backdrop{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:rgb(12 29 40 / .48);backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s ease}.modal-backdrop.open{opacity:1;visibility:visible}.modal-sheet{width:min(520px,100%);background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 24px 70px rgb(12 29 40 / .28);transform:translateY(12px) scale(.98);transition:transform .18s ease}.modal-backdrop.open .modal-sheet{transform:none}.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px 16px;border-bottom:1px solid var(--border)}.modal-head h2{margin:0;font-size:20px}.modal-head p{margin:3px 0 0;color:var(--muted);font-size:13px}.modal-close{width:44px;height:44px;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:24px;line-height:1}.modal-body{padding:20px 22px 22px}.modal-note{margin:12px 0 0;color:var(--muted);font-size:12px;text-align:center}
+    .print-sheet{width:min(940px,100%);max-height:calc(100vh - 40px);overflow:auto}.print-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:2}.print-toolbar h2{margin:0;font-size:19px}.paper-size-group{display:flex;align-items:center;gap:6px;margin-left:auto}.paper-size-label{font-size:13px;color:var(--muted);margin-right:3px}.paper-size-btn{min-width:58px;min-height:44px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);font-weight:700}.paper-size-btn.active{background:var(--primary);border-color:var(--primary);color:var(--primary-fg)}.print-actions{display:flex;gap:8px}.pick-page{width:794px;min-height:1050px;margin:18px auto;padding:28px 30px;background:white;color:#20252b;box-shadow:0 4px 24px rgb(12 29 40 / .14);font-family:Arial,Tahoma,sans-serif;line-height:1.35;transition:width .18s ease,min-height .18s ease}.pick-page.paper-a5{width:559px;min-height:794px;padding:22px}.pick-page.paper-4x6{width:384px;min-height:576px;padding:14px}.pick-head{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;border-bottom:1px solid #20252b;padding-bottom:12px}.pick-title-row{display:flex;align-items:flex-start;gap:22px}.pick-title{font-size:20px}.pick-code{font-size:14px;margin-top:3px}.barcode{width:220px;height:50px;background:repeating-linear-gradient(90deg,#111 0 2px,transparent 2px 4px,#111 4px 5px,transparent 5px 8px,#111 8px 12px,transparent 12px 14px)}.pick-meta{font-size:13px}.pick-owner{text-align:right;margin-top:35px;font-size:13px}.pick-summary{display:flex;gap:32px;margin:15px 0 8px;font-size:13px}.pick-table{width:100%;border-collapse:collapse;font-size:13px}.pick-table th{padding:8px 6px;border-top:1px solid #20252b;border-bottom:1px solid #20252b;text-align:left}.pick-table td{padding:10px 6px;border-bottom:1px dashed #b9c0c7;vertical-align:top}.pick-table th:nth-child(1),.pick-table td:nth-child(1){width:40px}.pick-table th:nth-child(3),.pick-table td:nth-child(3){width:150px}.pick-table th:nth-child(4),.pick-table td:nth-child(4){width:150px}.pick-table th:nth-child(5),.pick-table td:nth-child(5){width:90px;text-align:right;font-variant-numeric:tabular-nums}.pick-location{font-weight:700}.print-example{margin-top:14px;text-align:center;color:#667085;font-size:12px}.paper-a5 .pick-head{grid-template-columns:1.2fr 1fr;gap:10px}.paper-a5 .pick-title-row{gap:10px}.paper-a5 .barcode{width:145px}.paper-a5 .pick-summary{gap:14px}.paper-a5 .pick-table{font-size:11px}.paper-a5 .pick-table th,.paper-a5 .pick-table td{padding:7px 4px}.paper-a5 .pick-table th:nth-child(3),.paper-a5 .pick-table td:nth-child(3),.paper-a5 .pick-table th:nth-child(4),.paper-a5 .pick-table td:nth-child(4){width:95px}.paper-4x6 .pick-head{grid-template-columns:1fr;gap:7px;padding-bottom:7px}.paper-4x6 .pick-title-row{gap:12px}.paper-4x6 .pick-title{font-size:16px}.paper-4x6 .pick-code{font-size:10px}.paper-4x6 .barcode{width:160px;height:36px}.paper-4x6 .pick-meta{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;font-size:9px}.paper-4x6 .pick-owner{margin:0;text-align:left}.paper-4x6 .pick-summary{gap:10px;margin:7px 0 5px;font-size:9px}.paper-4x6 .pick-table{font-size:8px;line-height:1.25}.paper-4x6 .pick-table th,.paper-4x6 .pick-table td{padding:5px 3px}.paper-4x6 .pick-table th:nth-child(1),.paper-4x6 .pick-table td:nth-child(1){width:22px}.paper-4x6 .pick-table th:nth-child(3),.paper-4x6 .pick-table td:nth-child(3){width:72px}.paper-4x6 .pick-table th:nth-child(4),.paper-4x6 .pick-table td:nth-child(4){width:70px}.paper-4x6 .pick-table th:nth-child(5),.paper-4x6 .pick-table td:nth-child(5){width:40px}.paper-4x6 .print-example{font-size:8px;margin-top:7px}
+    .example{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--link);border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700}.mobile-nav{display:none}
+    .toast{position:fixed;right:24px;bottom:24px;background:var(--inverse);color:var(--on-inverse);padding:13px 16px;border-radius:12px;box-shadow:var(--shadow);transform:translateY(120px);opacity:0;transition:.25s;z-index:20}.toast.show{transform:none;opacity:1}
+    @media(max-width:1050px){.app{grid-template-columns:82px minmax(0,1fr)}.brand{padding:12px 8px;text-align:center}.brand-name,.brand-line{display:none}.product-name{font-size:11px}.nav button{justify-content:center;padding:0}.nav button span{display:none}.sidebar-foot{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.filters{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:700px){.app{display:block}.sidebar{display:none}.topbar{height:auto;min-height:68px;padding:10px 14px;gap:8px}.menu-btn{display:grid;width:44px;height:44px;place-items:center;border:1px solid var(--border);border-radius:12px;background:var(--surface);flex:0 0 auto}.search{width:auto;min-width:0;flex:1;height:44px}.search input{font-size:14px}.topbar-actions{margin-left:0;gap:0}.top-upload-btn{width:44px;padding:0;justify-content:center}.top-upload-btn span{display:none}.user{display:none}main{padding:18px 14px 94px}.title-row{align-items:flex-start;flex-direction:column;gap:5px}h1{font-size:25px}.status-tabs{gap:20px;padding:0 14px}.status-tab{min-height:48px}.filter-wrap{padding:12px 14px}.filters{display:flex;overflow-x:auto}.control{min-width:150px}.action-row{align-items:flex-start;flex-direction:column;padding:12px 14px}.action-buttons{flex-wrap:nowrap;overflow-x:auto;width:100%}.action-buttons .btn{white-space:nowrap}.approval{grid-template-columns:1fr;padding:18px}.approval .btn{width:100%}.kpis{gap:10px}.kpi{padding:14px}.kpi-value{font-size:25px}.grid{gap:14px}.panel-head{align-items:flex-start;padding:16px}.panel-body{padding:14px}.desktop-table{display:none}.mobile-cards{display:grid!important;gap:10px;padding:12px}.po-card{padding:14px;border:1px solid var(--border);border-radius:12px}.po-card-head{display:flex;justify-content:space-between;gap:10px}.po-card dl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}.po-card dt{color:var(--muted);font-size:12px}.po-card dd{margin:0;font-weight:700}.modal-backdrop{align-items:end;padding:0}.modal-sheet{border-radius:20px 20px 0 0}.print-sheet{max-height:96vh}.print-toolbar{align-items:flex-start;flex-wrap:wrap}.print-toolbar>div:first-child{width:100%}.paper-size-group{margin-left:0}.print-actions{margin-left:auto}.pick-page{transform-origin:top center}.mobile-nav{position:fixed;bottom:0;left:0;right:0;z-index:10;display:grid;grid-template-columns:repeat(4,1fr);padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--border)}.mobile-nav button{min-height:54px;border:0;background:transparent;color:var(--muted);font-size:11px}.mobile-nav button.active{color:var(--link);font-weight:800}.mobile-nav svg{display:block;width:21px;height:21px;margin:auto;stroke:currentColor;fill:none;stroke-width:2}.toast{left:14px;right:14px;bottom:84px}.as-of{font-size:12px}}
+    @media(min-width:701px){.mobile-cards{display:none}}
+    @media print{body{background:white}.app,.mobile-nav,.toast,#uploadModal,.print-toolbar{display:none!important}#printModal{position:static;display:block!important;opacity:1!important;visibility:visible!important;background:white;padding:0}.print-sheet{width:auto;max-height:none;overflow:visible;border:0;box-shadow:none}.pick-page{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}.print-example{display:none}@page{size:A4 portrait;margin:12mm}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+  <style id="dynamicPrintStyle"></style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-name">GADGET VILLA</div><div class="brand-line"></div><span class="product-name">PO TRACE</span></div>
+      <nav class="nav" aria-label="เมนูหลัก">
+        <button data-view="dashboard"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg><span>ภาพรวม</span></button>
+        <button class="active" data-view="inbox"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 14h4l2 3h4l2-3h4"/></svg><span>รายการ PO</span></button>
+        <button data-view="pick"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Zm0 0v10l8 4 8-4V7M12 11v10"/></svg><span>แผนหยิบ</span></button>
+        <button data-view="trace"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6m-3-3h6"/></svg><span>ค้นหาสินค้า</span></button>
+        <button data-view="stage"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8h14v13M8 12h3v3H8zm5 0h3v3h-3zM9 8V4h6v4"/></svg><span>จุดพักสินค้า</span></button>
+        <button data-view="report"><svg viewBox="0 0 24 24"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg><span>รายงาน</span></button>
+      </nav>
+      <div class="sidebar-foot"><div class="online">เชื่อมต่อระบบแล้ว</div><div style="margin-top:7px">สต๊อกล่าสุด 09:15 น.</div></div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="menu-btn" aria-label="เปิดเมนู">☰</button>
+        <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="globalSearch" placeholder="ค้นหา SKU, Barcode, เลข PO หรือลูกค้า" /></label>
+        <div class="topbar-actions">
+          <button class="top-upload-btn" id="topUploadBtn" aria-label="แนบไฟล์ PO"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 15v5h14v-5"/></svg><span>แนบ PO</span></button>
+          <div class="user"><div class="avatar">กว</div><div class="user-meta"><b>หัวหน้าคลัง</b><br><span>คลัง STOCK_5</span></div></div>
+        </div>
+      </header>
+
+      <main>
+        <div class="title-row"><div><div class="eyebrow">คลังสินค้า STOCK_5</div><h1>รายการ PO และงานหยิบ</h1></div><div><span class="example">● ข้อมูลตัวอย่าง</span><div class="as-of">สต๊อกล่าสุด 09:15 น. · 23 พ.ย. 2569</div></div></div>
+
+        <section class="card workflow" aria-label="ตัวกรองสถานะ PO">
+          <div class="status-tabs">
+            <button class="status-tab active">ทั้งหมด <b>11</b></button>
+            <button class="status-tab">กำลังหยิบ <b>3</b></button>
+            <button class="status-tab">รอเปิดบิล <b>7</b></button>
+            <button class="status-tab">เสร็จสิ้น <b>1</b></button>
+          </div>
+          <div class="filter-wrap">
+            <div class="filters">
+              <button class="control"><span>ลูกค้า</span><b>ทั้งหมด⌄</b></button>
+              <button class="control"><span>กำหนดส่ง</span><b>ทุกวัน⌄</b></button>
+              <button class="control"><span>ผู้หยิบ</span><b>ทุกคน⌄</b></button>
+              <button class="control"><span>จุดพัก</span><b>ทั้งหมด⌄</b></button>
+              <button class="control"><span>สถานะสต๊อก</span><b>ทั้งหมด⌄</b></button>
+            </div>
+          </div>
+          <div class="action-row">
+            <div class="action-buttons">
+              <button class="btn btn-soft" id="printPickBtn">พิมพ์ Pick List</button>
+              <button class="btn btn-soft">มอบหมายคนหยิบ</button>
+              <button class="btn">ตรวจสต๊อกตำแหน่ง</button>
+            </div>
+            <div class="action-meta">เลือกแล้ว 0 ใบ · 0 SKU</div>
+          </div>
+        </section>
+
+        <section class="grid">
+          <article class="card">
+            <div class="panel-head"><div><h2>รายการ PO</h2><p>เรียงตามกำหนดส่งและสถานะงาน</p></div><div class="chips"><button class="chip active">ทั้งหมด 11</button><button class="chip">เร่งด่วน 6</button></div></div>
+            <div class="desktop-table table-wrap">
+              <table class="table"><thead><tr><th>PO / ลูกค้า</th><th>สถานะ</th><th>ชื่อพนักงานหยิบ</th><th>กำหนดส่ง</th><th class="num">SKU</th><th class="num">จำนวนชิ้น</th><th class="num">หยิบแล้ว</th><th>จุดพัก</th></tr></thead>
+                <tbody>
+                  <tr><td><div class="customer"><b class="mono">PR2026112221</b><small>JIB · Purchase Request</small></div></td><td><span class="status warning">⚠ หยิบบางส่วน</span></td><td><div class="picker">กิตติ (ตัวอย่าง)<small>เริ่มหยิบ 08:42 น.</small></div></td><td>23 พ.ย. 2569</td><td class="num">4</td><td class="num">402</td><td class="num"><b>318</b></td><td><button class="location-edit" data-po="PR2026112221" data-location="STAGE-A03">STAGE-A03 ✎</button></td></tr>
+                  <tr><td><div class="customer"><b class="mono">QS2611005591</b><small>ลูกค้าโครงการ · Quotation</small></div></td><td><span class="status danger">✕ สินค้าขาด</span></td><td><div class="picker">พิมพ์ชนก (ตัวอย่าง)<small>เริ่มหยิบ 09:16 น.</small></div></td><td>24 พ.ย. 2569</td><td class="num">4</td><td class="num">64</td><td class="num"><b>36</b></td><td><button class="location-edit" data-po="QS2611005591" data-location="PICK-07">PICK-07 ✎</button></td></tr>
+                  <tr><td><div class="customer"><b class="mono">88-13</b><small>iHAVECPU · Purchase Order</small></div></td><td><span class="status success">✓ หยิบครบ</span></td><td><div class="picker">ธนา (ตัวอย่าง)<small>หยิบครบ 09:28 น.</small></div></td><td>25 พ.ย. 2569</td><td class="num">1</td><td class="num">1</td><td class="num"><b>1</b></td><td><button class="location-edit" data-po="88-13" data-location="STAGE-B02">STAGE-B02 ✎</button></td></tr>
+                  <tr><td><div class="customer"><b class="mono">QS2611005522</b><small>ลูกค้าโครงการ · Quotation</small></div></td><td><span class="status info">ℹ รอเปิดบิล</span></td><td><div class="picker">ยังไม่มอบหมาย</div></td><td>ยังไม่ระบุ</td><td class="num">34</td><td class="num">430</td><td class="num">—</td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="mobile-cards">
+              <article class="po-card"><div class="po-card-head"><div><b class="mono">PR2026112221</b><div style="color:var(--muted);font-size:13px">JIB · คลัง Stock6</div></div><span class="status warning">⚠ บางส่วน</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd>กิตติ (ตัวอย่าง)</dd></div><div><dt>เริ่มหยิบ</dt><dd>08:42 น.</dd></div><div><dt>กำหนดส่ง</dt><dd>23 พ.ย. 2569</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="PR2026112221" data-location="STAGE-A03">STAGE-A03 ✎</button></dd></div><div><dt>ต้องการ</dt><dd>402 ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>318 ชิ้น</dd></div></dl></article>
+              <article class="po-card"><div class="po-card-head"><div><b class="mono">QS2611005591</b><div style="color:var(--muted);font-size:13px">ลูกค้าโครงการ · UGREEN</div></div><span class="status danger">✕ สินค้าขาด</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd>พิมพ์ชนก (ตัวอย่าง)</dd></div><div><dt>เริ่มหยิบ</dt><dd>09:16 น.</dd></div><div><dt>กำหนดส่ง</dt><dd>24 พ.ย. 2569</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="QS2611005591" data-location="PICK-07">PICK-07 ✎</button></dd></div><div><dt>ต้องการ</dt><dd>64 ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>36 ชิ้น</dd></div></dl></article>
+            </div>
+          </article>
+
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="uploadModal" aria-hidden="true">
+    <section class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+      <div class="modal-head"><div><h2 id="uploadTitle">แนบไฟล์ PO</h2><p>รองรับ PDF, Excel และภาพถ่ายหลายไฟล์</p></div><button class="modal-close" id="closeUploadBtn" aria-label="ปิดหน้าต่าง">×</button></div>
+      <div class="modal-body">
+        <label class="upload" for="fileUpload"><div class="upload-icon"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 15v5h14v-5"/></svg></div><h3>ลากไฟล์ PO มาวางที่นี่</h3><p>ระบบจะอ่านเลข PO, SKU, จำนวน และกำหนดส่ง</p><span class="btn btn-primary" style="display:inline-flex;align-items:center">เลือกไฟล์ PO</span><input id="fileUpload" type="file" multiple accept=".pdf,.xlsx,.xls,.jpg,.jpeg,.png" /></label>
+        <p class="modal-note">ไฟล์จะเข้าสถานะ “รอตรวจเอกสาร” ก่อนสร้างงานหยิบ</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="printModal" aria-hidden="true">
+    <section class="modal-sheet print-sheet" role="dialog" aria-modal="true" aria-labelledby="printTitle">
+      <div class="print-toolbar">
+        <div><h2 id="printTitle">ตัวอย่าง Pick List</h2><div class="as-of">ตรวจสอบข้อมูลก่อนส่งเครื่องพิมพ์</div></div>
+        <div class="paper-size-group" role="group" aria-label="เลือกขนาดกระดาษ"><span class="paper-size-label">ขนาดกระดาษ</span><button class="paper-size-btn" data-size="4x6" aria-pressed="false">4 × 6</button><button class="paper-size-btn" data-size="a5" aria-pressed="false">A5</button><button class="paper-size-btn active" data-size="a4" aria-pressed="true">A4</button></div>
+        <div class="print-actions"><button class="btn" id="closePrintBtn">ปิด</button><button class="btn btn-primary" id="confirmPrintBtn">พิมพ์เอกสาร</button></div>
+      </div>
+      <article class="pick-page paper-a4" id="pickPage">
+        <div class="pick-head">
+          <div><div class="pick-title-row"><div><div class="pick-title">Pick List</div><div class="pick-code">OFF-20261123-01</div></div><div class="barcode" aria-label="บาร์โค้ดเลขที่ Pick List"></div></div><div class="pick-summary"><span>OFFLINE ALL</span><span>จำนวน SKU 4</span><span>จำนวนสินค้า 402</span></div></div>
+          <div class="pick-meta"><div>คลังสินค้า STOCK_5</div><div>ประเภท Wave สร้างด้วยตนเอง</div><div>เวลาพิมพ์ 23 พ.ย. 13:56</div><div class="pick-owner">ผู้หยิบ <b>กิตติ (ตัวอย่าง)</b><br>รหัสผู้หยิบ <b>EMP-024 (ตัวอย่าง)</b></div></div>
+        </div>
+        <table class="pick-table"><thead><tr><th>#</th><th>สินค้า</th><th>SKU</th><th>ตำแหน่ง</th><th>จำนวน</th></tr></thead><tbody>
+          <tr><td>1</td><td>Keyboard Fantech MK921 Wireless Brown Switch Black</td><td>1024001077</td><td class="pick-location">01U-02-01</td><td>96</td></tr>
+          <tr><td>2</td><td>Keyboard Fantech MK921 Wireless White Switch Black</td><td>1024001078</td><td class="pick-location">01U-02-06</td><td>89</td></tr>
+          <tr><td>3</td><td>Keyboard Fantech MK921 Wireless Brown Switch White</td><td>1024001079</td><td class="pick-location">01U-02-08</td><td>88</td></tr>
+          <tr><td>4</td><td>Keyboard Fantech MK921 Wireless White Switch White</td><td>1024001080</td><td class="pick-location">01U-02-10</td><td>129</td></tr>
+        </tbody></table>
+        <div class="print-example">ข้อมูลตัวอย่างสำหรับตรวจรูปแบบเอกสาร</div>
+      </article>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="locationModal" aria-hidden="true">
+    <section class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="locationTitle">
+      <div class="modal-head"><div><h2 id="locationTitle">แก้ไขจุดพัก</h2><p id="locationPo">PO —</p></div><button class="modal-close" id="closeLocationBtn" aria-label="ปิดหน้าต่าง">×</button></div>
+      <div class="modal-body">
+        <label class="field-label" for="locationInput">รหัสจุดพักสินค้า</label><input class="text-field" id="locationInput" placeholder="เช่น STAGE-A03" autocomplete="off" />
+        <div class="quick-locations" aria-label="จุดพักที่ใช้บ่อย"><button class="chip" data-location-choice="STAGE-A01">STAGE-A01</button><button class="chip" data-location-choice="STAGE-A03">STAGE-A03</button><button class="chip" data-location-choice="STAGE-B02">STAGE-B02</button><button class="chip" data-location-choice="PICK-07">PICK-07</button></div>
+        <p class="audit-note">ระบบจะบันทึกผู้แก้ไขและเวลาแก้ไขอัตโนมัติ</p>
+        <div class="modal-actions"><button class="btn" id="cancelLocationBtn">ยกเลิก</button><button class="btn btn-primary" id="saveLocationBtn">บันทึกจุดพัก</button></div>
+      </div>
+    </section>
+  </div>
+
+  <nav class="mobile-nav" aria-label="เมนูมือถือ">
+    <button><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg>ภาพรวม</button>
+    <button class="active"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 14h4l2 3h4l2-3h4"/></svg>รายการ PO</button>
+    <button><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Zm0 0v10l8 4 8-4V7M12 11v10"/></svg>งานหยิบ</button>
+    <button><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>ค้นหา</button>
+  </nav>
+  <div class="toast" id="toast" role="status">เปิดรายการเร่งด่วนแล้ว — ข้อมูลตัวอย่าง</div>
+  <script>
+    const toast=document.getElementById('toast');
+    function showToast(message){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2400)}
+    const uploadModal=document.getElementById('uploadModal');
+    const openUpload=()=>{uploadModal.classList.add('open');uploadModal.setAttribute('aria-hidden','false');document.getElementById('closeUploadBtn').focus()};
+    const closeUpload=()=>{uploadModal.classList.remove('open');uploadModal.setAttribute('aria-hidden','true')};
+    document.getElementById('topUploadBtn').addEventListener('click',openUpload);
+    document.getElementById('closeUploadBtn').addEventListener('click',closeUpload);
+    uploadModal.addEventListener('click',e=>{if(e.target===uploadModal)closeUpload()});
+    document.getElementById('fileUpload').addEventListener('change',e=>{const n=e.target.files.length;if(n){closeUpload();showToast(`รับไฟล์ ${n} ไฟล์แล้ว — ขั้นต่อไป: ตรวจ OCR`)}});
+    const printModal=document.getElementById('printModal');
+    const openPrint=()=>{printModal.classList.add('open');printModal.setAttribute('aria-hidden','false');document.getElementById('confirmPrintBtn').focus()};
+    const closePrint=()=>{printModal.classList.remove('open');printModal.setAttribute('aria-hidden','true')};
+    document.getElementById('printPickBtn').addEventListener('click',openPrint);
+    document.getElementById('closePrintBtn').addEventListener('click',closePrint);
+    document.getElementById('confirmPrintBtn').addEventListener('click',()=>window.print());
+    printModal.addEventListener('click',e=>{if(e.target===printModal)closePrint()});
+    const paperMap={a4:{className:'paper-a4',page:'A4 portrait',margin:'12mm'},a5:{className:'paper-a5',page:'A5 portrait',margin:'9mm'},'4x6':{className:'paper-4x6',page:'4in 6in',margin:'5mm'}};
+    document.querySelectorAll('.paper-size-btn').forEach(btn=>btn.addEventListener('click',()=>{const setting=paperMap[btn.dataset.size];document.querySelectorAll('.paper-size-btn').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-pressed','false')});btn.classList.add('active');btn.setAttribute('aria-pressed','true');const page=document.getElementById('pickPage');page.classList.remove('paper-a4','paper-a5','paper-4x6');page.classList.add(setting.className);document.getElementById('dynamicPrintStyle').textContent=`@media print{@page{size:${setting.page};margin:${setting.margin}}}`;showToast(`เลือกกระดาษ ${btn.textContent.trim()} แล้ว`)}));
+    const locationModal=document.getElementById('locationModal');
+    const locationInput=document.getElementById('locationInput');
+    let activeLocationPo='';
+    const openLocation=(button)=>{activeLocationPo=button.dataset.po;locationInput.value=button.dataset.location||'';document.getElementById('locationPo').textContent=`PO ${activeLocationPo}`;locationModal.classList.add('open');locationModal.setAttribute('aria-hidden','false');setTimeout(()=>locationInput.select(),50)};
+    const closeLocation=()=>{locationModal.classList.remove('open');locationModal.setAttribute('aria-hidden','true')};
+    document.querySelectorAll('.location-edit').forEach(btn=>btn.addEventListener('click',()=>openLocation(btn)));
+    document.querySelectorAll('[data-location-choice]').forEach(btn=>btn.addEventListener('click',()=>{locationInput.value=btn.dataset.locationChoice;locationInput.focus()}));
+    document.getElementById('closeLocationBtn').addEventListener('click',closeLocation);
+    document.getElementById('cancelLocationBtn').addEventListener('click',closeLocation);
+    document.getElementById('saveLocationBtn').addEventListener('click',()=>{const value=locationInput.value.trim().toUpperCase();if(!value){locationInput.focus();showToast('กรอกรหัสจุดพักก่อนบันทึก');return}document.querySelectorAll(`.location-edit[data-po="${activeLocationPo}"]`).forEach(btn=>{btn.dataset.location=value;btn.textContent=`${value} ✎`});closeLocation();showToast(`บันทึกจุดพัก ${value} ให้ PO ${activeLocationPo} แล้ว`)});
+    locationInput.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('saveLocationBtn').click()});
+    locationModal.addEventListener('click',e=>{if(e.target===locationModal)closeLocation()});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(uploadModal.classList.contains('open'))closeUpload();if(printModal.classList.contains('open'))closePrint();if(locationModal.classList.contains('open'))closeLocation()}});
+    document.querySelectorAll('.nav button').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');showToast(`เปิดเมนู ${btn.textContent.trim()} — Mockup`)}));
+    document.querySelectorAll('.status-tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.status-tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');showToast(`กรองสถานะ ${btn.textContent.trim()} — ข้อมูลตัวอย่าง`)}));
+    document.querySelectorAll('.control').forEach(btn=>btn.addEventListener('click',()=>showToast(`เปิดตัวกรอง ${btn.querySelector('span').textContent} — Mockup`)));
+    document.querySelectorAll('.chip').forEach(btn=>btn.addEventListener('click',()=>{if(btn.closest('.chips')){btn.closest('.chips').querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}}));
+    document.getElementById('globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter')showToast(`ค้นหา “${e.target.value || 'ทั้งหมด'}” — ข้อมูลตัวอย่าง`)});
+  </script>
+</body>
+</html>

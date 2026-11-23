@@ -47,6 +47,16 @@ const RECEIVING_TOOLS = [
   { href: "/tools/receiving/packinglist-converter.html", label: "แปลง Packing List · ใบแปะลัง", external: true },
   { href: "/tools/receiving/label-reprint.html", label: "พิมพ์ใบแปะลัง · พิมพ์เพิ่ม/แก้งาน", external: true },
   { href: "/receiving/pick-locations", label: "ตำแหน่งหยิบ · ซิงค์จาก BigSeller", external: false },
+];
+
+/**
+ * Offline warehouse / PO Trace — new workflow from the GV PO Trace plan.
+ * The PO Trace page is an interactive mockup (sample data) until the live
+ * backend ships; pack + warehouse map are already live.
+ */
+const WAREHOUSE_TOOLS = [
+  { href: "/tools/po-trace/index.html", label: "ติดตาม PO ออฟไลน์ (ใหม่)", external: true },
+  { href: "/pack", label: "ยิงสแกนลงลัง", external: false },
   { href: "/tools/warehouse-map/index.html", label: "ผังคลังและสต็อก (3D)", external: true },
 ];
 
@@ -67,7 +77,7 @@ function Chevron({ open }: { open: boolean }) {
 export function HeaderNav({ pendingReports }: HeaderNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openMenu, setOpenMenu] = useState<"" | "reports" | "receiving" | "tools">("");
+  const [openMenu, setOpenMenu] = useState<"" | "reports" | "receiving" | "warehouse" | "tools">("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   // A submenu closes on a click elsewhere or Escape.
@@ -173,6 +183,27 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
           <div className="relative">
             <button
               type="button"
+              onClick={() => setOpenMenu((m) => (m === "warehouse" ? "" : "warehouse"))}
+              aria-haspopup="menu"
+              aria-expanded={openMenu === "warehouse"}
+              className={`flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b-2 py-1 text-base ${isActive("/pack") ? "border-[#cdeb03] font-semibold text-[#cdeb03]" : "border-transparent text-[#d6e3ec] hover:text-white"}`}
+            >
+              คลังออฟไลน์
+              <Chevron open={openMenu === "warehouse"} />
+            </button>
+            {openMenu === "warehouse" ? (
+              <div role="menu" className="absolute top-full right-0 z-30 mt-2 flex min-w-64 flex-col rounded-[10px] border border-line bg-surface p-1.5 shadow-[var(--shadow-sm)]">
+                {WAREHOUSE_TOOLS.map((tool) => (
+                  <a key={tool.href} role="menuitem" href={tool.href} {...(tool.external ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={() => setOpenMenu("")} className="flex min-h-11 items-center rounded-md px-3 py-2 text-base text-accent hover:bg-accent-soft">
+                    {tool.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="relative">
+            <button
+              type="button"
               onClick={() => setOpenMenu((m) => (m === "tools" ? "" : "tools"))}
               aria-haspopup="menu"
               aria-expanded={openMenu === "tools"}
@@ -235,6 +266,12 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
           ))}
           <p className="px-3 pt-2 text-sm text-muted">ฝ่ายรับเข้า</p>
           {RECEIVING_TOOLS.map((tool) => (
+            <a key={tool.href} href={tool.href} {...(tool.external ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={() => setMobileOpen(false)} className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent">
+              {tool.label}
+            </a>
+          ))}
+          <p className="px-3 pt-2 text-sm text-muted">คลังออฟไลน์</p>
+          {WAREHOUSE_TOOLS.map((tool) => (
             <a key={tool.href} href={tool.href} {...(tool.external ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={() => setMobileOpen(false)} className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent">
               {tool.label}
             </a>
