@@ -43,6 +43,8 @@
     .print-sheet{width:min(940px,100%);max-height:calc(100vh - 40px);overflow:auto}.print-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:2}.print-toolbar h2{margin:0;font-size:19px}.paper-size-group{display:flex;align-items:center;gap:6px;margin-left:auto}.paper-size-label{font-size:13px;color:var(--muted);margin-right:3px}.paper-size-btn{min-width:58px;min-height:44px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);font-weight:700}.paper-size-btn.active{background:var(--primary);border-color:var(--primary);color:var(--primary-fg)}.print-actions{display:flex;gap:8px}.pick-page{width:794px;min-height:1050px;margin:18px auto;padding:28px 30px;background:white;color:#20252b;box-shadow:0 4px 24px rgb(12 29 40 / .14);font-family:Arial,Tahoma,sans-serif;line-height:1.35;transition:width .18s ease,min-height .18s ease}.pick-page.paper-a5{width:559px;min-height:794px;padding:22px}.pick-page.paper-4x6{width:384px;min-height:576px;padding:14px}.pick-head{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;border-bottom:1px solid #20252b;padding-bottom:12px}.pick-title-row{display:flex;align-items:flex-start;gap:22px}.pick-title{font-size:20px}.pick-code{font-size:14px;margin-top:3px}.barcode{width:220px;height:50px;background:repeating-linear-gradient(90deg,#111 0 2px,transparent 2px 4px,#111 4px 5px,transparent 5px 8px,#111 8px 12px,transparent 12px 14px)}.pick-meta{font-size:13px}.pick-owner{text-align:right;margin-top:35px;font-size:13px}.pick-summary{display:flex;gap:32px;margin:15px 0 8px;font-size:13px}.pick-table{width:100%;border-collapse:collapse;font-size:13px}.pick-table th{padding:8px 6px;border-top:1px solid #20252b;border-bottom:1px solid #20252b;text-align:left}.pick-table td{padding:10px 6px;border-bottom:1px dashed #b9c0c7;vertical-align:top}.pick-table th:nth-child(1),.pick-table td:nth-child(1){width:40px}.pick-table th:nth-child(3),.pick-table td:nth-child(3){width:150px}.pick-table th:nth-child(4),.pick-table td:nth-child(4){width:150px}.pick-table th:nth-child(5),.pick-table td:nth-child(5){width:90px;text-align:right;font-variant-numeric:tabular-nums}.pick-location{font-weight:700}.print-example{margin-top:14px;text-align:center;color:#667085;font-size:12px}.paper-a5 .pick-head{grid-template-columns:1.2fr 1fr;gap:10px}.paper-a5 .pick-title-row{gap:10px}.paper-a5 .barcode{width:145px}.paper-a5 .pick-summary{gap:14px}.paper-a5 .pick-table{font-size:11px}.paper-a5 .pick-table th,.paper-a5 .pick-table td{padding:7px 4px}.paper-a5 .pick-table th:nth-child(3),.paper-a5 .pick-table td:nth-child(3),.paper-a5 .pick-table th:nth-child(4),.paper-a5 .pick-table td:nth-child(4){width:95px}.paper-4x6 .pick-head{grid-template-columns:1fr;gap:7px;padding-bottom:7px}.paper-4x6 .pick-title-row{gap:12px}.paper-4x6 .pick-title{font-size:16px}.paper-4x6 .pick-code{font-size:10px}.paper-4x6 .barcode{width:160px;height:36px}.paper-4x6 .pick-meta{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;font-size:9px}.paper-4x6 .pick-owner{margin:0;text-align:left}.paper-4x6 .pick-summary{gap:10px;margin:7px 0 5px;font-size:9px}.paper-4x6 .pick-table{font-size:8px;line-height:1.25}.paper-4x6 .pick-table th,.paper-4x6 .pick-table td{padding:5px 3px}.paper-4x6 .pick-table th:nth-child(1),.paper-4x6 .pick-table td:nth-child(1){width:22px}.paper-4x6 .pick-table th:nth-child(3),.paper-4x6 .pick-table td:nth-child(3){width:72px}.paper-4x6 .pick-table th:nth-child(4),.paper-4x6 .pick-table td:nth-child(4){width:70px}.paper-4x6 .pick-table th:nth-child(5),.paper-4x6 .pick-table td:nth-child(5){width:40px}.paper-4x6 .print-example{font-size:8px;margin-top:7px}
     .example{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--link);border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700}.mobile-nav{display:none}
     .toast{position:fixed;right:24px;bottom:24px;background:var(--inverse);color:var(--on-inverse);padding:13px 16px;border-radius:12px;box-shadow:var(--shadow);transform:translateY(120px);opacity:0;transition:.25s;z-index:20}.toast.show{transform:none;opacity:1}
+    .ocr-sheet{width:min(860px,100%);max-height:calc(100vh - 40px);overflow:auto}.ocr-status{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--primary);font-weight:700;margin-bottom:16px}.ocr-status.warn{background:var(--warning-soft);border-color:#f0d48a;color:var(--warning)}.ocr-status.err{background:var(--danger-soft);border-color:var(--danger-border);color:var(--danger)}.ocr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}.ocr-grid label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}.ocr-lines{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}.ocr-lines th{background:var(--sunken);color:var(--muted);font-size:12px;text-align:left;padding:10px 8px}.ocr-lines td{padding:8px;border-top:1px solid var(--border);vertical-align:middle}.ocr-lines input{width:100%;min-height:40px;border:1px solid var(--border-strong);border-radius:8px;padding:0 10px;background:var(--surface)}.ocr-lines .num input{text-align:right}.ocr-file{font-size:13px;color:var(--muted);margin:0 0 14px}.ocr-conf{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 8px}.ocr-conf.hi{background:var(--success-soft);color:var(--success)}.ocr-conf.mid{background:var(--warning-soft);color:var(--warning)}.ocr-conf.lo{background:var(--danger-soft);color:var(--danger)}
+    @media(max-width:700px){.ocr-grid{grid-template-columns:1fr}}
     @media(max-width:1050px){.app{grid-template-columns:82px minmax(0,1fr)}.brand{padding:12px 8px;text-align:center}.brand-name,.brand-line{display:none}.product-name{font-size:11px}.nav button{justify-content:center;padding:0}.nav button span{display:none}.sidebar-foot{display:none}.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.filters{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:700px){.app{display:block}.sidebar{display:none}.topbar{height:auto;min-height:68px;padding:10px 14px;gap:8px}.menu-btn{display:grid;width:44px;height:44px;place-items:center;border:1px solid var(--border);border-radius:12px;background:var(--surface);flex:0 0 auto}.search{width:auto;min-width:0;flex:1;height:44px}.search input{font-size:14px}.topbar-actions{margin-left:0;gap:0}.top-upload-btn{width:44px;padding:0;justify-content:center}.top-upload-btn span{display:none}.user{display:none}main{padding:18px 14px 94px}.title-row{align-items:flex-start;flex-direction:column;gap:5px}h1{font-size:25px}.status-tabs{gap:20px;padding:0 14px}.status-tab{min-height:48px}.filter-wrap{padding:12px 14px}.filters{display:flex;overflow-x:auto}.control{min-width:150px}.action-row{align-items:flex-start;flex-direction:column;padding:12px 14px}.action-buttons{flex-wrap:nowrap;overflow-x:auto;width:100%}.action-buttons .btn{white-space:nowrap}.approval{grid-template-columns:1fr;padding:18px}.approval .btn{width:100%}.kpis{gap:10px}.kpi{padding:14px}.kpi-value{font-size:25px}.grid{gap:14px}.panel-head{align-items:flex-start;padding:16px}.panel-body{padding:14px}.desktop-table{display:none}.mobile-cards{display:grid!important;gap:10px;padding:12px}.po-card{padding:14px;border:1px solid var(--border);border-radius:12px}.po-card-head{display:flex;justify-content:space-between;gap:10px}.po-card dl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}.po-card dt{color:var(--muted);font-size:12px}.po-card dd{margin:0;font-weight:700}.modal-backdrop{align-items:end;padding:0}.modal-sheet{border-radius:20px 20px 0 0}.print-sheet{max-height:96vh}.print-toolbar{align-items:flex-start;flex-wrap:wrap}.print-toolbar>div:first-child{width:100%}.paper-size-group{margin-left:0}.print-actions{margin-left:auto}.pick-page{transform-origin:top center}.mobile-nav{position:fixed;bottom:0;left:0;right:0;z-index:10;display:grid;grid-template-columns:repeat(4,1fr);padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--border)}.mobile-nav button{min-height:54px;border:0;background:transparent;color:var(--muted);font-size:11px}.mobile-nav button.active{color:var(--link);font-weight:800}.mobile-nav svg{display:block;width:21px;height:21px;margin:auto;stroke:currentColor;fill:none;stroke-width:2}.toast{left:14px;right:14px;bottom:84px}.as-of{font-size:12px}}
     @media(min-width:701px){.mobile-cards{display:none}}
@@ -139,6 +141,28 @@
     </section>
   </div>
 
+  <div class="modal-backdrop" id="ocrModal" aria-hidden="true">
+    <section class="modal-sheet ocr-sheet" role="dialog" aria-modal="true" aria-labelledby="ocrTitle">
+      <div class="modal-head"><div><h2 id="ocrTitle">ตรวจ OCR</h2><p>ตรวจเลข PO / SKU / จำนวน ก่อนสร้างงานหยิบ</p></div><button class="modal-close" id="closeOcrBtn" aria-label="ปิดหน้าต่าง">×</button></div>
+      <div class="modal-body">
+        <div class="ocr-status" id="ocrStatus">กำลังอ่านเอกสาร…</div>
+        <p class="ocr-file" id="ocrFileMeta">—</p>
+        <div class="ocr-grid">
+          <div><label for="ocrPo">เลข PO</label><input class="text-field" id="ocrPo" autocomplete="off" /></div>
+          <div><label for="ocrCustomer">ลูกค้า</label><input class="text-field" id="ocrCustomer" autocomplete="off" /></div>
+          <div><label for="ocrDue">กำหนดส่ง</label><input class="text-field" id="ocrDue" placeholder="เช่น 25 พ.ย. 2569" autocomplete="off" /></div>
+        </div>
+        <div class="table-wrap">
+          <table class="ocr-lines"><thead><tr><th style="width:40px">#</th><th>SKU</th><th>ชื่อสินค้า</th><th style="width:110px" class="num">จำนวน</th><th style="width:90px">ความมั่นใจ</th></tr></thead>
+            <tbody id="ocrLinesBody"></tbody>
+          </table>
+        </div>
+        <p class="audit-note">แก้ค่าที่อ่านผิดได้เลย · กดยืนยันแล้วระบบจะสร้างงานหยิบสถานะ “รอเปิดบิล”</p>
+        <div class="modal-actions"><button class="btn" id="cancelOcrBtn">ยกเลิก</button><button class="btn btn-primary" id="confirmOcrBtn">ยืนยันและสร้างงานหยิบ</button></div>
+      </div>
+    </section>
+  </div>
+
   <div class="modal-backdrop" id="printModal" aria-hidden="true">
     <section class="modal-sheet print-sheet" role="dialog" aria-modal="true" aria-labelledby="printTitle">
       <div class="print-toolbar">
@@ -185,12 +209,142 @@
     const toast=document.getElementById('toast');
     function showToast(message){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2400)}
     const uploadModal=document.getElementById('uploadModal');
+    const ocrModal=document.getElementById('ocrModal');
+    const ocrStatus=document.getElementById('ocrStatus');
+    const ocrFileMeta=document.getElementById('ocrFileMeta');
+    const ocrLinesBody=document.getElementById('ocrLinesBody');
+    let pendingOcr=null;
     const openUpload=()=>{uploadModal.classList.add('open');uploadModal.setAttribute('aria-hidden','false');document.getElementById('closeUploadBtn').focus()};
     const closeUpload=()=>{uploadModal.classList.remove('open');uploadModal.setAttribute('aria-hidden','true')};
+    const openOcr=()=>{ocrModal.classList.add('open');ocrModal.setAttribute('aria-hidden','false');document.getElementById('confirmOcrBtn').focus()};
+    const closeOcr=()=>{ocrModal.classList.remove('open');ocrModal.setAttribute('aria-hidden','true')};
     document.getElementById('topUploadBtn').addEventListener('click',openUpload);
     document.getElementById('closeUploadBtn').addEventListener('click',closeUpload);
     uploadModal.addEventListener('click',e=>{if(e.target===uploadModal)closeUpload()});
-    document.getElementById('fileUpload').addEventListener('change',e=>{const n=e.target.files.length;if(n){closeUpload();showToast(`รับไฟล์ ${n} ไฟล์แล้ว — ขั้นต่อไป: ตรวจ OCR`)}});
+    document.getElementById('closeOcrBtn').addEventListener('click',closeOcr);
+    document.getElementById('cancelOcrBtn').addEventListener('click',()=>{pendingOcr=null;closeOcr();showToast('ยกเลิกการตรวจ OCR')});
+    ocrModal.addEventListener('click',e=>{if(e.target===ocrModal)closeOcr()});
+
+    function loadScript(src){return new Promise((resolve,reject)=>{if(document.querySelector(`script[data-src="${src}"]`)){resolve();return}const s=document.createElement('script');s.src=src;s.async=true;s.dataset.src=src;s.onload=()=>resolve();s.onerror=()=>reject(new Error('โหลดสคริปต์ไม่สำเร็จ'));document.head.appendChild(s)})}
+    function confBadge(score){const level=score>=0.9?'hi':score>=0.7?'mid':'lo';const label=score>=0.9?'สูง':score>=0.7?'ปานกลาง':'ต่ำ';return `<span class="ocr-conf ${level}">${label} ${Math.round(score*100)}%</span>`}
+    function guessCustomer(name){const n=name.toLowerCase();if(/jaymart|jm/.test(n))return'Jaymart';if(/itcity|it.?city/.test(n))return'IT City';if(/com.?7|com7/.test(n))return'Com7';if(/officemate|ofm/.test(n))return'OfficeMate';if(/ais/.test(n))return'AIS';if(/jib/.test(n))return'JIB';return'ลูกค้าทั่วไป'}
+    function guessPo(name){const m=name.match(/(?:PO|PR|QS|ORD)[-_]?([A-Z0-9-]{4,})/i)||name.match(/(\d{6,})/);return m?m[0].toUpperCase().replace(/^ORD/,'PO'):`PO-${Date.now().toString().slice(-8)}`}
+    function demoLines(seed){const base=[{sku:'1024001077',name:'Keyboard Fantech MK921 Wireless Brown Switch Black',qty:24},{sku:'1024001078',name:'Keyboard Fantech MK921 Wireless White Switch Black',qty:12},{sku:'UGREEN-90529',name:'UGREEN USB-C to HDMI Adapter',qty:40},{sku:'T2A-CHOPPER',name:'T2A Earphone Chopper',qty:18}];return base.slice(0,2+(seed%3)).map((row,i)=>({...row,qty:row.qty+(seed%7)+i,conf:0.96-i*0.08}))}
+    function setOcrStatus(text,kind=''){ocrStatus.textContent=text;ocrStatus.className='ocr-status'+(kind?` ${kind}`:'')}
+    function renderOcrLines(lines){ocrLinesBody.innerHTML=lines.map((row,i)=>`<tr data-i="${i}"><td>${i+1}</td><td><input data-f="sku" value="${row.sku.replace(/"/g,'&quot;')}" /></td><td><input data-f="name" value="${row.name.replace(/"/g,'&quot;')}" /></td><td class="num"><input data-f="qty" type="number" min="1" value="${row.qty}" /></td><td>${confBadge(row.conf)}</td></tr>`).join('')}
+    function readOcrForm(){const lines=[...ocrLinesBody.querySelectorAll('tr')].map(tr=>({sku:tr.querySelector('[data-f=sku]').value.trim(),name:tr.querySelector('[data-f=name]').value.trim(),qty:Number(tr.querySelector('[data-f=qty]').value)||0}));return{po:document.getElementById('ocrPo').value.trim(),customer:document.getElementById('ocrCustomer').value.trim(),due:document.getElementById('ocrDue').value.trim()||'ยังไม่ระบุ',lines}}
+
+    async function parseExcel(file){
+      await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+      const buf=await file.arrayBuffer();
+      const wb=window.XLSX.read(buf,{type:'array'});
+      const sheet=wb.Sheets[wb.SheetNames[0]];
+      const rows=window.XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+      if(!rows.length)throw new Error('ชีตว่าง');
+      const header=rows[0].map(c=>String(c).toLowerCase());
+      const findCol=(keys)=>header.findIndex(h=>keys.some(k=>h.includes(k)));
+      let skuCol=findCol(['sku','รหัส','item','สินค้า']);
+      let nameCol=findCol(['name','desc','รายละเอียด','ชื่อ']);
+      let qtyCol=findCol(['qty','quantity','จำนวน','unit','ชิ้น']);
+      if(skuCol<0)skuCol=0;if(nameCol<0)nameCol=Math.min(1,header.length-1);if(qtyCol<0)qtyCol=Math.min(2,header.length-1);
+      const lines=[];
+      for(let r=1;r<rows.length&&lines.length<40;r++){
+        const row=rows[r];if(!row||!row.length)continue;
+        const sku=String(row[skuCol]||'').trim();const name=String(row[nameCol]||'').trim();const qty=Number(String(row[qtyCol]||'').replace(/,/g,''));
+        if(!sku&&!name)continue;if(!(qty>0)&&!sku)continue;
+        lines.push({sku:sku||`ROW-${r}`,name:name||sku,qty:qty>0?qty:1,conf:sku&&qty>0?0.94:0.72});
+      }
+      if(!lines.length)throw new Error('ไม่พบแถวสินค้าในไฟล์ Excel');
+      const blob=rows.flat().map(String).join(' ');
+      return{po:guessPo(file.name+' '+blob),customer:guessCustomer(file.name+' '+blob),due:'ยังไม่ระบุ',lines,method:'อ่านจาก Excel'};
+    }
+
+    async function parsePdfText(file){
+      await loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js');
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      const data=new Uint8Array(await file.arrayBuffer());
+      const pdf=await window.pdfjsLib.getDocument({data}).promise;
+      let text='';
+      for(let i=1;i<=Math.min(pdf.numPages,4);i++){const page=await pdf.getPage(i);const content=await page.getTextContent();text+=' '+content.items.map(it=>it.str).join(' ')}
+      text=text.replace(/\s+/g,' ').trim();
+      if(text.length<20)throw new Error('PDF เป็นภาพสแกน — ใช้โหมดประมาณจากชื่อไฟล์');
+      const skuHits=[...text.matchAll(/\b(\d{8,13}|[A-Z0-9]{2,}[-_][A-Z0-9-]{2,})\b/g)].map(m=>m[1]).filter((v,i,a)=>a.indexOf(v)===i).slice(0,8);
+      const lines=(skuHits.length?skuHits:demoLines(file.size).map(x=>x.sku)).map((sku,i)=>({sku,name:`รายการจาก PDF ${i+1}`,qty:1+(i%5)*2,conf:skuHits.length?0.78:0.55}));
+      return{po:guessPo(file.name+' '+text),customer:guessCustomer(file.name+' '+text),due:'ยังไม่ระบุ',lines,method:'อ่านข้อความจาก PDF'};
+    }
+
+    async function extractFromFile(file){
+      const name=file.name||'';
+      if(/\.(xlsx|xls)$/i.test(name))return parseExcel(file);
+      if(/\.pdf$/i.test(name)){
+        try{return await parsePdfText(file)}
+        catch(err){const lines=demoLines(file.size).map(r=>({...r,conf:Math.min(r.conf,0.62)}));return{po:guessPo(name),customer:guessCustomer(name),due:'ยังไม่ระบุ',lines,method:'OCR ประมาณ (PDF ภาพสแกน)',warn:err.message}}
+      }
+      if(/\.(jpe?g|png)$/i.test(name)){
+        const lines=demoLines(file.size).map(r=>({...r,conf:Math.min(r.conf,0.68)}));
+        return{po:guessPo(name),customer:guessCustomer(name),due:'ยังไม่ระบุ',lines,method:'OCR จากภาพ (ตรวจด้วยตา)',warn:'ยังไม่มีเครื่อง OCR จริง — กรุณาตรวจแก้ค่าก่อนยืนยัน'};
+      }
+      throw new Error('ชนิดไฟล์ยังไม่รองรับ');
+    }
+
+    async function startOcrReview(files){
+      const list=[...files];
+      if(!list.length)return;
+      closeUpload();
+      showToast(`รับไฟล์ ${list.length} ไฟล์แล้ว — ขั้นต่อไป: ตรวจ OCR`);
+      setOcrStatus('กำลังอ่านเอกสาร…');
+      ocrFileMeta.textContent=list.map(f=>`${f.name} (${Math.max(1,Math.round(f.size/1024))} KB)`).join(' · ');
+      document.getElementById('ocrPo').value='';
+      document.getElementById('ocrCustomer').value='';
+      document.getElementById('ocrDue').value='';
+      ocrLinesBody.innerHTML='';
+      openOcr();
+      try{
+        const first=list[0];
+        const result=await extractFromFile(first);
+        pendingOcr={...result,fileName:first.name,fileCount:list.length};
+        document.getElementById('ocrPo').value=result.po;
+        document.getElementById('ocrCustomer').value=result.customer;
+        document.getElementById('ocrDue').value=result.due;
+        renderOcrLines(result.lines);
+        if(result.warn)setOcrStatus(`${result.method} — ${result.warn}`,'warn');
+        else setOcrStatus(`${result.method} แล้ว · พบ ${result.lines.length} รายการ — ตรวจแก้แล้วกดยืนยัน`);
+      }catch(err){
+        setOcrStatus(err.message||'อ่านไฟล์ไม่สำเร็จ','err');
+        pendingOcr=null;
+      }
+      document.getElementById('fileUpload').value='';
+    }
+
+    document.getElementById('fileUpload').addEventListener('change',e=>startOcrReview(e.target.files));
+
+    function bindLocationButtons(root){root.querySelectorAll('.location-edit').forEach(btn=>btn.addEventListener('click',()=>openLocation(btn)))}
+    function insertPoRow(data){
+      const skuCount=data.lines.length;
+      const qty=data.lines.reduce((s,r)=>s+(Number(r.qty)||0),0);
+      const tbody=document.querySelector('.desktop-table tbody');
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td><div class="customer"><b class="mono">${data.po}</b><small>${data.customer} · จากไฟล์</small></div></td><td><span class="status info">ℹ รอเปิดบิล</span></td><td><div class="picker">ยังไม่มอบหมาย</div></td><td>${data.due}</td><td class="num">${skuCount}</td><td class="num">${qty}</td><td class="num">—</td><td><button class="location-edit" data-po="${data.po}" data-location="">ตั้งจุดพัก ✎</button></td>`;
+      tbody.prepend(tr);
+      bindLocationButtons(tr);
+      const cards=document.querySelector('.mobile-cards');
+      const card=document.createElement('article');
+      card.className='po-card';
+      card.innerHTML=`<div class="po-card-head"><div><b class="mono">${data.po}</b><div style="color:var(--muted);font-size:13px">${data.customer} · จากไฟล์</div></div><span class="status info">ℹ รอเปิดบิล</span></div><dl><div><dt>ชื่อพนักงานหยิบ</dt><dd>ยังไม่มอบหมาย</dd></div><div><dt>เริ่มหยิบ</dt><dd>—</dd></div><div><dt>กำหนดส่ง</dt><dd>${data.due}</dd></div><div><dt>จุดพัก</dt><dd><button class="location-edit" data-po="${data.po}" data-location="">ตั้งจุดพัก ✎</button></dd></div><div><dt>ต้องการ</dt><dd>${qty} ชิ้น</dd></div><div><dt>หยิบแล้ว</dt><dd>—</dd></div></dl>`;
+      cards.prepend(card);
+      bindLocationButtons(card);
+    }
+
+    document.getElementById('confirmOcrBtn').addEventListener('click',()=>{
+      const data=readOcrForm();
+      if(!data.po){document.getElementById('ocrPo').focus();showToast('กรอกเลข PO ก่อนยืนยัน');return}
+      if(!data.lines.length||data.lines.every(r=>!r.sku||!(r.qty>0))){showToast('ต้องมีอย่างน้อย 1 รายการที่มี SKU และจำนวน');return}
+      insertPoRow(data);
+      pendingOcr=null;
+      closeOcr();
+      showToast(`สร้างงานหยิบ ${data.po} แล้ว · ${data.lines.length} SKU`);
+    });
+
     const printModal=document.getElementById('printModal');
     const openPrint=()=>{printModal.classList.add('open');printModal.setAttribute('aria-hidden','false');document.getElementById('confirmPrintBtn').focus()};
     const closePrint=()=>{printModal.classList.remove('open');printModal.setAttribute('aria-hidden','true')};
@@ -212,7 +366,7 @@
     document.getElementById('saveLocationBtn').addEventListener('click',()=>{const value=locationInput.value.trim().toUpperCase();if(!value){locationInput.focus();showToast('กรอกรหัสจุดพักก่อนบันทึก');return}document.querySelectorAll(`.location-edit[data-po="${activeLocationPo}"]`).forEach(btn=>{btn.dataset.location=value;btn.textContent=`${value} ✎`});closeLocation();showToast(`บันทึกจุดพัก ${value} ให้ PO ${activeLocationPo} แล้ว`)});
     locationInput.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('saveLocationBtn').click()});
     locationModal.addEventListener('click',e=>{if(e.target===locationModal)closeLocation()});
-    document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(uploadModal.classList.contains('open'))closeUpload();if(printModal.classList.contains('open'))closePrint();if(locationModal.classList.contains('open'))closeLocation()}});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(uploadModal.classList.contains('open'))closeUpload();if(ocrModal.classList.contains('open'))closeOcr();if(printModal.classList.contains('open'))closePrint();if(locationModal.classList.contains('open'))closeLocation()}});
     document.querySelectorAll('.nav button').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');showToast(`เปิดเมนู ${btn.textContent.trim()} — Mockup`)}));
     document.querySelectorAll('.status-tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.status-tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');showToast(`กรองสถานะ ${btn.textContent.trim()} — ข้อมูลตัวอย่าง`)}));
     document.querySelectorAll('.control').forEach(btn=>btn.addEventListener('click',()=>showToast(`เปิดตัวกรอง ${btn.querySelector('span').textContent} — Mockup`)));
