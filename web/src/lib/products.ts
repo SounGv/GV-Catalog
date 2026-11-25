@@ -64,7 +64,7 @@ function rowToProduct(row: ProductRow): Product {
     currentLotNote: row.current_lot_note,
     currentLotUpdatedAt: row.current_lot_updated_at,
     qtyPerCarton: row.qty_per_carton,
-    packageKind: row.package_kind === "box" || row.package_kind === "pouch" ? row.package_kind : null,
+    packageKind: row.package_kind === "box" || row.package_kind === "pouch" || row.package_kind === "both" ? row.package_kind : null,
   };
 }
 

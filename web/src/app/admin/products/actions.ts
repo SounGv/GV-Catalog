@@ -38,7 +38,7 @@ function readProductForm(formData: FormData) {
     widthCm: num("widthCm"),
     heightCm: num("heightCm"),
     currentLotNote: str("currentLotNote"),
-    packageKind: ((k) => (k === "box" || k === "pouch" ? k : null))(String(formData.get("packageKind") ?? "")) as PackageKind | null,
+    packageKind: ((k) => (k === "box" || k === "pouch" || k === "both" ? k : null))(String(formData.get("packageKind") ?? "")) as PackageKind | null,
   };
 }
 

@@ -23,11 +23,11 @@ export type Product = {
   currentLotUpdatedAt: string | null;
   /** Pieces per carton from the merchant SKU export's "Carton" unit — null means unknown. */
   qtyPerCarton: number | null;
-  /** How the unit is packed — "box" (กล่อง) or "pouch" (ซอง); null = not set. */
+  /** How the unit is packed — "box" (กล่อง), "pouch" (ซอง) or "both" (กล่อง+ซอง); null = not set. */
   packageKind: PackageKind | null;
 };
 
-export type PackageKind = "box" | "pouch";
+export type PackageKind = "box" | "pouch" | "both";
 
 export type CatalogQuery = {
   q: string;

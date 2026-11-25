@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { Product } from "@/lib/types";
+import type { PackageKind, Product } from "@/lib/types";
 import type { RetailerBarcode } from "@/lib/retailer-barcode-types";
 
 type ProductCardProps = {
@@ -21,7 +21,7 @@ type ProductCardProps = {
   /** Package angles (of 6) that have an uploaded photo — drives the status line. */
   packagePhotoCount?: number;
   /** "box" = boxed variant (SKU ends in BOX), "pouch" = the bagged sibling of a BOX variant — shown as a corner badge. */
-  packageKind?: "box" | "pouch" | null;
+  packageKind?: PackageKind | null;
 };
 
 function BoxIcon() {
@@ -46,7 +46,17 @@ function PouchIcon() {
 const PACKAGE_BADGE = {
   box: { label: "กล่อง", Icon: BoxIcon, cls: "bg-amber-400 text-ink" },
   pouch: { label: "ซอง", Icon: PouchIcon, cls: "bg-ink text-white" },
+  both: { label: "กล่อง+ซอง", Icon: BothIcon, cls: "bg-gradient-to-r from-amber-400 to-ink text-white [text-shadow:0_1px_1px_rgb(0_0_0/.5)]" },
 } as const;
+
+function BothIcon() {
+  return (
+    <span className="inline-flex -space-x-1">
+      <BoxIcon />
+      <PouchIcon />
+    </span>
+  );
+}
 
 export function ProductCard({ product, href, sameFamily, familySuffix, retailerBarcodes = [], packagePhotoCount = 0, packageKind = null }: ProductCardProps) {
   const badge = packageKind ? PACKAGE_BADGE[packageKind] : null;

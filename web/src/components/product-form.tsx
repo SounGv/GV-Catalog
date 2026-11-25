@@ -53,6 +53,7 @@ export function ProductForm({ action, product, error, retailerBarcodes = [] }: P
           <option value="">ยังไม่ระบุ</option>
           <option value="box">กล่อง</option>
           <option value="pouch">ซอง</option>
+          <option value="both">กล่อง+ซอง</option>
         </select>
       </label>
 
