@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ใบแปะลัง · ข้อความ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Free-text carton label for offline orders ("Fantech / IT CITY — เข้างาน Commart"): two lines, optional PO / date,
+   carton numbering 1/N, printed through the browser on the label printer (6x4 in, 4x6 in or 100x75 mm). */
+:root{--ink:#18232b;--nav:#18364c;--accent:#185c45;--soft:#e8f2ed;--bg:#f7f8fa;--surface:#fff;--line:#e5e9ed;--line2:#cfd6dc;--muted:#64748b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Sarabun","Segoe UI",sans-serif}
+a.back{display:inline-block;margin:0 20px}
+.top{background:var(--nav);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px}
+.top img{height:36px}
+.top h1{margin:0;font-size:19px;line-height:1.35}
+.top span{color:#aebfcc;font-size:14px}
+main{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:20px;padding:20px;max-width:1280px;margin:0 auto}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+main>*{min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card+.card{margin-top:14px}
+.step{display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:10px}
+.step i{font-style:normal;background:var(--accent);color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px}
+label{display:block;font-size:14px;font-weight:600;margin:10px 0 4px}
+label small{font-weight:400;color:var(--muted)}
+input,textarea{width:100%;min-height:44px;border:1px solid var(--line2);border-radius:10px;padding:8px 12px;font:inherit;background:#fff;color:inherit}
+textarea{min-height:88px;resize:vertical}
+input:focus,textarea:focus{outline:3px solid #185c4533;border-color:var(--accent)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.chip{flex:none;min-height:40px;border:1px solid var(--line2);background:#fff;border-radius:99px;padding:0 14px;font:inherit;font-size:14px;cursor:pointer;color:inherit}
+.chip:hover,.chip:focus-visible{border-color:var(--accent);color:var(--accent)}
+.chip.recent{border-style:dashed}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{min-height:52px;border:2px solid var(--line2);background:#fff;border-radius:10px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;line-height:1.2;color:inherit}
+.seg button small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.seg button.on{border-color:var(--accent);background:var(--soft);color:var(--accent)}
+.chk{display:flex;align-items:center;gap:8px;font-weight:400;margin:10px 0 0}
+.chk input{width:20px;min-height:20px}
+.go{width:100%;min-height:56px;margin-top:14px;border:0;border-radius:12px;background:var(--accent);color:#fff;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
+.go:disabled{opacity:.5;cursor:not-allowed}
+.go b{background:#fff;color:var(--accent);border-radius:6px;padding:0 8px;margin-left:6px}
+.prevhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.prevhead span{color:var(--muted);font-size:14px}
+.stage{background:#e9edf0;border:1px solid var(--line);border-radius:14px;padding:24px;display:flex;flex-wrap:wrap;gap:18px;justify-content:center;align-items:flex-start;min-height:420px}
+.wrap{position:relative;flex:none;box-shadow:0 2px 10px #18232b26;background:#fff}
+.lbl{background:#fff;color:#000;position:relative;overflow:hidden;font-family:"Sarabun","Segoe UI",sans-serif}
+.lbl .in{position:absolute;inset:5mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:3mm}
+.lbl .l1{font-weight:800;line-height:1.15;white-space:nowrap}
+.lbl .l2{font-weight:700;line-height:1.3;white-space:pre-line}
+.lbl .meta{position:absolute;left:5mm;right:5mm;bottom:3.5mm;display:flex;justify-content:space-between;align-items:flex-end;gap:3mm;font:700 11pt/1 "Sarabun",sans-serif}
+.lbl .meta .box{border:.5mm solid #000;border-radius:2mm;padding:1mm 2.5mm;white-space:nowrap}
+.lbl.frame .in{border:.7mm solid #000;border-radius:3mm;inset:4mm;padding:4mm}
+.lbl.bar .l1{background:#000;color:#fff;padding:1.5mm 5mm;border-radius:2mm}
+.lbl.meta-on .in{bottom:11mm}
+.note{color:var(--muted);font-size:13px;margin:8px 0 0}
+#print{display:none}
+@media print{
+ body{background:#fff}
+ a.back,.top,main{display:none!important}
+ #print{display:block}
+ #print .lbl{page-break-after:always;break-after:page}
+ #print .lbl:last-child{page-break-after:auto;break-after:auto}
+}
+</style>
+<style id="pageSize">@page{size:6in 4in;margin:0}</style>
+<link rel="stylesheet" href="../shared/gv-header.css">
+</head>
+<body>
+<a class="back" href="/">&lsaquo; กลับหน้าหลัก</a>
+<header class="top"><img src="../shared/gv-mark.png" alt="GV"><div><h1>ใบแปะลัง · ข้อความ</h1><span>พิมพ์ข้อความแปะลังออเดอร์ออฟไลน์ เช่น ส่งที่ไหน เข้างานอะไร</span></div></header>
+<main>
+ <section>
+  <div class="card">
+   <div class="step"><i>1</i>ข้อความบนใบแปะ</div>
+   <label>เลือกเร็ว <small>(กดแล้วเติมให้ · เส้นประ = ที่เพิ่งพิมพ์ไป)</small></label>
+   <div class="chips" id="presets"></div>
+   <label for="a">บรรทัดใหญ่ <small>(แบรนด์ / ร้าน)</small></label>
+   <input id="a" value="Fantech / IT CITY" autocomplete="off">
+   <label for="b">ข้อความ <small>(ส่งที่ไหน · หมายเหตุ กด Enter ขึ้นบรรทัดใหม่ได้)</small></label>
+   <textarea id="b">เข้างาน Commart</textarea>
+   <div class="row">
+    <div><label for="po">เลข PO <small>(ไม่ใส่ก็ได้)</small></label><input id="po" autocomplete="off" placeholder="เช่น 3000087681"></div>
+    <div><label for="dt">วันที่ส่ง <small>(ไม่ใส่ก็ได้)</small></label><input id="dt" autocomplete="off" placeholder="เช่น 28/11/2569"></div>
+   </div>
+  </div>
+  <div class="card">
+   <div class="step"><i>2</i>ขนาดและแบบ</div>
+   <div class="seg" id="size">
+    <button type="button" data-v="l" class="on">6 × 4 นิ้ว<small>แนวนอน</small></button>
+    <button type="button" data-v="p">4 × 6 นิ้ว<small>แนวตั้ง</small></button>
+    <button type="button" data-v="s">100 × 75 มม.<small>ใบเล็ก</small></button>
+   </div>
+   <label>แบบ</label>
+   <div class="seg" id="style">
+    <button type="button" data-v="plain" class="on">เรียบ<small>ตัวหนังสือล้วน</small></button>
+    <button type="button" data-v="frame">มีกรอบ<small>อ่านง่ายบนลัง</small></button>
+    <button type="button" data-v="bar">หัวดำ<small>บรรทัดใหญ่เด่น</small></button>
+   </div>
+  </div>
+  <div class="card">
+   <div class="step"><i>3</i>จำนวน</div>
+   <div class="row">
+    <div><label for="n">จำนวนลัง</label><input id="n" type="number" min="1" max="200" value="1" inputmode="numeric"></div>
+    <div><label for="c">พิมพ์ลังละ</label><input id="c" type="number" min="1" max="4" value="1" inputmode="numeric"></div>
+   </div>
+   <label class="chk"><input type="checkbox" id="num" checked>ใส่เลขลัง "ลัง 1/N" มุมล่างขวา</label>
+   <button class="go" id="go" type="button">พิมพ์ใบแปะ <b id="tot">1</b> ใบ</button>
+   <p class="note">ตอนพิมพ์ เลือกเครื่องพิมพ์ใบแปะ (TSC / Godex) ขนาดกระดาษตรงกับที่เลือกด้านบน และ Margins = None</p>
+  </div>
+ </section>
+ <section class="card">
+  <div class="prevhead"><b>ตัวอย่างก่อนพิมพ์</b><span id="cap"></span></div>
+  <div class="stage" id="stage"></div>
+ </section>
+</main>
+<div id="print"></div>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const SIZES={l:{w:152.4,h:101.6,page:'6in 4in',name:'6 × 4 นิ้ว',big:40},p:{w:101.6,h:152.4,page:'4in 6in',name:'4 × 6 นิ้ว',big:34},s:{w:100,h:75,page:'100mm 75mm',name:'100 × 75 มม.',big:30}};
+const PRESETS=[['IT City · Commart','Fantech / IT CITY','เข้างาน Commart'],['Com7','UGREEN / Com7',''],['Jaymart','Jaymart',''],['AIS','AIS',''],['OfficeMate','OfficeMate','']];
+const KEY='gv-carton-note';
+let st={size:'l',style:'plain',recent:[]};
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s){st={...st,...s};if(!Array.isArray(st.recent))st.recent=[]}}catch{}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch{}};
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,Math.floor(Number(v)||a)));
+
+function chips(){
+ const rec=st.recent.map(r=>`<button type="button" class="chip recent" data-a="${esc(r[0])}" data-b="${esc(r[1])}">${esc((r[0]+' '+r[1].split('\n')[0]).slice(0,28))}</button>`).join('');
+ $('presets').innerHTML=rec+PRESETS.map(p=>`<button type="button" class="chip" data-a="${esc(p[1])}" data-b="${esc(p[2])}">${esc(p[0])}</button>`).join('');
+}
+function fit(el,maxW,maxH,start){let s=start;el.style.fontSize=s+'pt';while(s>8&&(el.scrollWidth>maxW+1||el.scrollHeight>maxH+1)){s-=1;el.style.fontSize=s+'pt'}}
+function label(i,n){
+ const meta=[$('po').value.trim()&&('PO '+$('po').value.trim()),$('dt').value.trim()&&('ส่ง '+$('dt').value.trim())].filter(Boolean).join('   ');
+ const num=$('num').checked,z=SIZES[st.size];
+ return`<div class="lbl ${st.style}${meta||num?' meta-on':''}" style="width:${z.w}mm;height:${z.h}mm"><div class="in"><div class="l1">${esc($('a').value.trim())}</div><div class="l2">${esc($('b').value.trim())}</div></div>`
+  +(meta||num?`<div class="meta"><span>${esc(meta)}</span>${num?`<span class="box">ลัง ${i}/${n}</span>`:''}</div>`:'')+`</div>`;
+}
+function fitAll(root){const z=SIZES[st.size];root.querySelectorAll('.lbl').forEach(l=>{const box=l.querySelector('.in'),bw=box.clientWidth,bh=box.clientHeight;
+ fit(l.querySelector('.l1'),bw-(st.style==='bar'?40:0),bh*.45,z.big);fit(l.querySelector('.l2'),bw,bh*.5,Math.round(z.big*.85))})}
+function draw(){
+ const z=SIZES[st.size],n=clamp($('n').value,1,200),c=clamp($('c').value,1,4),show=Math.min(n,3);
+ const scale=Math.min(1,($('stage').clientWidth-48)/(z.w*3.78),(st.size==='p'?420:340)/(z.h*3.78));
+ $('tot').textContent=n*c;$('go').disabled=!$('a').value.trim()&&!$('b').value.trim();
+ $('cap').textContent=`${z.name} · ${n} ลัง × ${c} = ${n*c} ใบ`+(n>3?' · แสดง 3 ใบแรก':'');
+ let h='';for(let i=1;i<=show;i++)h+=`<div class="wrap" style="width:${z.w*3.78*scale}px;height:${z.h*3.78*scale}px"><div style="transform:scale(${scale});transform-origin:0 0">${label(i,n)}</div></div>`;
+ $('stage').innerHTML=h;fitAll($('stage'));
+ document.querySelectorAll('#size button').forEach(b=>b.classList.toggle('on',b.dataset.v===st.size));
+ document.querySelectorAll('#style button').forEach(b=>b.classList.toggle('on',b.dataset.v===st.style));
+}
+['a','b','po','dt','n','c','num'].forEach(id=>$(id).addEventListener('input',draw));
+for(const g of ['size','style'])$(g).addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;st[g]=b.dataset.v;save();draw()});
+$('presets').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;$('a').value=b.dataset.a;$('b').value=b.dataset.b;draw();$('b').focus()});
+$('go').addEventListener('click',()=>{
+ const z=SIZES[st.size],n=clamp($('n').value,1,200),c=clamp($('c').value,1,4);
+ $('pageSize').textContent=`@page{size:${z.page};margin:0}`;
+ let h='';for(let i=1;i<=n;i++)for(let k=0;k<c;k++)h+=label(i,n);
+ $('print').innerHTML=h;
+ // measure at real size before printing so long text shrinks the same way as the preview
+ $('print').style.cssText='display:block;position:absolute;left:-9999px;top:0';fitAll($('print'));$('print').style.cssText='';
+ const a=$('a').value.trim(),b=$('b').value.trim();
+ if(a||b){st.recent=[[a,b],...st.recent.filter(r=>r[0]!==a||r[1]!==b)].slice(0,5);save();chips()}
+ window.print();
+});
+addEventListener('resize',draw);
+chips();(document.fonts?document.fonts.ready:Promise.resolve()).then(draw);draw();
+})();
+</script>
+<script src="/tools/shared/back-link.js"></script>
+</body>
+</html>
