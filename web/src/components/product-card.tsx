@@ -20,9 +20,36 @@ type ProductCardProps = {
   retailerBarcodes?: RetailerBarcode[];
   /** Package angles (of 6) that have an uploaded photo — drives the status line. */
   packagePhotoCount?: number;
+  /** "box" = boxed variant (SKU ends in BOX), "pouch" = the bagged sibling of a BOX variant — shown as a corner badge. */
+  packageKind?: "box" | "pouch" | null;
 };
 
-export function ProductCard({ product, href, sameFamily, familySuffix, retailerBarcodes = [], packagePhotoCount = 0 }: ProductCardProps) {
+function BoxIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 2.8 20.5 7v10L12 21.2 3.5 17V7z" />
+      <path d="M3.5 7 12 11.2 20.5 7M12 11.2v10" />
+    </svg>
+  );
+}
+
+function PouchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
+      <path d="M5 4.5h14l-1 15.5a1.5 1.5 0 0 1-1.5 1.4h-9A1.5 1.5 0 0 1 6 20z" />
+      <path d="M5.3 8.5h13.4" strokeDasharray="1.6 1.6" />
+      <circle cx="12" cy="6.4" r=".2" />
+    </svg>
+  );
+}
+
+const PACKAGE_BADGE = {
+  box: { label: "กล่อง", Icon: BoxIcon, cls: "bg-amber-400 text-ink" },
+  pouch: { label: "ซอง", Icon: PouchIcon, cls: "bg-ink text-white" },
+} as const;
+
+export function ProductCard({ product, href, sameFamily, familySuffix, retailerBarcodes = [], packagePhotoCount = 0, packageKind = null }: ProductCardProps) {
+  const badge = packageKind ? PACKAGE_BADGE[packageKind] : null;
   const hasImage = Boolean(product.imageUrl);
   const skuBase = familySuffix ? product.sku.slice(0, product.sku.length - familySuffix.length) : product.sku;
 
@@ -31,11 +58,25 @@ export function ProductCard({ product, href, sameFamily, familySuffix, retailerB
       href={href}
       title={sameFamily ? `มี SKU อื่นที่ขึ้นต้นเหมือนกัน (${product.sku})` : undefined}
       className={
-        "group flex h-full flex-col overflow-hidden rounded-xl border bg-surface shadow-[var(--shadow-sm)] transition-shadow hover:shadow-md " +
-        (sameFamily ? "border-2 border-red-500" : "border-line hover:border-accent/50")
+        "group flex h-full flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-sm)] transition-shadow hover:shadow-md " +
+        // a model sold in more than one package (10594 + 10594-BOX): the variant with a suffix (-BOX) is a yellow card,
+        // the plain SKU keeps the red border on white
+        (familySuffix
+          ? "border-2 border-amber-500 bg-amber-200 hover:border-amber-600"
+          : sameFamily
+            ? "border-2 border-red-500 bg-surface"
+            : "border-line bg-surface hover:border-accent/50")
       }
     >
       <div className="relative aspect-square bg-neutral-100">
+        {badge ? (
+          <span
+            className={`absolute left-2 top-2 z-10 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-base font-extrabold shadow-lg ring-2 ring-white ${badge.cls}`}
+          >
+            <badge.Icon />
+            {badge.label}
+          </span>
+        ) : null}
         {hasImage && product.imageUrl ? (
           <Image
             src={product.imageUrl}
@@ -105,7 +146,7 @@ export function ProductCard({ product, href, sameFamily, familySuffix, retailerB
           )}
         </span>
 
-        <span className="mt-auto flex items-center justify-between border-t border-line pt-2 text-sm font-medium text-accent">
+        <span className={`mt-auto flex items-center justify-between border-t pt-2 text-sm font-medium text-accent ${familySuffix ? "border-amber-500/60" : "border-line"}`}>
           ดูสินค้าและแพ็กเกจ
           <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">
             →

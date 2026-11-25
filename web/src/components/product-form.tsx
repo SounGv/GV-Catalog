@@ -47,6 +47,15 @@ export function ProductForm({ action, product, error, retailerBarcodes = [] }: P
         </label>
       </div>
 
+      <label className={labelClass}>
+        <span className={labelTextClass}>แพ็กเกจ (ขึ้นเป็นเครื่องหมายมุมบนของรูปในแค็ตตาล็อก)</span>
+        <select name="packageKind" defaultValue={product?.packageKind ?? ""} className={inputClass}>
+          <option value="">ยังไม่ระบุ</option>
+          <option value="box">กล่อง</option>
+          <option value="pouch">ซอง</option>
+        </select>
+      </label>
+
       <div className="grid grid-cols-2 gap-4">
         <label className={labelClass}>
           <span className={labelTextClass}>บาร์โค้ดหลัก (GTIN)</span>

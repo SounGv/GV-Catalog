@@ -43,6 +43,8 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS current_lot_updated_at timestamptz
 -- conversion rule — used for warehouse packing/labeling (e.g. the box-label
 -- print tool). Null means unknown, not zero.
 ALTER TABLE products ADD COLUMN IF NOT EXISTS qty_per_carton integer;
+-- How the unit is packed: 'box' (กล่อง) or 'pouch' (ซอง); null = not set yet. Shown as a corner badge on the catalog card.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS package_kind text CHECK (package_kind IN ('box', 'pouch'));
 
 -- Alternate barcodes some big offline retail chains (COM7, IT City, Jaymart,
 -- AIS, OfficeMate, etc.) require printed on the package before shipment,

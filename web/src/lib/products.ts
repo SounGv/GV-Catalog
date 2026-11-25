@@ -23,6 +23,7 @@ type ProductRow = {
   current_lot_note: string | null;
   current_lot_updated_at: string | null;
   qty_per_carton: number | null;
+  package_kind?: string | null;
 };
 
 function asBrand(value: string): Brand {
@@ -63,6 +64,7 @@ function rowToProduct(row: ProductRow): Product {
     currentLotNote: row.current_lot_note,
     currentLotUpdatedAt: row.current_lot_updated_at,
     qtyPerCarton: row.qty_per_carton,
+    packageKind: row.package_kind === "box" || row.package_kind === "pouch" ? row.package_kind : null,
   };
 }
 
@@ -101,14 +103,22 @@ type ProductWithFamily = Product & {
   familySuffix: string | null;
 };
 
-function rowToProductWithFamily(row: ProductRow & { family_key: string | null; family_count: string }): ProductWithFamily {
+function rowToProductWithFamily(
+  row: ProductRow & { family_key: string | null; family_count: string; family_has_box: boolean | null },
+): ProductWithFamily {
+  const suffix = row.family_key === null ? null : row.sku.slice(row.family_key.length);
+  const multi = row.family_key !== null && Number(row.family_count) > 1;
+  const product = rowToProduct(row);
   return {
-    ...rowToProduct(row),
+    ...product,
     // A null family_key means the SKU has no ≥5-digit leading run to match on —
     // window functions bucket all such NULLs into one partition, so family_count
     // for those rows is meaningless noise, not a real shared-family count.
     sameFamilyCount: row.family_key === null ? 1 : Number(row.family_count),
-    familySuffix: row.family_key === null ? null : row.sku.slice(row.family_key.length),
+    familySuffix: suffix,
+    // set on the product wins; otherwise guess: a SKU ending in BOX is a box, the plain SKU of a family with a BOX variant
+    // is the pouch (10594 = ซอง, 10594-BOX = กล่อง)
+    packageKind: product.packageKind ?? (/BOX$/i.test(row.sku) ? "box" : multi && !suffix && row.family_has_box ? "pouch" : null),
   };
 }
 
@@ -142,12 +152,13 @@ export async function filterProducts(
 
   const [{ rows: countRows }, { rows: shownRows }] = await Promise.all([
     pool.query<{ n: string }>(`SELECT count(*)::text AS n FROM products ${where}`, params),
-    pool.query<ProductRow & { family_key: string | null; family_count: string }>(
+    pool.query<ProductRow & { family_key: string | null; family_count: string; family_has_box: boolean | null }>(
       `WITH filtered AS (
          SELECT *, NULLIF(substring(sku from '^[0-9]{5,}'), '') AS family_key
          FROM products ${where}
        )
-       SELECT *, count(*) OVER (PARTITION BY family_key)::text AS family_count
+       SELECT *, count(*) OVER (PARTITION BY family_key)::text AS family_count,
+              bool_or(sku ~* 'BOX$') OVER (PARTITION BY family_key) AS family_has_box
        FROM filtered
        ORDER BY sku LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
       params,

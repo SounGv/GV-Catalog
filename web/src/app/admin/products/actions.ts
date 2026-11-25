@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { pool } from "@/lib/db";
 import { adminProductEditPath, skuPath } from "@/lib/catalog-query";
 import { replaceBarcodesForSku, type RetailerBarcode } from "@/lib/barcodes";
-import type { Brand } from "@/lib/types";
+import type { Brand, PackageKind } from "@/lib/types";
 
 const BRANDS: Brand[] = ["UGREEN", "Fantech", "Other"];
 
@@ -38,6 +38,7 @@ function readProductForm(formData: FormData) {
     widthCm: num("widthCm"),
     heightCm: num("heightCm"),
     currentLotNote: str("currentLotNote"),
+    packageKind: ((k) => (k === "box" || k === "pouch" ? k : null))(String(formData.get("packageKind") ?? "")) as PackageKind | null,
   };
 }
 
@@ -71,11 +72,11 @@ export async function createProductAction(formData: FormData): Promise<void> {
   await pool.query(
     `INSERT INTO products
        (sku, name, brand, category, gtin, model, color, image_url, weight_g, length_cm, width_cm, height_cm,
-        current_lot_note, current_lot_updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        current_lot_note, current_lot_updated_at, package_kind)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
     [
       p.sku, p.name, p.brand, p.category, p.gtin, p.model, p.color, p.imageUrl, p.weightG, p.lengthCm, p.widthCm, p.heightCm,
-      p.currentLotNote, p.currentLotNote ? new Date() : null,
+      p.currentLotNote, p.currentLotNote ? new Date() : null, p.packageKind,
     ],
   );
   await replaceBarcodesForSku(p.sku, barcodes);
@@ -119,11 +120,11 @@ export async function updateProductAction(originalSku: string, formData: FormDat
     `UPDATE products SET
        sku = $1, name = $2, brand = $3, category = $4, gtin = $5, model = $6, color = $7,
        image_url = $8, weight_g = $9, length_cm = $10, width_cm = $11, height_cm = $12,
-       current_lot_note = $13, current_lot_updated_at = $14
+       current_lot_note = $13, current_lot_updated_at = $14, package_kind = $16
      WHERE sku = $15`,
     [
       p.sku, p.name, p.brand, p.category, p.gtin, p.model, p.color, p.imageUrl, p.weightG, p.lengthCm, p.widthCm, p.heightCm,
-      p.currentLotNote, currentLotUpdatedAt, originalSku,
+      p.currentLotNote, currentLotUpdatedAt, originalSku, p.packageKind,
     ],
   );
   await replaceBarcodesForSku(p.sku, barcodes);

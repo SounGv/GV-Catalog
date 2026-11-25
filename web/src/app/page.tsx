@@ -124,6 +124,7 @@ export default async function Home({
                 href={skuHref(product.sku, query)}
                 sameFamily={product.sameFamilyCount > 1}
                 familySuffix={product.sameFamilyCount > 1 ? product.familySuffix : null}
+                packageKind={product.packageKind}
                 retailerBarcodes={barcodesBySku[product.sku]}
                 packagePhotoCount={packagePhotoCounts[product.sku] ?? 0}
               />
