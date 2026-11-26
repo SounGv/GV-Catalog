@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { PickDetail, PickItem, PickOutcome } from "@/lib/pick";
 import { announce, preloadThaiVoice, type Announcement } from "@/components/thai-voice";
 import { useHardwareScan } from "@/components/use-hardware-scan";
+import { CameraBarcodeSheet } from "@/components/camera-barcode-sheet";
 
 // Same name key as /pack, so a picker who also packs types their name once.
 const NAME_KEY = "gv-pack-scanner-name";
@@ -73,6 +74,7 @@ export function PickScanner({ initial }: { initial: PickDetail }) {
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -279,6 +281,7 @@ export function PickScanner({ initial }: { initial: PickDetail }) {
 
         {name && !allDone ? (
           <form
+            className="flex gap-1.5"
             onSubmit={(e) => {
               e.preventDefault();
               const v = inputRef.current?.value.trim() ?? "";
@@ -290,10 +293,20 @@ export function PickScanner({ initial }: { initial: PickDetail }) {
               ref={inputRef}
               inputMode="none"
               autoComplete="off"
-              placeholder="ยิงบาร์โค้ด / กดปุ่มสแกนข้างเครื่อง"
+              placeholder="ยิงบาร์โค้ด / ปุ่มสแกนข้างเครื่อง"
               aria-label="ช่องยิงบาร์โค้ด"
-              className="h-11 w-full rounded-xl border-2 border-accent bg-surface px-3 text-base"
+              className="h-11 min-w-0 flex-1 rounded-xl border-2 border-accent bg-surface px-3 text-base"
             />
+            <button
+              type="button"
+              onClick={() => setCameraOpen(true)}
+              aria-label="สแกนด้วยกล้องมือถือ"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent text-white"
+            >
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 9v6M10 9v6M13 9v6M17 9v6" />
+              </svg>
+            </button>
           </form>
         ) : null}
 
@@ -352,6 +365,9 @@ export function PickScanner({ initial }: { initial: PickDetail }) {
           })}
         </ul>
       </div>
+      {cameraOpen && name && !allDone ? (
+        <CameraBarcodeSheet onDetected={(code) => void onScan(code)} onClose={() => setCameraOpen(false)} status={feedback} />
+      ) : null}
     </main>
   );
 }
