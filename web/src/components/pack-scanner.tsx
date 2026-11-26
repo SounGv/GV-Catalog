@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { BranchDetail, BranchSummary, CloseOutcome, ScanOutcome } from "@/lib/pack";
 import { stationId, useEvidenceRecorder } from "@/components/use-evidence-recorder";
+import { CameraBarcodeSheet } from "@/components/camera-barcode-sheet";
 import { announce, preloadThaiVoice, type Announcement } from "@/components/thai-voice";
 
 type Feedback = { tone: "ok" | "warn" | "info"; text: string; shortages?: CloseOutcome["shortages"] };
@@ -158,6 +159,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
   const [blockedNotice, setBlockedNotice] = useState<string | null>(null);
   /** "แก้ไขจำนวน" mode: each line shows a button to take one piece back out. */
   const [isEditingQty, setIsEditingQty] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const myStation = useSyncExternalStore(noSubscribe, stationId, () => "");
 
   const scanInputRef = useRef<HTMLInputElement>(null);
@@ -364,6 +366,12 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
     event.preventDefault();
     const barcode = event.currentTarget.value.trim();
     event.currentTarget.value = "";
+    // Epoch ms of the keystroke itself (not of when the request is sent) for the clip offset.
+    submitBarcode(barcode, performance.timeOrigin + event.timeStamp);
+  };
+
+  /** One scanned code, from the scan box (scanner gun / PDA) or the phone camera. */
+  const submitBarcode = (barcode: string, at: number) => {
     if (!barcode || !selectedRef.current) return;
     const isProductHere = detail?.lines.some((l) => l.barcodes.includes(barcode));
     const target = isProductHere ? undefined : findBranchByReference(barcode);
@@ -371,8 +379,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
       void selectBranch(target);
       return;
     }
-    // Epoch ms of the keystroke itself (not of when the request is sent) for the clip offset.
-    queueRef.current.push({ barcode, at: performance.timeOrigin + event.timeStamp });
+    queueRef.current.push({ barcode, at });
     setPendingCount(queueRef.current.length);
     void drainQueue();
   };
@@ -735,6 +742,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                     {total ? `${total.scanned}/${total.required}` : "…"}
                   </p>
                 </div>
+                <div className="flex gap-2">
                 <input
                   id="scan-input"
                   aria-label="ช่องยิงบาร์โค้ด"
@@ -750,8 +758,30 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                         ? `พร้อมสแกน — ยิงบาร์โค้ดสินค้า${pendingCount > 1 ? ` (รอส่ง ${pendingCount - 1})` : ""}`
                         : "เลือกสาขาและพิมพ์ชื่อผู้สแกนก่อน"
                   }
-                  className="h-14 rounded-[10px] border-2 border-accent bg-surface px-4 font-mono text-2xl outline-none disabled:border-line disabled:bg-neutral-100"
+                  className="h-14 min-w-0 flex-1 rounded-[10px] border-2 border-accent bg-surface px-4 font-mono text-2xl outline-none disabled:border-line disabled:bg-neutral-100"
                 />
+                <button
+                  type="button"
+                  disabled={!canScan}
+                  onClick={() => setCameraOpen(true)}
+                  aria-label="สแกนด้วยกล้องมือถือ"
+                  className="grid h-14 w-14 shrink-0 place-items-center rounded-[10px] bg-accent text-white disabled:opacity-40"
+                >
+                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M7 9v6M10 9v6M13 9v6M17 9v6" />
+                  </svg>
+                </button>
+                </div>
+                {cameraOpen && canScan ? (
+                  <CameraBarcodeSheet
+                    onDetected={(code) => submitBarcode(code, Date.now())}
+                    onClose={() => {
+                      setCameraOpen(false);
+                      focusScanInput();
+                    }}
+                    status={feedback ? { tone: feedback.tone === "ok" ? "ok" : feedback.tone === "warn" ? "bad" : "warn", text: feedback.text } : null}
+                  />
+                ) : null}
                 {feedback ? (
                   <div
                     role="status"
