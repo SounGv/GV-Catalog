@@ -2,7 +2,7 @@
 // - API calls and non-GET requests are never cached.
 // - Pages go to the network first; a cached copy is used only when offline.
 // - Built static files (/_next/static, icons, sounds) are cached after first use.
-const VERSION = "gv-pwa-v1";
+const VERSION = "gv-pwa-v2";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
