@@ -285,6 +285,7 @@
     const openOcr=()=>{ocrModal.classList.add('open');ocrModal.setAttribute('aria-hidden','false');document.getElementById('confirmOcrBtn').focus()};
     const closeOcr=()=>{ocrModal.classList.remove('open');ocrModal.setAttribute('aria-hidden','true')};
     document.getElementById('topUploadBtn').addEventListener('click',openUpload);
+    if(location.hash==='#upload')openUpload(); // shortcut from the GV app menu (/m)
     document.getElementById('closeUploadBtn').addEventListener('click',closeUpload);
     uploadModal.addEventListener('click',e=>{if(e.target===uploadModal)closeUpload()});
     document.getElementById('closeOcrBtn').addEventListener('click',closeOcr);

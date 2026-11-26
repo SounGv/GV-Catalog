@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { PickDetail, PickItem, PickOutcome } from "@/lib/pick";
 import { announce, preloadThaiVoice, type Announcement } from "@/components/thai-voice";
+import { useHardwareScan } from "@/components/use-hardware-scan";
 
 // Same name key as /pack, so a picker who also packs types their name once.
 const NAME_KEY = "gv-pack-scanner-name";
@@ -141,6 +142,9 @@ export function PickScanner({ initial }: { initial: PickDetail }) {
     setFeedback({ tone: ok ? "ok" : outcome.result === "over" ? "warn" : "bad", text });
   }
 
+  // PDA side-button scans land here even when the scan box lost focus.
+  useHardwareScan((code) => void onScan(code), { enabled: Boolean(name) && !allDone && !busy, scanInput: inputRef });
+
   async function onAction(action: "manual" | "short" | "unshort" | "undo", item: PickItem) {
     let qty: number | undefined;
     if (action === "manual") {
@@ -171,161 +175,183 @@ export function PickScanner({ initial }: { initial: PickDetail }) {
   const pct = detail.required ? Math.round(((detail.picked + detail.short) / detail.required) * 100) : 0;
 
   return (
-    <main className="mx-auto flex max-w-[640px] flex-col gap-3 px-4 py-4">
-      <div className="rounded-xl bg-[#18364c] p-4 text-white">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-lg font-bold">สแกนหยิบ · {detail.customer}</h1>
-          <Link href="/pack" className="text-sm text-white/80 underline">
-            งานทั้งหมด
+    <main className="mx-auto flex min-h-screen max-w-[560px] flex-col bg-bg">
+      <header className="sticky top-0 z-30 border-b border-line bg-surface">
+        <div className="flex items-center gap-2 px-3 pt-2.5">
+          <Link href="/pack?s=picking" aria-label="กลับไปรายการ PO" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
           </Link>
-        </div>
-        <p className="truncate text-sm text-white/80">{detail.title || detail.sourceFile}</p>
-        <p className="mt-1 text-sm tabular-nums">
-          หยิบแล้ว {detail.picked.toLocaleString("th-TH")} / {detail.required.toLocaleString("th-TH")} ชิ้น · ครบ {doneCount}/{detail.items.length} รายการ
-          {detail.short ? ` · ขาด ${detail.short}` : ""}
-        </p>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/20">
-          <div className="h-full bg-[#7dd3a8] transition-[width]" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-
-      {!name ? (
-        <form
-          className="flex gap-2 rounded-xl border border-line bg-surface p-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            saveName();
-          }}
-        >
-          <input
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            placeholder="ชื่อคนหยิบ"
-            className="min-h-12 flex-1 rounded-lg border-2 border-accent px-3 text-base"
-            autoFocus
-          />
-          <button className="min-h-12 rounded-lg bg-accent px-4 font-semibold text-white">เริ่มหยิบ</button>
-        </form>
-      ) : null}
-
-      {allDone ? (
-        <div className="rounded-xl border-2 border-accent bg-accent-soft p-4 text-center">
-          <p className="text-lg font-bold text-accent">✓ หยิบครบทุกรายการแล้ว</p>
-          {detail.short ? <p className="text-sm text-amber-800">มีของขาด {detail.short} ชิ้น — ดูรายการสีเหลืองด้านล่าง</p> : null}
-          <Link href={`/pack/${detail.jobId}`} className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-accent px-5 font-semibold text-white">
-            ไปยิงสแกนลงลัง →
-          </Link>
-        </div>
-      ) : current ? (
-        <div className="rounded-xl border border-line bg-surface p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-sm text-muted">ไปที่ตำแหน่ง</p>
-              <p className="font-mono text-3xl font-extrabold tracking-wide text-[#18364c]">{current.positions[0]?.position ?? "ไม่มีตำแหน่ง"}</p>
-              {current.positions.length > 1 ? (
-                <p className="text-xs text-muted">มีที่อื่นด้วย: {current.positions.slice(1, 4).map((p) => `${p.position} (${p.qty})`).join(", ")}</p>
+          <div className="min-w-0 flex-1 leading-tight">
+            <h1 className="text-base font-bold">สแกนหยิบ</h1>
+            <p className="truncate text-xs text-muted">
+              {detail.title || detail.sourceFile} · {detail.customer}
+              {name ? (
+                <>
+                  {" · "}
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() => {
+                      setNameDraft(name);
+                      setName("");
+                    }}
+                  >
+                    {name} ✎
+                  </button>
+                </>
               ) : null}
-            </div>
-            {current.positions[0] ? <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs text-muted tabular-nums">สต็อก {current.positions[0].qty}</span> : null}
+            </p>
           </div>
-          <div className="mt-3 flex items-center gap-3">
-            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
-              {current.imageUrl ? <Image src={current.imageUrl} alt="" fill sizes="80px" className="object-contain p-1" /> : null}
+        </div>
+        <div className="flex items-center gap-2 px-3 pt-1.5 pb-2 text-xs text-muted tabular-nums">
+          <span>
+            {detail.picked.toLocaleString("th-TH")}/{detail.required.toLocaleString("th-TH")} ชิ้น
+          </span>
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-neutral-100">
+            <div className="h-full bg-[#1a7f4e] transition-[width]" style={{ width: `${pct}%` }} />
+          </div>
+          <span>
+            {doneCount}/{detail.items.length} SKU{detail.short ? ` · ขาด ${detail.short}` : ""}
+          </span>
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-2 px-3 pt-2 pb-6">
+        {!name ? (
+          <form
+            className="flex gap-1.5 rounded-xl bg-surface p-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveName();
+            }}
+          >
+            <input
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              placeholder="ชื่อคนหยิบ"
+              aria-label="ชื่อคนหยิบ"
+              className="h-11 min-w-0 flex-1 rounded-xl border-2 border-accent px-3 text-base"
+              autoFocus
+            />
+            <button className="h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-white">เริ่มหยิบ</button>
+          </form>
+        ) : null}
+
+        {allDone ? (
+          <div className="rounded-xl border-2 border-accent bg-accent-soft p-3 text-center">
+            <p className="text-base font-bold text-accent">✓ หยิบครบทุกรายการแล้ว</p>
+            {detail.short ? <p className="text-xs text-amber-800">มีของขาด {detail.short} ชิ้น — ดูแถวสีเหลืองด้านล่าง</p> : null}
+            <Link href={`/pack/${detail.jobId}`} className="mt-2 inline-flex h-11 items-center rounded-xl bg-accent px-5 text-sm font-semibold text-white">
+              ไปยิงสแกนลงลัง →
+            </Link>
+          </div>
+        ) : current ? (
+          <div className="rounded-[14px] bg-[#18232b] px-3 py-2.5 text-white">
+            <div className="flex items-center justify-between gap-2 text-xs text-[#d6e3ec]">
+              <span>ไปที่ตำแหน่ง</span>
+              <b className="font-mono text-[22px] tracking-wide text-[#cdeb03]">{current.positions[0]?.position ?? "ไม่มีตำแหน่ง"}</b>
             </div>
-            <div className="min-w-0">
-              <p className="font-mono text-2xl font-bold">{current.key}</p>
-              <p className="line-clamp-2 text-sm text-muted">{current.name}</p>
+            {current.positions[0] ? (
+              <p className="text-right text-[11px] text-[#9fb0bd] tabular-nums">
+                สต็อก {current.positions[0].qty}
+                {current.positions.length > 1 ? ` · ที่อื่น: ${current.positions.slice(1, 3).map((p) => `${p.position} (${p.qty})`).join(", ")}` : ""}
+              </p>
+            ) : null}
+            <div className="mt-1.5 flex items-center gap-2.5">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[10px] bg-white">
+                {current.imageUrl ? <Image src={current.imageUrl} alt="" fill sizes="56px" className="object-contain p-0.5" /> : null}
+              </div>
+              <div className="min-w-0 flex-1 leading-snug">
+                <p className="truncate font-mono text-sm font-bold">{current.key}</p>
+                <p className="line-clamp-2 text-xs text-[#9fb0bd]">{current.name}</p>
+              </div>
+              <div className="shrink-0 text-right tabular-nums">
+                <b className="text-[26px] leading-none">
+                  {current.picked}/{current.required - current.short}
+                </b>
+                <span className="block text-xs text-[#9fb0bd]">เหลือ {left(current)}</span>
+              </div>
             </div>
           </div>
-          <p className="mt-3 text-center tabular-nums">
-            <span className="text-6xl font-extrabold">{current.picked}</span>
-            <span className="text-2xl text-muted"> / {current.required - current.short} ชิ้น</span>
-          </p>
+        ) : null}
+
+        {name && !allDone ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const v = inputRef.current?.value.trim() ?? "";
+              if (inputRef.current) inputRef.current.value = "";
+              if (v) void onScan(v);
+            }}
+          >
+            <input
+              ref={inputRef}
+              inputMode="none"
+              autoComplete="off"
+              placeholder="ยิงบาร์โค้ด / กดปุ่มสแกนข้างเครื่อง"
+              aria-label="ช่องยิงบาร์โค้ด"
+              className="h-11 w-full rounded-xl border-2 border-accent bg-surface px-3 text-base"
+            />
+          </form>
+        ) : null}
+
+        {feedback ? <p className={`rounded-[10px] px-2.5 py-1.5 text-[13px] font-semibold ${toneClass[feedback.tone]}`}>{feedback.text}</p> : null}
+
+        {name && current && !allDone ? (
+          <div className="grid grid-cols-3 gap-1.5">
+            <button disabled={busy} onClick={() => onAction("manual", current)} className="h-10 rounded-[10px] border border-line bg-surface text-xs font-semibold">
+              ใส่จำนวนเอง
+            </button>
+            <button disabled={busy} onClick={() => onAction("short", current)} className="h-10 rounded-[10px] border border-red-300 bg-surface text-xs font-semibold text-red-700">
+              ของไม่พอ
+            </button>
+            <button disabled={busy || current.picked < 1} onClick={() => onAction("undo", current)} className="h-10 rounded-[10px] border border-line bg-surface text-xs font-semibold disabled:opacity-40">
+              ย้อน 1
+            </button>
+          </div>
+        ) : null}
+
+        <div className="mt-1 flex justify-between px-0.5 text-[13px] font-semibold text-muted">
+          <span>รายการตามทางเดิน</span>
+          <span className="font-normal">แตะเพื่อเลือก</span>
         </div>
-      ) : null}
-
-      {feedback ? <p className={`rounded-xl px-4 py-3 font-semibold ${toneClass[feedback.tone]}`}>{feedback.text}</p> : null}
-
-      {name && !allDone ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const v = inputRef.current?.value.trim() ?? "";
-            if (inputRef.current) inputRef.current.value = "";
-            if (v) void onScan(v);
-          }}
-        >
-          <input
-            ref={inputRef}
-            inputMode="none"
-            autoComplete="off"
-            placeholder="ยิงบาร์โค้ดสินค้าที่นี่"
-            aria-label="ช่องยิงบาร์โค้ด"
-            className="min-h-14 w-full rounded-xl border-2 border-accent px-4 text-lg"
-          />
-        </form>
-      ) : null}
-
-      {name && current && !allDone ? (
-        <div className="grid grid-cols-3 gap-2">
-          <button disabled={busy} onClick={() => onAction("manual", current)} className="min-h-12 rounded-lg border border-line bg-surface font-semibold">
-            ใส่จำนวนเอง
-          </button>
-          <button disabled={busy} onClick={() => onAction("short", current)} className="min-h-12 rounded-lg border border-amber-400 bg-surface font-semibold text-amber-800">
-            ของไม่พอ
-          </button>
-          <button disabled={busy || current.picked < 1} onClick={() => onAction("undo", current)} className="min-h-12 rounded-lg border border-line bg-surface font-semibold disabled:opacity-40">
-            ย้อน 1
-          </button>
-        </div>
-      ) : null}
-
-      <ul className="flex flex-col gap-1.5">
-        {detail.items.map((item) => {
-          const done = isDone(item);
-          return (
-            <li key={item.key}>
-              <button
-                type="button"
-                onClick={() => {
-                  setFocusKey(item.key);
-                  inputRef.current?.focus();
-                }}
-                className={`grid w-full grid-cols-[96px_1fr_auto] items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm ${
-                  item.short ? "border-amber-400 bg-amber-50" : current?.key === item.key ? "border-2 border-accent bg-surface" : "border-line bg-surface"
-                } ${done && !item.short ? "opacity-55" : ""}`}
-              >
-                <span className="font-mono">{item.positions[0]?.position ?? "—"}</span>
-                <span className="truncate font-mono">
-                  {item.key}
-                  {item.short ? <span className="ml-1 font-sans text-amber-800">ขาด {item.short}</span> : null}
-                </span>
-                <span className="font-semibold tabular-nums">
-                  {done && !item.short ? "✓ " : ""}
-                  {item.picked}/{item.required}
-                </span>
-              </button>
-              {item.short && name ? (
-                <button type="button" onClick={() => onAction("unshort", item)} className="ml-3 text-xs text-accent underline">
-                  ยกเลิกของขาด (เติมของแล้ว)
+        <ul className="flex flex-col gap-1">
+          {detail.items.map((item) => {
+            const done = isDone(item);
+            return (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFocusKey(item.key);
+                    inputRef.current?.focus();
+                  }}
+                  className={`grid min-h-11 w-full grid-cols-[72px_1fr_auto] items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left text-xs ${
+                    item.short ? "border border-amber-400 bg-amber-50" : current?.key === item.key ? "bg-surface outline-2 outline-accent" : "bg-surface"
+                  } ${done && !item.short ? "opacity-55" : ""}`}
+                >
+                  <span className="font-mono font-bold">{item.positions[0]?.position ?? "—"}</span>
+                  <span className="truncate">
+                    <span className="font-mono">{item.key}</span>
+                    {item.short ? <span className="ml-1 text-amber-800">ขาด {item.short}</span> : null}
+                  </span>
+                  <span className={`font-semibold tabular-nums ${done && !item.short ? "text-[#1a7f4e]" : ""}`}>
+                    {done && !item.short ? "✓ " : ""}
+                    {item.picked}/{item.required}
+                  </span>
                 </button>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-
-      {name ? (
-        <p className="text-center text-sm text-muted">
-          คนหยิบ: {name} ·{" "}
-          <button type="button" className="underline" onClick={() => {
-              setNameDraft(name);
-              setName("");
-            }}>
-            เปลี่ยนชื่อ
-          </button>
-        </p>
-      ) : null}
+                {item.short && name ? (
+                  <button type="button" onClick={() => onAction("unshort", item)} className="ml-2 min-h-8 text-xs text-accent underline">
+                    ยกเลิกของขาด (เติมของแล้ว)
+                  </button>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </main>
   );
 }
