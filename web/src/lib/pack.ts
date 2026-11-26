@@ -204,7 +204,8 @@ export async function listPackJobs(customer?: string): Promise<PackJobSummary[]>
     scanned: number;
   }>(
     `SELECT j.id, j.customer, j.source_file, j.created_at, j.created_by, j.title, j.note,
-            (SELECT count(*)::int FROM scan_events WHERE job_id = j.id AND result NOT IN ('unknown', 'ambiguous')) AS started_count,
+            ((SELECT count(*)::int FROM scan_events WHERE job_id = j.id AND result NOT IN ('unknown', 'ambiguous'))
+              + (SELECT count(*)::int FROM pick_events WHERE job_id = j.id AND result = 'counted')) AS started_count,
             (SELECT count(DISTINCT branch)::int FROM pack_lines WHERE job_id = j.id) AS branch_count,
             (SELECT count(*)::int FROM branch_closures WHERE job_id = j.id AND reopened_at IS NULL) AS closed_count,
             (SELECT coalesce(sum(qty_required), 0)::int FROM pack_lines WHERE job_id = j.id) AS required,
@@ -253,19 +254,25 @@ export type PackJobDeletePreview = {
 
 /** What deleting a job would remove. A job that already has scans or a closed bill is blocked. */
 export async function previewDeletePackJob(jobId: string): Promise<PackJobDeletePreview | null> {
-  const { rows } = await pool.query<{ source_file: string; lines: number; branches: number; scans: number; rejected: number; closures: number }>(
+  const { rows } = await pool.query<{ source_file: string; lines: number; branches: number; scans: number; rejected: number; closures: number; picked: boolean }>(
     `SELECT j.source_file,
             (SELECT count(*)::int FROM pack_lines WHERE job_id = j.id) AS lines,
             (SELECT count(DISTINCT branch)::int FROM pack_lines WHERE job_id = j.id) AS branches,
             (SELECT count(*)::int FROM scan_events WHERE job_id = j.id AND result NOT IN ('unknown', 'ambiguous')) AS scans,
             (SELECT count(*)::int FROM scan_events WHERE job_id = j.id AND result IN ('unknown', 'ambiguous')) AS rejected,
-            (SELECT count(*)::int FROM branch_closures WHERE job_id = j.id) AS closures
+            (SELECT count(*)::int FROM branch_closures WHERE job_id = j.id) AS closures,
+            EXISTS (SELECT 1 FROM pick_events WHERE job_id = j.id AND result = 'counted') AS picked
      FROM pack_jobs j WHERE j.id = $1`,
     [jobId],
   );
   const r = rows[0];
   if (!r) return null;
-  const blocked = r.scans > 0 || r.closures > 0 ? "งานนี้เริ่มยิงแล้ว ลบไม่ได้ (มีหลักฐานการสแกนอยู่)" : null;
+  const blocked =
+    r.scans > 0 || r.closures > 0
+      ? "งานนี้เริ่มยิงแล้ว ลบไม่ได้ (มีหลักฐานการสแกนอยู่)"
+      : r.picked
+        ? "งานนี้เริ่มสแกนหยิบแล้ว ลบไม่ได้ (มีประวัติการหยิบอยู่)"
+        : null;
   return {
     rows_in: 1,
     matched: 1,
@@ -280,7 +287,7 @@ export async function previewDeletePackJob(jobId: string): Promise<PackJobDelete
   };
 }
 
-/** Deletes a job that has no counted scans and no closed bill (rejected scans do not count as started); its lines go with it (ON DELETE CASCADE). */
+/** Deletes a job that has no counted scans, no counted pick and no closed bill (rejected scans do not count as started); its lines go with it (ON DELETE CASCADE). */
 export async function deletePackJob(jobId: string): Promise<"deleted" | "blocked" | "missing"> {
   const preview = await previewDeletePackJob(jobId);
   if (!preview) return "missing";
@@ -289,7 +296,8 @@ export async function deletePackJob(jobId: string): Promise<"deleted" | "blocked
   const { rowCount } = await pool.query(
     `DELETE FROM pack_jobs j WHERE j.id = $1
        AND NOT EXISTS (SELECT 1 FROM scan_events WHERE job_id = j.id AND result NOT IN ('unknown', 'ambiguous'))
-       AND NOT EXISTS (SELECT 1 FROM branch_closures WHERE job_id = j.id)`,
+       AND NOT EXISTS (SELECT 1 FROM branch_closures WHERE job_id = j.id)
+       AND NOT EXISTS (SELECT 1 FROM pick_events WHERE job_id = j.id AND result = 'counted')`,
     [jobId],
   );
   return (rowCount ?? 0) > 0 ? "deleted" : "blocked";

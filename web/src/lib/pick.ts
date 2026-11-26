@@ -224,6 +224,7 @@ export async function recordPick(jobId: string, input: PickAction, pickedBy: str
 
     if (input.action === "manual") {
       const qty = Math.floor(Number(input.qty));
+      if (remaining(item) <= 0) return reject(`${item.key} หยิบครบแล้ว`, item.key);
       if (item.picked < 1) return reject("ยิงสินค้าถูก 1 ชิ้นก่อน แล้วค่อยใส่จำนวน", item.key);
       if (!(qty > 0) || qty > remaining(item)) return reject(`ใส่ได้ 1–${remaining(item)} ชิ้น`, item.key);
       await insert(item.key, null, qty, "manual", "counted", pos);
