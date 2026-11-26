@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listPackJobs } from "@/lib/pack";
+import { getPickTotals } from "@/lib/pick";
 
 // The job list changes every time a job is created or scanned — never prerender it.
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ const formatDateTime = (iso: string) =>
 
 export default async function PackJobsPage() {
   const jobs = await listPackJobs();
+  const picked = await getPickTotals(jobs.map((j) => j.id));
   return (
     <main className="mx-auto flex max-w-[1100px] flex-col gap-4 px-4 py-8">
       <div>
@@ -31,6 +33,7 @@ export default async function PackJobsPage() {
                 <th className="px-3 py-2">ไฟล์ PO</th>
                 <th className="px-3 py-2">ลูกค้า</th>
                 <th className="px-3 py-2">สร้างเมื่อ</th>
+                <th className="px-3 py-2 text-right">หยิบแล้ว</th>
                 <th className="px-3 py-2 text-right">สแกนแล้ว / ต้องการ</th>
                 <th className="px-3 py-2 text-right">ครบแพ็คแล้ว</th>
                 <th className="px-3 py-2"></th>
@@ -45,6 +48,7 @@ export default async function PackJobsPage() {
                     {formatDateTime(job.createdAt)}
                     {job.createdBy ? ` · ${job.createdBy}` : ""}
                   </td>
+                  <td className="px-3 py-2 text-right font-mono">{(picked.get(job.id) ?? 0).toLocaleString("th-TH")}</td>
                   <td className="px-3 py-2 text-right font-mono">
                     {job.scanned.toLocaleString("th-TH")} / {job.required.toLocaleString("th-TH")}
                   </td>
@@ -52,8 +56,11 @@ export default async function PackJobsPage() {
                     {job.closedCount} / {job.branchCount}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <Link href={`/pack/${job.id}`} className="text-accent underline">
-                      เปิดสแกน
+                    <Link href={`/pick/${job.id}`} className="mr-3 whitespace-nowrap text-accent underline">
+                      สแกนหยิบ
+                    </Link>
+                    <Link href={`/pack/${job.id}`} className="whitespace-nowrap text-accent underline">
+                      ยิงลงลัง
                     </Link>
                   </td>
                 </tr>

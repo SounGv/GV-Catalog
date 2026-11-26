@@ -6,6 +6,8 @@ type CreateJobBody = {
   createdBy?: string;
   dryRun?: boolean;
   lines?: IncomingPackLine[];
+  /** "po-trace" = a PO read from a photo/PDF in the PO page; any customer name is allowed there. */
+  source?: string;
 };
 
 const MAX_LINES = 20000;
@@ -36,7 +38,8 @@ export async function POST(request: Request) {
   const lines = Array.isArray(body.lines) ? body.lines : [];
   if (sourceFile.length > 200) return Response.json({ error: "ชื่อไฟล์ PO ยาวเกินไป" }, { status: 400 });
   if (lines.some((line) => line === null || typeof line !== "object")) return Response.json({ error: "รูปแบบรายการไม่ถูกต้อง" }, { status: 400 });
-  if (!PACK_CUSTOMERS.includes(customer)) return Response.json({ error: `รองรับเฉพาะลูกค้า ${PACK_CUSTOMERS.join(", ")}` }, { status: 400 });
+  const fromPoPage = body.source === "po-trace" && customer.length > 0 && customer.length <= 60;
+  if (!PACK_CUSTOMERS.includes(customer) && !fromPoPage) return Response.json({ error: `รองรับเฉพาะลูกค้า ${PACK_CUSTOMERS.join(", ")}` }, { status: 400 });
   if (!sourceFile) return Response.json({ error: "ไม่มีชื่อไฟล์ PO" }, { status: 400 });
   if (!lines.length || lines.length > MAX_LINES) return Response.json({ error: "จำนวนรายการไม่ถูกต้อง" }, { status: 400 });
 

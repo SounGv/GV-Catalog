@@ -55,7 +55,199 @@
         if (k) byCode.set(k, item);
       }
     }
-    return { bySku, byCode, list };
+    // Model index: every SKU segment ("FAN-KEY-MK921-BK-BK-BR" → MK921, BK, BR …) points at its items,
+    // so a customer line that only says "MK921" finds the whole MK921 family.
+    const bySeg = new Map();
+    for (const item of list) {
+      for (const seg of skuSegments(item.sku)) {
+        if (!bySeg.has(seg)) bySeg.set(seg, []);
+        bySeg.get(seg).push(item);
+      }
+    }
+    return { bySku, byCode, list, bySeg };
+  }
+
+  /* ---------- model + attribute matching ---------- */
+
+  const COLOR_WORDS = {
+    BLACK: "BLACK", BK: "BLACK", BLK: "BLACK",
+    WHITE: "WHITE", WH: "WHITE", WHT: "WHITE",
+    GRAY: "GRAY", GREY: "GRAY", GY: "GRAY", GRY: "GRAY",
+    BLUE: "BLUE", BL: "BLUE", BLU: "BLUE",
+    PINK: "PINK", PK: "PINK", PNK: "PINK",
+    RED: "RED", PURPLE: "PURPLE", GREEN: "GREEN", YELLOW: "YELLOW", ORANGE: "ORANGE",
+    SILVER: "SILVER", GOLD: "GOLD", BROWN: "BROWN",
+  };
+  const COMBO_COLORS = { BLACKPINK: ["BLACK", "PINK"] };
+  // Product type word in a PO line → the type segment of a Fantech SKU (FAN-<TYPE>-…).
+  const TYPE_WORDS = {
+    KEYBOARD: "KEY", K8: "KEY", MOUSE: "MOU", OPT: "MOU", HEADSET: "HES", SPK: "SPK", SPEAKER: "SPK",
+    PAD: "PAD", MOUSEPAD: "PAD", CONTROLLER: "JOY", JOY: "JOY", MIC: "MIC", MICROPHONE: "MIC", CREATOR: "MIC",
+  };
+  const OCR_FIX = { GEARS: "GEAR5" };
+  const UNIT = /^(\d+(M|W|Y|K|P|HZ|MAH|CM|MM|GB|TB|CH|IN|PORTS?)|V\d|\d+K\d+HZ|\d{1,4})$/;
+
+  function skuSegments(sku) {
+    return norm(sku).split(/[\s\-_/]+/).filter(Boolean);
+  }
+
+  function words(text) {
+    return norm(text)
+      .replace(/\b([A-Z]{1,4})-(\d{2,4})\b/g, "$1$2") // GS-203 → GS203, CM-400 → CM400
+      .split(/[^0-9A-Z]+/)
+      .filter(Boolean)
+      .map((w) => OCR_FIX[w] || w);
+  }
+
+  /** Colour, switch and other words of a PO line or a catalog name. */
+  function attrs(text) {
+    let t = norm(text).replace(/&/g, " ");
+    const sw = new Set();
+    t = t.replace(/\b([A-Z]+(?:\s+[A-Z]+)?)\s*-?\s*(?:SW|SWITCH)\b/g, (_, name) => {
+      const n = name.trim().split(/\s+/);
+      if (n.length === 1) {
+        sw.add(COLOR_WORDS[n[0]] || n[0]);
+        return " ";
+      }
+      // two words: "WIRELESS BROWN-SW" → switch BROWN; "WHITE TARO SWITCH" → switch TARO, colour WHITE stays;
+      // "BERRY FROST-SW" → switch "BERRY FROST"
+      if (COLOR_WORDS[n[1]]) {
+        sw.add(COLOR_WORDS[n[1]]);
+        return ` ${n[0]} `;
+      }
+      if (COLOR_WORDS[n[0]]) {
+        sw.add(n[1]);
+        return ` ${n[0]} `;
+      }
+      sw.add(n.join(" "));
+      return " ";
+    });
+    const colors = new Set();
+    const rest = new Set();
+    for (const w of words(t)) {
+      if (COMBO_COLORS[w]) COMBO_COLORS[w].forEach((c) => colors.add(c));
+      else if (COLOR_WORDS[w] && w.length >= 3) colors.add(COLOR_WORDS[w]);
+      else rest.add(w);
+    }
+    return { colors, sw, rest };
+  }
+
+  function queryType(ws) {
+    for (const w of ws) if (TYPE_WORDS[w]) return TYPE_WORDS[w];
+    return "";
+  }
+
+  function scoreCandidate(q, item, modelHits) {
+    const segs = skuSegments(item.sku);
+    const a = attrs(item.name);
+    // Colours from the name; fall back to SKU segments when the name gives none (WHPR, BKPK …).
+    // When the name names a switch, the last SKU segment is that switch (…-GEAR5-WH = white switch), not a colour.
+    if (!a.colors.size) for (const s of a.sw.size ? segs.slice(0, -1) : segs) if (COLOR_WORDS[s]) a.colors.add(COLOR_WORDS[s]);
+    let score = 3 * modelHits;
+    let conflict = false;
+    // A UGREEN number is the SKU itself: a colour word that differs ("Black" vs "Alu Gray") is the
+    // customer's description, not a different product.
+    const numericExact = /^\d{5}[A-Z]{0,2}$/.test(item.sku) && q.models.has(norm(item.sku));
+    if (q.colors.size && a.colors.size && !numericExact) {
+      let hit = 0;
+      for (const c of q.colors) if (a.colors.has(c)) hit++;
+      if (hit) score += 2 * hit;
+      else {
+        score -= 2;
+        conflict = true;
+      }
+    }
+    if (q.sw.size && a.sw.size) {
+      const same = [...q.sw].some((s) => a.sw.has(s));
+      if (same) score += 2;
+      else {
+        score -= 3;
+        conflict = true;
+      }
+    }
+    const nameWords = new Set([...words(item.name), ...segs]);
+    for (const w of q.rest) if (w.length >= 3 && !UNIT.test(w) && nameWords.has(w)) score += 1;
+    // SKU parts this line says nothing about (another character, colour or edition) count against it.
+    for (const s of segs.slice(2)) {
+      if (q.models.has(s) || q.rest.has(s)) continue;
+      if (COLOR_WORDS[s]) {
+        if (!q.colors.size) score -= 0.25;
+        continue;
+      }
+      score -= 0.5;
+    }
+    const t = segs[0] === "FAN" ? segs[1] : "";
+    if (q.type && t && q.type !== t) score -= 3;
+    if (/^GIFT|KEYCAP/.test(norm(item.sku)) || /รอตั้งชื่อ/.test(item.name)) score -= 3;
+    if (/!!!/.test(item.name)) score -= 1; // marked as old / discontinued in the catalog
+    return { score, conflict };
+  }
+
+  function matchByModel(index, rawSku, rawName) {
+    const text = `${rawName || ""}`;
+    const ws = words(text);
+    const models = new Set();
+    const cands = new Map();
+    const add = (item, hits) => cands.set(item.sku, { item, hits: Math.max(hits, cands.get(item.sku)?.hits || 0) });
+
+    // UGREEN-style numeric model (20162, 45297C) — the SKU itself, then its packaging variants.
+    for (const w of ws) {
+      if (!/^\d{5}[A-Z]{0,2}$/.test(w)) continue;
+      const exact = index.bySku.get(w);
+      if (exact) {
+        models.add(w);
+        add(exact, 2);
+        continue;
+      }
+      const family = index.list.filter((i) => norm(i.sku).startsWith(w));
+      if (family.length) {
+        models.add(w);
+        family.forEach((i) => add(i, 1));
+      }
+    }
+    // Letter+digit model codes (MK921, WG9RD, HG30, GS203, X16) matched against SKU segments.
+    for (const w of ws) {
+      if (!/[A-Z]/.test(w) || !/\d/.test(w) || UNIT.test(w) || w.length > 14) continue;
+      const items = index.bySeg.get(w);
+      if (!items || items.length > 60) continue;
+      models.add(w);
+      items.forEach((i) => add(i, 1));
+    }
+    if (!cands.size) return null;
+
+    const q = { ...attrs(text), models, type: queryType(ws) };
+    for (const m of models) q.rest.delete(m);
+    const ranked = [...cands.values()]
+      .map(({ item, hits }) => {
+        // count every model code of the line this item carries (MK889PRO + AME)
+        const segs = new Set(skuSegments(item.sku));
+        const n = Math.max(hits, [...models].filter((m) => segs.has(m)).length);
+        return { item, ...scoreCandidate(q, item, n) };
+      })
+      .sort((a, b) => b.score - a.score);
+    const top = ranked[0];
+    const second = ranked[1];
+    const margin = second ? top.score - second.score : 99;
+    if (!top.conflict && margin >= 0.7) {
+      return {
+        status: "model",
+        conf: Math.min(0.96, 0.8 + margin / 20),
+        sku: top.item.sku,
+        name: top.item.name,
+        reason: `รุ่น ${[...models].join(" ")}${q.colors.size ? " · สี " + [...q.colors].join("/") : ""}${q.sw.size ? " · สวิตช์ " + [...q.sw].join("/") : ""}`,
+        alts: ranked.slice(1, 5).map((x) => x.item),
+      };
+    }
+    return {
+      status: "ambiguous",
+      conf: 0.6,
+      sku: top.conflict ? "" : top.item.sku,
+      name: top.item.name,
+      reason: top.conflict
+        ? `รุ่น ${[...models].join(" ")} มีในระบบ แต่สี/สวิตช์ไม่ตรงตัวไหนเลย — เลือกเอง`
+        : `รุ่น ${[...models].join(" ")} มีหลายแบบ — ตรวจเลือก`,
+      alts: ranked.slice(0, 6).map((x) => x.item),
+    };
   }
 
   function matchLine(index, rawSku, rawName) {
@@ -73,6 +265,9 @@
       const hit = index.bySku.get(norm(name));
       return { status: "exact", conf: 0.95, sku: hit.sku, name: hit.name, reason: "ชื่อตรงกับ SKU ในระบบ" };
     }
+
+    const byModel = matchByModel(index, rawSku, name);
+    if (byModel) return byModel;
 
     const query = `${rawSku || ""} ${name}`.trim();
     if (!query) return { status: "none", conf: 0, sku: "", name: name || rawSku || "", reason: "ไม่มีข้อความให้จับคู่", alts: [] };

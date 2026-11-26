@@ -393,3 +393,21 @@ CREATE TABLE IF NOT EXISTS warehouse_assignments (
   done_at timestamptz
 );
 CREATE INDEX IF NOT EXISTS warehouse_assignments_open_idx ON warehouse_assignments (status, day);
+
+-- Scan-to-pick (/pick/[job]): one row per scan or manual action while picking a pack job
+-- off the shelves. Picked = sum(qty) of counted scan/manual/undo rows (undo is -1);
+-- short = sum(qty) of short rows (a negative row clears a shortage). `sku` holds the
+-- pack line's sku, or its customer part code when the line has no sku.
+CREATE TABLE IF NOT EXISTS pick_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id uuid NOT NULL REFERENCES pack_jobs (id) ON DELETE CASCADE,
+  sku text NOT NULL,
+  barcode text,
+  qty integer NOT NULL,
+  kind text NOT NULL CHECK (kind IN ('scan', 'manual', 'short', 'undo')),
+  result text NOT NULL CHECK (result IN ('counted', 'over', 'wrong', 'unknown')),
+  position text,
+  picked_by text,
+  picked_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS pick_events_job_idx ON pick_events (job_id, sku);

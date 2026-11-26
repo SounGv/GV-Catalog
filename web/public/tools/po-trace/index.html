@@ -270,7 +270,7 @@
     <button><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>ค้นหา</button>
   </nav>
   <div class="toast" id="toast" role="status">เปิดรายการเร่งด่วนแล้ว — ข้อมูลตัวอย่าง</div>
-  <script src="/tools/po-trace/po-match.js"></script>
+  <script src="/tools/po-trace/po-match.js?v=3"></script>
   <script>
     const toast=document.getElementById('toast');
     function showToast(message){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2400)}
@@ -295,7 +295,7 @@
     function escAttr(v){return String(v??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
     function matchBadge(row){
       const st=String(row.matchStatus||'').toLowerCase();
-      if(st==='exact'||st==='barcode')return `<span class="ocr-conf hi">ตรง ${Math.round((row.conf||0)*100)}%</span><div class="ocr-cust">${escAttr(row.matchReason||'')}</div>`;
+      if(st==='exact'||st==='barcode'||st==='model')return `<span class="ocr-conf hi">ตรง ${Math.round((row.conf||0)*100)}%</span><div class="ocr-cust">${escAttr(row.matchReason||'')}</div>`;
       if(st==='fuzzy')return `<span class="ocr-conf mid">ใกล้เคียง ${Math.round((row.conf||0)*100)}%</span><div class="ocr-cust">${escAttr(row.matchReason||'')}</div>`;
       if(st==='ambiguous')return `<span class="ocr-conf mid">หลายตัวเลือก</span><div class="ocr-cust">${escAttr(row.matchReason||'')}</div>`;
       return `<span class="ocr-conf lo">ไม่พบ</span><div class="ocr-cust">${escAttr(row.matchReason||'เลือก SKU เอง')}</div>`;
@@ -559,7 +559,7 @@
         document.getElementById('ocrDue').value=result.due;
         renderOcrLines(matched);
         if(result.rawText){rawText.textContent=result.rawText;rawWrap.hidden=false}
-        const ok=matched.filter(r=>r.sku&&['exact','barcode','fuzzy'].includes(String(r.matchStatus).toLowerCase())).length;
+        const ok=matched.filter(r=>r.sku&&['exact','barcode','model','fuzzy'].includes(String(r.matchStatus).toLowerCase())).length;
         const miss=matched.filter(r=>!r.sku||String(r.matchStatus).toLowerCase()==='none').length;
         const amb=matched.filter(r=>String(r.matchStatus).toLowerCase()==='ambiguous').length;
         const summary=`${result.method} · ${matched.length} รายการ · จับคู่ได้ ${ok} · ต้องเลือก ${amb} · ไม่พบ ${miss}`;
@@ -605,11 +605,47 @@
       if(!data.lines.length||data.lines.every(r=>!r.sku||!(r.qty>0))){showToast('ต้องมีอย่างน้อย 1 รายการที่มี SKU ระบบเรา และจำนวน');return}
       const missing=data.lines.filter(r=>!(r.qty>0)||!r.sku);
       if(missing.length){showToast(`ยังมี ${missing.length} รายการที่ยังไม่เลือก SKU ระบบเรา`);return}
-      insertPoRow(data);
-      pendingOcr=null;
-      closeOcr();
-      showToast(`สร้างงานหยิบ ${data.po} แล้ว · จับคู่ ${data.lines.length} SKU ระบบเรา`);
+      void createPickJob(data);
     });
+
+    // Turns the reviewed PO into a real job (pack_jobs): picking at /pick/<id>, then scan-to-carton at /pack/<id>.
+    // One PO = one "branch", so /pack shows it as one carton group.
+    async function createPickJob(data){
+      const btn=document.getElementById('confirmOcrBtn');
+      const index=await loadCatalogIndex().catch(()=>null);
+      const lines=data.lines.filter(r=>r.sku&&r.qty>0).map(r=>{
+        const item=index?.bySku.get(window.PoMatch.norm(r.sku));
+        return{branch:data.po,branchName:data.customer,po:data.po,part:r.customerSku||r.sku,sku:item?.sku||r.sku,description:item?.name||r.name||r.customerName,systemBarcode:item?.gtin||'',qty:Math.round(r.qty)};
+      });
+      const noBarcode=lines.filter(l=>!l.systemBarcode).map(l=>l.sku);
+      const customer=data.customer||'ลูกค้าทั่วไป';
+      const sourceFile=`${data.po} · ${pendingOcr?.fileName||'PO'}`.slice(0,200);
+      let createdBy='';try{createdBy=localStorage.getItem('gv-pack-scanner-name')||''}catch{}
+      const send=async dryRun=>{const res=await fetch('/api/pack/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer,sourceFile,createdBy,dryRun,source:'po-trace',lines})});const out=await res.json().catch(()=>({}));if(!res.ok)throw new Error(out.error||('HTTP '+res.status));return out};
+      // Remember this customer's item codes for the SKUs staff confirmed, so the next PO matches by code.
+      const pairs=data.lines.filter(r=>r.sku&&r.customerSku).map(r=>({code:r.customerSku,sku:r.sku}));
+      const mapCodes=async dryRun=>{if(!pairs.length)return null;const res=await fetch('/api/po/code-map',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer,pairs,dryRun})});return res.ok?res.json():null};
+      btn.disabled=true;
+      try{
+        const {preview}=await send(true);
+        const codePlan=await mapCodes(true).catch(()=>null);
+        const msg=[`สร้างงานหยิบ PO ${data.po} (${customer})`,`${preview.to_insert} รายการ · ${preview.qty_total} ชิ้น`];
+        if(noBarcode.length)msg.push(`⚠ ไม่มีบาร์โค้ดในแค็ตตาล็อก จะไม่ถูกสร้าง: ${noBarcode.join(', ')}`);
+        if(preview.existing_job_ids.length)msg.push(`⚠ PO นี้เคยสร้างงานแล้ว ${preview.existing_job_ids.length} งาน — สร้างซ้ำ?`);
+        if(codePlan?.to_insert)msg.push(`จำรหัสสินค้าของ ${customer} เพิ่ม ${codePlan.to_insert} รหัส (ครั้งหน้าจับคู่ตรงทันที)`);
+        if(codePlan?.conflicts?.length)msg.push(`⚠ รหัสที่ไม่จำ: ${codePlan.conflicts.map(c=>`${c.code} → ${c.reason}`).join('; ')}`);
+        if(!confirm(msg.join(String.fromCharCode(10))))return;
+        const {jobId}=await send(false);
+        if(codePlan?.to_insert)await mapCodes(false).catch(()=>null);
+        insertPoRow(data);
+        pendingOcr=null;
+        closeOcr();
+        showToast(`สร้างงานหยิบ ${data.po} แล้ว — กำลังเปิดหน้าสแกนหยิบ`);
+        setTimeout(()=>{location.href=`/pick/${jobId}`},700);
+      }catch(err){
+        showToast(`สร้างงานไม่สำเร็จ: ${err.message}`);
+      }finally{btn.disabled=false}
+    }
 
     const printModal=document.getElementById('printModal');
     const openPrint=()=>{printModal.classList.add('open');printModal.setAttribute('aria-hidden','false');document.getElementById('confirmPrintBtn').focus()};
