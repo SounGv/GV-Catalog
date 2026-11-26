@@ -103,7 +103,7 @@
   function attrs(text) {
     let t = norm(text).replace(/&/g, " ");
     const sw = new Set();
-    t = t.replace(/\b([A-Z]+(?:\s+[A-Z]+)?)\s*-?\s*(?:SW|SWITCH)\b/g, (_, name) => {
+    t = t.replace(/\b([A-Z]+(?:\s+[A-Z]+)?)\s*-?\s*(?:SW|SV|SWITCH)\b/g, (_, name) => {
       const n = name.trim().split(/\s+/);
       if (n.length === 1) {
         sw.add(COLOR_WORDS[n[0]] || n[0]);
@@ -213,6 +213,28 @@
       models.add(w);
       items.forEach((i) => add(i, 1));
     }
+    // Photo OCR swaps look-alike characters (MK895 read as MK395). When no model code is found,
+    // try one look-alike swap per code and keep it only if it lands on exactly one known model.
+    // A guessed model is never auto-confirmed: staff check it.
+    let ocrGuess = "";
+    if (!cands.size) {
+      const LOOK = { 3: "8", 8: "3B", B: "8", 0: "OD", O: "0", D: "0", 1: "IL", I: "1", L: "1", 5: "S", S: "5", 6: "G", G: "6", 2: "Z", Z: "2" };
+      for (const w of ws) {
+        if (!/[A-Z]/.test(w) || !/\d/.test(w) || UNIT.test(w) || w.length < 3 || w.length > 14) continue;
+        const found = new Set();
+        for (let i = 0; i < w.length; i++)
+          for (const ch of LOOK[w[i]] || "") {
+            const v = w.slice(0, i) + ch + w.slice(i + 1);
+            if (index.bySeg.has(v) && index.bySeg.get(v).length <= 60) found.add(v);
+          }
+        if (found.size === 1) {
+          const v = [...found][0];
+          models.add(v);
+          ocrGuess = `อ่านได้ ${w} น่าจะเป็น ${v}`;
+          index.bySeg.get(v).forEach((i) => add(i, 1));
+        }
+      }
+    }
     if (!cands.size) return null;
 
     const q = { ...attrs(text), models, type: queryType(ws) };
@@ -228,7 +250,7 @@
     const top = ranked[0];
     const second = ranked[1];
     const margin = second ? top.score - second.score : 99;
-    if (!top.conflict && margin >= 0.7) {
+    if (!top.conflict && margin >= 0.7 && !ocrGuess) {
       return {
         status: "model",
         conf: Math.min(0.96, 0.8 + margin / 20),
@@ -243,9 +265,11 @@
       conf: 0.6,
       sku: top.conflict ? "" : top.item.sku,
       name: top.item.name,
-      reason: top.conflict
-        ? `รุ่น ${[...models].join(" ")} มีในระบบ แต่สี/สวิตช์ไม่ตรงตัวไหนเลย — เลือกเอง`
-        : `รุ่น ${[...models].join(" ")} มีหลายแบบ — ตรวจเลือก`,
+      reason:
+        (ocrGuess ? ocrGuess + " · " : "") +
+        (top.conflict
+          ? `รุ่น ${[...models].join(" ")} ไม่มี${q.sw.size ? " สวิตช์ " + [...q.sw].join("/") : " สี/แบบนี้"} ในแค็ตตาล็อก — เลือกเอง (ระบบจะจำรหัสนี้)`
+          : `รุ่น ${[...models].join(" ")} มีหลายแบบ — ตรวจเลือก`),
       alts: ranked.slice(0, 6).map((x) => x.item),
     };
   }
