@@ -239,7 +239,7 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
       </button>
 
       {mobileOpen ? (
-        <div className="absolute top-full right-0 left-0 z-30 flex flex-col gap-1 rounded-b-[10px] border-b border-line bg-surface p-3 shadow-[var(--shadow-sm)] md:hidden">
+        <div className="absolute top-full right-0 left-0 z-30 flex max-h-[calc(100dvh-5rem)] flex-col gap-1 overflow-y-auto overscroll-contain rounded-b-[10px] border-b border-line bg-surface p-3 pb-6 shadow-[var(--shadow-sm)] md:hidden">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
