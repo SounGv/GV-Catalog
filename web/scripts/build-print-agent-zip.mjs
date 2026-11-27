@@ -8,7 +8,7 @@ import path from "node:path";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const JSZip = createRequire(import.meta.url)("jszip");
 const zip = new JSZip();
-for (const name of ["gv-print-agent.mjs", "start-agent.bat", "README.md"]) zip.file(`gv-print-agent/${name}`, readFileSync(path.join(root, "print-agent", name)));
+for (const name of ["GV-Print.bat", "gv-print-agent.ps1", "README.md"]) zip.file(`gv-print-agent/${name}`, readFileSync(path.join(root, "print-agent", name)));
 const out = path.join(root, "public/tools/print-agent/gv-print-agent.zip");
 mkdirSync(path.dirname(out), { recursive: true });
 writeFileSync(out, await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
