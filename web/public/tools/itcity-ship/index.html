@@ -293,7 +293,11 @@ const TH_MON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','ม�
 function draw(flash){
  // sources
  $('srcData').classList.toggle('empty',!DATA);
- if(DATA){$('dataName').textContent=DATA.file;$('dataMeta').innerHTML=`ใช้ไฟล์ที่จำไว้ · สาขา IT <b>${pool().length}</b> แห่ง`;$('dataBtn').textContent='อัปไฟล์ DATA ใหม่'}
+ if(DATA){
+  $('dataName').textContent=DATA.builtIn?'ข้อมูลที่อยู่ร้านในระบบ':DATA.file;
+  $('dataMeta').innerHTML=DATA.builtIn?`สาขา IT <b>${pool().length}</b> แห่ง · จาก ${esc(DATA.file)} · มีไฟล์ใหม่กว่าค่อยอัปทับ`:`ไฟล์ที่อัปเองในเครื่องนี้ · สาขา IT <b>${pool().length}</b> แห่ง`;
+  $('dataMeta').classList.remove('bad');$('dataBtn').textContent='อัปไฟล์ DATA ใหม่';
+ }
  $('srcOrd').classList.toggle('empty',!ORD);
  if(ORD){$('ordName').textContent=ORD.file;$('ordMeta').innerHTML=`<b>${ORD.bills}</b> บิล · <b>${ORD.groups.length}</b> สาขา · อ่านสาขาจากคอลัมน์ ชื่อโลจิสติกส์`;$('ordBtn').textContent='เปลี่ยนไฟล์'}
  const show=!!(ORD&&DATA);$('work').hidden=!show;$('empty').hidden=show;
@@ -327,7 +331,11 @@ async function handle(file,want){
    fillDatalist();buildRows();draw();return;
   }
   throw Error('ไม่รู้จักไฟล์นี้ · ไฟล์ออเดอร์ต้องมีคอลัมน์ "ชื่อโลจิสติกส์" · ไฟล์ DATA ต้องมีชีตที่มีหัว "รหัสร้าน"');
- }catch(e){toast(e.message||'อ่านไฟล์ไม่สำเร็จ',true)}
+ }catch(e){
+  // keep the reason on the card too: a toast alone is easy to miss (e.g. the file is still open in Excel)
+  const msg=e?.name==='NotReadableError'?'อ่านไฟล์ไม่ได้ · ถ้าไฟล์เปิดอยู่ใน Excel ให้ปิดก่อนแล้วอัปใหม่':(e.message||'อ่านไฟล์ไม่สำเร็จ');
+  const m=$(want==='data'?'dataMeta':'ordMeta');m.textContent=msg;m.classList.add('bad');toast(msg,true);
+ }
 }
 document.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click',()=>{pickKind=b.dataset.pick;$('file').click()}));
 $('file').addEventListener('change',e=>{const f=e.target.files[0];if(f)handle(f,pickKind);e.target.value=''});
@@ -375,6 +383,10 @@ $('dl').addEventListener('click',async()=>{
  }catch(e){toast('สร้างไฟล์ Excel ไม่สำเร็จ: '+(e.message||e),true)}
 });
 
+// store addresses ship with the page (data.json, from the DATA sheet); a DATA file uploaded in this browser replaces them here
+fetch('data.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
+ if(j&&!DATA){DATA={file:j.file,builtIn:true,rows:j.rows};fillDatalist();buildRows();draw()}
+}).catch(()=>{});
 if(DATA)fillDatalist();
 draw();
 })();

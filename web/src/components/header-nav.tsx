@@ -36,12 +36,16 @@ const STATIC_TOOLS = [
   { href: "/tools/jaymart/branch-order-validator.html", label: "แปลงไฟล์ PO Jaymart" },
   { href: "/tools/ais/gv-po-label-system.html", label: "แปลงไฟล์ PO AIS" },
   { href: "/tools/itcity/index.html", label: "แปลงไฟล์ PO IT City" },
-  { href: "/tools/itcity-ship/index.html", label: "ใบส่งสาขา IT City (ฟอร์ม ORDER ขนส่ง)" },
   { href: "/tools/officemate/GV-OfficeMate-PDF-to-Excel.html", label: "แปลงไฟล์ PO OfficeMate" },
   { href: "/tools/com-7/index.html", label: "ตรวจบาร์โค้ด PO Com7" },
   { href: "/tools/box-label/label_print_edit.html", label: "พิมพ์ใบแปะกล่อง" },
   { href: "/tools/order-labels/index.html", label: "ใบแปะลังจากออเดอร์ BigSeller" },
   { href: "/tools/carton-note/index.html", label: "ใบแปะลัง · ข้อความ (ส่งที่ / เข้างาน)" },
+];
+
+/** Shipping (จัดส่ง) tools — forms handed to the carrier; its own menu. */
+const SHIPPING_TOOLS = [
+  { href: "/tools/itcity-ship/index.html", label: "ใบส่งสาขา IT City (ฟอร์ม ORDER ขนส่ง)" },
 ];
 
 /** Receiving department (ฝ่ายรับเข้า) tools — its own menu, separate from the PO converters. */
@@ -79,7 +83,7 @@ function Chevron({ open }: { open: boolean }) {
 export function HeaderNav({ pendingReports }: HeaderNavProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openMenu, setOpenMenu] = useState<"" | "reports" | "receiving" | "warehouse" | "tools">("");
+  const [openMenu, setOpenMenu] = useState<"" | "reports" | "receiving" | "warehouse" | "shipping" | "tools">("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   // A submenu closes on a click elsewhere or Escape.
@@ -206,6 +210,27 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
           <div className="relative">
             <button
               type="button"
+              onClick={() => setOpenMenu((m) => (m === "shipping" ? "" : "shipping"))}
+              aria-haspopup="menu"
+              aria-expanded={openMenu === "shipping"}
+              className="flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent py-1 text-base text-[#d6e3ec] hover:text-white"
+            >
+              จัดส่ง
+              <Chevron open={openMenu === "shipping"} />
+            </button>
+            {openMenu === "shipping" ? (
+              <div role="menu" className="absolute top-full right-0 z-30 mt-2 flex min-w-64 flex-col rounded-[10px] border border-line bg-surface p-1.5 shadow-[var(--shadow-sm)]">
+                {SHIPPING_TOOLS.map((tool) => (
+                  <a key={tool.href} role="menuitem" href={tool.href} target="_blank" rel="noopener noreferrer" onClick={() => setOpenMenu("")} className="flex min-h-11 items-center rounded-md px-3 py-2 text-base text-accent hover:bg-accent-soft">
+                    {tool.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="relative">
+            <button
+              type="button"
               onClick={() => setOpenMenu((m) => (m === "tools" ? "" : "tools"))}
               aria-haspopup="menu"
               aria-expanded={openMenu === "tools"}
@@ -275,6 +300,12 @@ export function HeaderNav({ pendingReports }: HeaderNavProps) {
           <p className="px-3 pt-2 text-sm text-muted">คลังออฟไลน์</p>
           {WAREHOUSE_TOOLS.map((tool) => (
             <a key={tool.href} href={tool.href} {...(tool.external ? { target: "_blank", rel: "noopener noreferrer" } : {})} onClick={() => setMobileOpen(false)} className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent">
+              {tool.label}
+            </a>
+          ))}
+          <p className="px-3 pt-2 text-sm text-muted">จัดส่ง</p>
+          {SHIPPING_TOOLS.map((tool) => (
+            <a key={tool.href} href={tool.href} target="_blank" rel="noopener noreferrer" onClick={() => setMobileOpen(false)} className="flex items-center justify-between rounded-md px-3 py-2 text-base text-accent">
               {tool.label}
             </a>
           ))}
