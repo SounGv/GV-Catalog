@@ -108,6 +108,11 @@ tr.need:hover td{background:#fff8e6}
 .need-h{display:flex;align-items:center;gap:6px;color:var(--warn);font-weight:700;font-size:13px;line-height:1.35;margin-bottom:6px}
 .need-h svg.i{width:16px;height:16px}
 td.hint{white-space:normal;color:var(--warn);font-size:13px}
+.sugs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.sug{display:flex;flex-direction:column;align-items:flex-start;max-width:360px;min-height:44px;padding:6px 10px;border-radius:9px;border:1.5px solid var(--warn-line);background:#fff;font:inherit;font-size:13px;color:var(--ink);cursor:pointer;text-align:left;line-height:1.35}
+.sug:hover{border-color:var(--accent);background:var(--soft-2)}
+.sug small{color:var(--muted);font-size:11.5px}
+.swap-link{border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 @keyframes flash{from{background:#fff1c2}}
 tr.flash td{animation:flash .9s ease-out}
 
@@ -237,21 +242,28 @@ function match(name){
  const eq=P.filter(r=>norm(r.name)===n);
  if(eq.length){
   const raw=eq.filter(r=>thaiNorm(r.name)===thaiNorm(name));
-  // one DATA row with the exact same text wins; otherwise the same branch is listed under several codes -> one row
-  return{status:'ok',cands:raw.length===1?raw:eq};
+  // one DATA row with the exact same text wins
+  if(raw.length===1)return{status:'ok',cands:raw};
+  // the same branch listed under several codes (same name text or same address) -> one row;
+  // different shops that only share the mall name (เอช vs ไอทีซิตี้ at one mall) -> the user chooses
+  const same=eq.every(r=>sameShop(r,eq[0]));
+  return same?{status:'ok',cands:eq}:{status:'choose',cands:eq};
  }
+ // a name that is only similar is never filled in by itself: it is offered as a suggestion to confirm
  const sc=P.map(r=>({r,s:dice(n,norm(r.name))})).sort((a,b)=>b.s-a.s);
- if(sc[0].s>=.82)return{status:'near',cands:sc.filter(x=>x.s===sc[0].s).map(x=>x.r)};
- return{status:'none',cands:[]};
+ const near=sc.filter(x=>x.s>=.72).slice(0,3).map(x=>x.r);
+ return{status:near.length?'near':'none',cands:near};
 }
 const digits=t=>String(t||'').replace(/\D/g,'').replace(/^66/,'0');
+const squash=s=>thaiNorm(s).replace(/[\s,.]/g,'');
+function sameShop(a,b){return thaiNorm(a.name)===thaiNorm(b.name)||(squash(a.addr).length>10&&squash(a.addr)===squash(b.addr))}
 function buildRows(){
  ROWS=(ORD?.groups||[]).map(g=>{
   const m=match(g.name),old=ROWS.find(x=>x.name===g.name);
   const r={name:g.name,orders:g.orders,status:m.status,cands:m.cands,box:old?.box??'1',zone:old?.zone??'',weight:old?.weight??'',client:old?.client??'',manual:false};
   const hand=PICKS[g.name]&&byCode(PICKS[g.name]);
   if(hand){r.code=hand.code;r.manual=true}
-  else if(m.cands.length)r.code=m.cands.map(x=>x.code).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).pop();
+  else if(m.status==='ok')r.code=m.cands.map(x=>x.code).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).pop();
   else r.code='';
   return r;
  });
@@ -260,16 +272,18 @@ function buildRows(){
 /* ---------- address: drop ตำบล/อำเภอ/จังหวัด/zip that have their own columns ---------- */
 function shortAddr(c){
  const a=String(c.addr||'');let cut=a.length;
+ // only the tail is cut: a building name in the first half (อาคารกรุงเทพ…, a mall named after the district) stays
+ const tail=i=>i>a.length*.45;
  for(const p of['(ต\\.|ตำบล|แขวง)\\s*','(อ\\.|อำเภอ|เขต)\\s*','(จ\\.|จังหวัด)\\s*']){const m=a.match(new RegExp('(?<![\\u0E00-\\u0E7F])'+p+'[\\u0E00-\\u0E7F]'));if(m)cut=Math.min(cut,m.index)}
- for(const v of[c.sub,c.dist]){const t=String(v||'').trim();if(t.length>2){const i=a.lastIndexOf(t);if(i>0)cut=Math.min(cut,i)}}
+ for(const v of[c.sub,c.dist]){const t=String(v||'').trim();if(t.length>2){const i=a.lastIndexOf(t);if(i>0&&tail(i))cut=Math.min(cut,i)}}
  const z=a.match(/\b\d{5}\s*$/);if(z)cut=Math.min(cut,z.index);
- const b=a.search(/กรุงเทพ/);if(b>=0)cut=Math.min(cut,b);
+ const b=a.search(/กรุงเทพ(ฯ|มหานคร)?\s*(\d{5})?\s*$/);if(b>=0)cut=Math.min(cut,b);
  return a.slice(0,cut).replace(/[\s,]+$/,'').trim();
 }
 function view(r){
  const c=byCode(r.code);if(!c)return null;
  let tel2=c.tel2,from='';
- if(r.cands.length>1&&r.cands.includes(c)){const o=r.cands.find(x=>x!==c&&digits(x.tel1)&&digits(x.tel1)!==digits(c.tel1));if(o){tel2=o.tel1;from=o.code}}
+ if(r.status==='ok'&&r.cands.length>1&&r.cands.includes(c)){const o=r.cands.find(x=>x!==c&&digits(x.tel1)&&digits(x.tel1)!==digits(c.tel1));if(o){tel2=o.tel1;from=o.code}}
  return{c,addr:(c.name+' '+shortAddr(c)).trim(),tel2,from};
 }
 
@@ -279,9 +293,11 @@ const zone=(r,i)=>`<td class="in gs"><input class="cell" data-f="zone" data-i="$
 function row(r,i){
  const v=view(r);
  if(!v||r.editing){
-  const hint=r.cands.length?`ใกล้เคียง: ${r.cands.map(x=>x.code+' '+x.name).join(' / ')}`:'ไม่พบสาขานี้ในชีต DATA';
+  const why=v?'พิมพ์รหัสใหม่ หรือเลือกจากรายการ':r.status==='choose'?'ห้างนี้มีหลายร้านในชีต DATA เลือกร้านที่ส่ง':r.status==='near'?'ไม่พบชื่อตรงกัน ชื่อที่ใกล้เคียง (ตรวจก่อนเลือก)':'ไม่พบสาขานี้ในชีต DATA พิมพ์รหัสหรือชื่อสาขาในช่องซ้าย';
+  const sug=r.cands.map(x=>`<button type="button" class="sug" data-sug="${i}" data-c="${esc(x.code)}"><b>${esc(x.code)}</b> ${esc(x.name)}<small>${esc(shortAddr(x))} · ${esc(x.tel1)||'ไม่มีเบอร์'}</small></button>`).join('');
+  const hint=`<div>${why}</div>${sug?`<div class="sugs">${sug}</div>`:''}`;
   return `<tr class="need" id="r${i}"><td class="key"><div class="need-h">${ic('alert')}${v?'เปลี่ยนรหัสร้าน':'ใส่รหัสร้าน'}</div><input class="codein" list="codes" data-code="${i}" value="${esc(r.editing?r.code:'')}" placeholder="พิมพ์รหัส หรือชื่อสาขา" aria-label="รหัสร้าน ${esc(r.name)}"><div class="codehelp">Enter เพื่อใช้ · Esc ยกเลิก</div><span class="from" title="${esc(r.name)}">${esc(r.name)}</span></td>
-   <td class="hint" colspan="5">${esc(hint)}</td>${zone(r,i)}<td class="muted" colspan="3">ขึ้นหลังใส่รหัส</td>${ship(r,i)}</tr>`;
+   <td class="hint" colspan="5">${hint}</td>${zone(r,i)}<td class="muted" colspan="3">ขึ้นหลังใส่รหัส</td>${ship(r,i)}</tr>`;
  }
  const {c}=v;
  const tag=r.manual?'<span class="tag mine">เลือกเอง</span>':r.status==='near'?'<span class="tag near">ชื่อใกล้เคียง · ตรวจ</span>':r.cands.length>1?`<span class="tag dup">รวม ${r.cands.map(x=>x.code).join(' + ')}</span>`:'';
@@ -295,7 +311,7 @@ function draw(flash){
  $('srcData').classList.toggle('empty',!DATA);
  if(DATA){
   $('dataName').textContent=DATA.builtIn?'ข้อมูลที่อยู่ร้านในระบบ':DATA.file;
-  $('dataMeta').innerHTML=DATA.builtIn?`สาขา IT <b>${pool().length}</b> แห่ง · จาก ${esc(DATA.file)} · มีไฟล์ใหม่กว่าค่อยอัปทับ`:`ไฟล์ที่อัปเองในเครื่องนี้ · สาขา IT <b>${pool().length}</b> แห่ง`;
+  $('dataMeta').innerHTML=DATA.builtIn?`สาขา IT <b>${pool().length}</b> แห่ง · จาก ${esc(DATA.file)} · มีไฟล์ใหม่กว่าค่อยอัปทับ`:`ไฟล์ที่อัปเองในเครื่องนี้ · สาขา IT <b>${pool().length}</b> แห่ง${BUILT?` · <button type="button" class="swap-link" data-built>ใช้ข้อมูลในระบบแทน</button>`:''}`;
   $('dataMeta').classList.remove('bad');$('dataBtn').textContent='อัปไฟล์ DATA ใหม่';
  }
  $('srcOrd').classList.toggle('empty',!ORD);
@@ -309,7 +325,7 @@ function draw(flash){
  $('cW').innerHTML=`${ic('alert')}ต้องใส่รหัส ${w} สาขา`;$('cW').hidden=!w;
  $('dlN').textContent=`${ROWS.length} สาขา`;
  if(flash!=null)$('r'+flash)?.classList.add('flash');
- const f=document.querySelector('[data-code]');if(f&&ROWS.some(r=>r.editing))f.focus();
+ if(editIdx>=0&&ROWS[editIdx]?.editing)document.querySelector(`#r${editIdx} [data-code]`)?.focus();
 }
 function fillDatalist(){$('codes').innerHTML=pool().map(r=>`<option value="${esc(r.code)}">${esc(r.name)}</option>`).join('')}
 
@@ -346,20 +362,25 @@ for(const el of[$('srcOrd'),$('srcData'),$('empty')]){
 }
 
 /* ---------- table interaction ---------- */
-$('tb').addEventListener('click',e=>{const b=e.target.closest('[data-edit]');if(b){const i=+b.dataset.edit;ROWS[i].editing=true;draw()}});
+let editIdx=-1;
+$('tb').addEventListener('click',e=>{
+ const s=e.target.closest('[data-sug]');if(s){applyCode(+s.dataset.sug,s.dataset.c);return}
+ const b=e.target.closest('[data-edit]');if(b){const i=+b.dataset.edit;ROWS[i].editing=true;editIdx=i;draw()}
+});
 $('tb').addEventListener('input',e=>{const t=e.target;if(t.dataset.f)ROWS[+t.dataset.i][t.dataset.f]=t.value});
 function applyCode(i,val){
  const r=ROWS[i],v=String(val||'').trim();
  const c=byCode(v)||byCode(v.split(/\s/)[0])||pool().find(x=>thaiNorm(x.name)===thaiNorm(v));
  if(!c){toast(`ไม่พบรหัส "${v}" ในชีต DATA`,true);return}
  // remembered per branch name, so the next order file for this branch uses the same code
- r.code=c.code;r.editing=false;r.manual=true;PICKS[r.name]=c.code;
+ r.code=c.code;r.editing=false;r.manual=true;PICKS[r.name]=c.code;editIdx=-1;
  store.set(PICK_KEY,PICKS);draw(i);
 }
 $('tb').addEventListener('keydown',e=>{const t=e.target.closest('[data-code]');if(!t)return;const i=+t.dataset.code;
  if(e.key==='Enter'){e.preventDefault();applyCode(i,t.value)}
  if(e.key==='Escape'){ROWS[i].editing=false;draw()}});
-$('tb').addEventListener('change',e=>{const t=e.target.closest('[data-code]');if(t&&t.value.trim())applyCode(+t.dataset.code,t.value)});
+// picking from the list applies at once; half-typed text waits for Enter (leaving the box does nothing)
+$('tb').addEventListener('change',e=>{const t=e.target.closest('[data-code]');if(t&&byCode(t.value)&&/^IT/i.test(t.value.trim()))applyCode(+t.dataset.code,t.value)});
 $('cW').addEventListener('click',()=>{const t=document.querySelector('tr.need');if(t){t.scrollIntoView({behavior:'smooth',block:'center'});t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash');t.querySelector('input')?.focus({preventScroll:true})}});
 
 /* ---------- outputs ---------- */
@@ -384,9 +405,14 @@ $('dl').addEventListener('click',async()=>{
 });
 
 // store addresses ship with the page (data.json, from the DATA sheet); a DATA file uploaded in this browser replaces them here
-fetch('data.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
- if(j&&!DATA){DATA={file:j.file,builtIn:true,rows:j.rows};fillDatalist();buildRows();draw()}
+// whichever is newer wins: an uploaded file older than the built-in list is dropped, so updating data.json reaches every PC
+let BUILT=null;
+function useBuilt(){DATA={file:BUILT.file,builtIn:true,rows:BUILT.rows};try{localStorage.removeItem(DATA_KEY)}catch{}fillDatalist();buildRows();draw()}
+fetch('/tools/itcity-ship/data.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
+ if(!j)return;BUILT=j;
+ if(!DATA||(!DATA.builtIn&&Date.parse(j.updated)>(DATA.savedAt||0)))useBuilt();else draw();
 }).catch(()=>{});
+$('dataMeta').addEventListener('click',e=>{if(e.target.closest('[data-built]')&&BUILT)useBuilt()});
 if(DATA)fillDatalist();
 draw();
 })();
