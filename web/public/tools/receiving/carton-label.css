@@ -17,3 +17,6 @@
 .label-barcode{border-left:0;box-shadow:none;margin-top:0;padding:4mm 4mm 3mm;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden}
 .label-barcode .bc{width:100%;height:18mm;margin:0;display:block}
 .label-barcode .bc-number{text-align:center;font-size:14pt;line-height:1.05;margin-top:2mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Barcode sits right under the line (not centred) so it keeps ~15 mm clear of the bottom edge when a thermal printer feeds a little low. */
+.label-barcode{justify-content:flex-start!important;padding:3mm 4mm 0!important}
+.label-ref{align-self:start;padding-top:6mm!important}
