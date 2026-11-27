@@ -1,0 +1,381 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ใบส่งสาขา IT City</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/gv-header.css">
+<style>
+:root{
+ --bg:#f7f8fa;--surface:#fff;--ink:#18232b;--ink-2:#3b4954;--muted:#64748b;--faint:#94a3b8;--line:#e5e9ed;--line-2:#d5dbe1;
+ --accent:#185c45;--accent-2:#124a37;--soft:#e8f2ed;--soft-2:#f4f9f6;--navy:#18364c;--navy-ink:#aebfcc;
+ --warn:#7a5600;--warn-bg:#fff6dc;--warn-line:#ecd38a;--bad:#9b2a22;--bad-bg:#fdecea;--head:#f3f5f7;
+ --r:12px;--shadow:0 1px 2px rgba(24,35,43,.05),0 8px 24px -12px rgba(24,35,43,.12);
+}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 Sarabun,"Noto Sans Thai","Segoe UI",sans-serif}
+::selection{background:var(--soft);color:var(--accent-2)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.app-header{display:flex;align-items:center;gap:14px}
+.app-header img{height:40px;width:auto}
+.app-header h1{margin:0;font-size:21px;line-height:1.35;font-weight:700}
+.app-header span{font-size:14px}
+main{padding:20px 24px 56px;max-width:1760px;margin:0 auto}
+
+/* sources */
+.sources{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.src{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);transition:border-color .15s,background .15s}
+.src.drag{border-color:var(--accent);background:var(--soft-2)}
+.src.empty{border-style:dashed;border-color:var(--line-2);box-shadow:none}
+.src .ic{width:44px;height:44px;border-radius:11px;background:var(--soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.src.empty .ic{background:#eef1f4;color:var(--muted)}
+.src .ic svg.i{width:22px;height:22px}
+.src .tx{min-width:0;flex:1}
+.src .lb{font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.4}
+.src .fn{font-weight:700;overflow-wrap:anywhere;line-height:1.4}
+.src .mt{font-size:13px;color:var(--muted)}
+.src .mt b{color:var(--ink-2);font-weight:700;font-variant-numeric:tabular-nums}
+.src .mt.bad{color:var(--bad);font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,box-shadow .15s}
+.btn:hover{background:var(--soft-2);border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 16px -6px rgba(24,92,69,.55)}
+.btn.pri:hover{background:var(--accent-2)}
+.btn[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
+.btn .n{background:rgba(255,255,255,.18);border-radius:999px;padding:0 8px;font-size:13px;font-variant-numeric:tabular-nums}
+
+/* summary bar */
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:22px 0 12px}
+.ttl{display:flex;align-items:baseline;gap:10px;margin-right:6px}
+.ttl h2{margin:0;font-size:19px;line-height:1.35}
+.ttl span{color:var(--muted);font-size:14px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 12px 5px 9px;font-weight:600;font-size:13.5px;font-variant-numeric:tabular-nums;border:0;font-family:inherit;line-height:1.3}
+.pill.ok{background:var(--soft);color:var(--accent)}
+.pill.w{background:var(--warn-bg);color:var(--warn);cursor:pointer}
+.pill.w:hover{box-shadow:inset 0 0 0 1px var(--warn-line)}
+.pill svg.i{width:16px;height:16px}
+.sp{flex:1}
+
+/* empty state */
+.empty-state{background:var(--surface);border:1px dashed var(--line-2);border-radius:var(--r);padding:44px 20px;text-align:center;color:var(--muted);margin-top:22px}
+.empty-state b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+
+/* table */
+.tw{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:auto;max-height:calc(100vh - 240px)}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
+thead th{position:sticky;z-index:2;background:var(--head);text-align:left;white-space:nowrap}
+thead tr.grp th{top:0;height:30px;padding:0 12px;font-size:12px;font-weight:700;color:#4f5d6b;border-bottom:1px solid var(--line)}
+thead tr.grp th+th{border-left:1px solid var(--line)}
+thead tr.cols th{top:30px;padding:6px 10px 8px;font-size:12.5px;font-weight:700;color:var(--ink-2);line-height:1.3;border-bottom:1px solid var(--line-2);vertical-align:bottom}
+thead th .c{display:block;font-size:10.5px;font-weight:700;color:#5b6878;letter-spacing:.04em}
+thead th.gs,td.gs{border-left:1px solid var(--line)}
+thead tr th.key{left:0;z-index:4;background:var(--accent);color:#fff}
+thead tr.grp th.key{background:var(--accent-2);color:#cfe6dc}
+thead tr.cols th.key{color:#fff}
+thead th.key .c{color:#a7d3c1}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.5;white-space:nowrap;font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:0}
+tbody tr{transition:background .12s}
+tbody tr:hover td{background:var(--soft-2)}
+td.key{position:sticky;left:0;z-index:1;background:#fbfdfc;border-right:1px solid var(--line);min-width:200px;max-width:230px;white-space:normal}
+tbody tr:hover td.key{background:#eef6f2}
+.code{display:flex;align-items:center;gap:7px;font-weight:800;font-size:15.5px;color:var(--accent-2);line-height:1.35}
+.code svg.i{width:16px;height:16px;color:var(--accent)}
+.code .sw{margin-left:auto;display:grid;place-items:center;width:32px;height:32px;border-radius:8px;border:0;background:transparent;color:var(--faint);cursor:pointer}
+.code .sw:hover{background:var(--soft);color:var(--accent)}
+.code .sw svg.i{width:15px;height:15px;color:inherit}
+.from{display:block;color:var(--muted);font-size:12px;line-height:1.4;margin-top:1px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{display:inline-block;margin-top:3px;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.5}
+.tag.dup{background:var(--soft);color:var(--accent)}
+.tag.near{background:var(--warn-bg);color:var(--warn)}
+.tag.mine{background:#e8eef6;color:var(--navy)}
+td.addr{white-space:normal;min-width:280px;width:32%;color:var(--ink-2)}
+td.addr b{color:var(--ink);font-weight:700}
+td.r{text-align:right}
+td.ord{color:var(--muted);font-size:12.5px;white-space:normal;min-width:130px}
+td.muted{color:var(--faint)}
+td.t2 small{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+td.in{padding:6px;background:#fcfdfd}
+input.cell{width:100%;min-width:66px;height:36px;border:1px dashed var(--line-2);border-radius:8px;background:transparent;font:inherit;font-variant-numeric:tabular-nums;padding:0 9px;color:var(--ink);transition:border-color .15s,background .15s,box-shadow .15s}
+input.cell:hover{border-style:solid;border-color:#b9c4cd;background:#fff}
+input.cell:focus{outline:none;border-style:solid;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(24,92,69,.14)}
+input.cell:not(:placeholder-shown){border-style:solid;background:#fff}
+input.box{min-width:52px;max-width:60px;text-align:center;font-weight:700}
+input.cell::placeholder{color:#b6c0c9}
+input.codein{min-width:0;width:100%;height:40px;border:1.5px solid var(--warn-line);border-radius:9px;background:#fff;font:inherit;font-weight:700;padding:0 10px}
+input.codein:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(24,92,69,.14)}
+.codehelp{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.35}
+tr.need td{background:#fffcf3}
+tr.need td.key{background:var(--warn-bg)}
+tr.need:hover td{background:#fff8e6}
+.need-h{display:flex;align-items:center;gap:6px;color:var(--warn);font-weight:700;font-size:13px;line-height:1.35;margin-bottom:6px}
+.need-h svg.i{width:16px;height:16px}
+td.hint{white-space:normal;color:var(--warn);font-size:13px}
+@keyframes flash{from{background:#fff1c2}}
+tr.flash td{animation:flash .9s ease-out}
+
+.foot{display:flex;flex-wrap:wrap;gap:6px 20px;color:var(--muted);font-size:13px;margin-top:12px}
+.foot span{display:inline-flex;align-items:center;gap:7px}
+.foot i{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px dashed var(--line-2);background:#fff}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;font-weight:600;box-shadow:0 10px 30px -10px rgba(0,0,0,.4);transition:opacity .2s,transform .2s;z-index:50;max-width:90vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.bad{background:var(--bad)}
+.tw::-webkit-scrollbar{width:10px;height:10px}.tw::-webkit-scrollbar-thumb{background:#cdd5dc;border-radius:10px;border:2px solid #fff}.tw::-webkit-scrollbar-track{background:transparent}
+@media (max-width:900px){.sources{grid-template-columns:1fr}main{padding:16px 16px 40px}.sp{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></symbol>
+ <symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v7h14v-7"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></symbol>
+ <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5v.5"/></symbol>
+ <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5"/><path d="M5 20h14"/></symbol>
+ <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></symbol>
+ <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+</svg>
+<a class="back" href="/">&lsaquo; กลับหน้าหลัก</a>
+<header class="app-header"><img src="../shared/gv-mark.png" alt="Gadget Villa"><div><h1>ใบส่งสาขา IT City</h1><span>อัปไฟล์ออเดอร์ BigSeller ระบบหารหัสร้านกับที่อยู่ให้ แล้วดาวน์โหลดฟอร์ม ORDER ส่งขนส่ง</span></div></header>
+<main>
+ <section class="sources" aria-label="ไฟล์ที่ใช้">
+  <div class="src empty" id="srcOrd" data-kind="orders"><div class="ic"><svg class="i"><use href="#i-file"/></svg></div><div class="tx"><div class="lb">ไฟล์ออเดอร์จาก BigSeller</div><div class="fn" id="ordName">ยังไม่ได้เลือกไฟล์</div><div class="mt" id="ordMeta">ส่งออกรายการคำสั่งซื้อจาก BigSeller (.xlsx) แล้วลากมาวางตรงนี้</div></div><button class="btn" type="button" data-pick="orders" id="ordBtn">เลือกไฟล์</button></div>
+  <div class="src empty" id="srcData" data-kind="data"><div class="ic"><svg class="i"><use href="#i-store"/></svg></div><div class="tx"><div class="lb">ที่อยู่ร้าน · ชีต DATA</div><div class="fn" id="dataName">ยังไม่มีข้อมูลร้าน</div><div class="mt" id="dataMeta">ไฟล์ DATA ORDER GADGETVILLA IT CITY (มีชีต DATA) · อัปครั้งเดียว ระบบจำไว้</div></div><button class="btn" type="button" data-pick="data" id="dataBtn">อัปไฟล์ DATA</button></div>
+ </section>
+ <input type="file" id="file" accept=".xlsx,.xls" hidden>
+
+ <div class="empty-state" id="empty"><b>อัปไฟล์ออเดอร์ BigSeller เพื่อเริ่ม</b>ระบบอ่านชื่อสาขาจากคอลัมน์ "ชื่อโลจิสติกส์" แล้วหารหัสร้านกับที่อยู่จากชีต DATA ให้</div>
+
+ <div id="work" hidden>
+ <div class="bar">
+  <div class="ttl"><h2>ฟอร์ม ORDER</h2><span id="shipDate"></span></div>
+  <span class="pill ok" id="cOk"></span><button class="pill w" id="cW" type="button" title="ไปที่สาขาที่ยังไม่มีรหัส"></button>
+  <span class="sp"></span>
+  <button class="btn" type="button" id="copy"><svg class="i"><use href="#i-copy"/></svg>คัดลอกรหัสร้าน</button>
+  <button class="btn pri" type="button" id="dl"><svg class="i"><use href="#i-down"/></svg>ดาวน์โหลดฟอร์ม ORDER<span class="n" id="dlN"></span></button>
+ </div>
+ <div class="tw" role="region" aria-label="ตารางฟอร์ม ORDER" tabindex="0">
+ <table>
+  <thead>
+   <tr class="grp"><th class="key">ร้าน</th><th colspan="5">ที่อยู่ปลายทาง</th><th class="gs" colspan="4">ผู้ติดต่อ</th><th class="gs" colspan="4">ข้อมูลส่งของ</th></tr>
+   <tr class="cols">
+    <th class="key"><span class="c">A</span>รหัสร้าน</th><th><span class="c">B</span>ที่อยู่</th><th><span class="c">C</span>ถนน*แขวง</th><th><span class="c">D</span>เขต</th><th><span class="c">E</span>จังหวัด</th><th><span class="c">F</span>รหัสไปรษณีย์</th>
+    <th class="gs"><span class="c">G</span>Zone</th><th><span class="c">H</span>ชื่อผู้ติดต่อ</th><th><span class="c">I</span>เบอร์โทร1</th><th><span class="c">J</span>เบอร์โทร2 / Fax</th>
+    <th class="gs"><span class="c">K</span>BOX</th><th><span class="c">L</span>น้ำหนัก</th><th><span class="c">M</span>Client code</th><th><span class="c">N</span>Order No.</th>
+   </tr>
+  </thead>
+  <tbody id="tb"></tbody>
+ </table>
+ </div>
+ <div class="foot">
+  <span>คอลัมน์ A–N เรียงเหมือนชีต ORDER เดิม ไฟล์ที่ดาวน์โหลดได้หน้าตาเดียวกัน</span>
+  <span><i></i>กรอบเส้นประ กรอกเองได้</span>
+  <span>สาขาที่ DATA มี 2 รหัส รวมเป็นแถวเดียว ใช้รหัสใหม่กว่า เบอร์ของอีกรหัสอยู่ช่องเบอร์โทร2</span>
+ </div>
+ </div>
+</main>
+<datalist id="codes"></datalist>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/tools/shared/back-link.js"></script>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ic=id=>`<svg class="i" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const DATA_KEY='gv-itcity-ship-data',PICK_KEY='gv-itcity-ship-pick';
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}}};
+let DATA=store.get(DATA_KEY,null);   // {file, savedAt, rows:[{code,name,addr,sub,dist,prov,zip,contact,tel1,tel2}]}
+let PICKS=store.get(PICK_KEY,{});    // branch name -> code chosen by hand
+let ORD=null;                         // {file, bills, lines, date, groups:[{name, orders:[]}]}
+let ROWS=[];
+let pickKind='orders';
+function toast(t,bad){const e=$('toast');e.textContent=t;e.className='toast on'+(bad?' bad':'');clearTimeout(toast.t);toast.t=setTimeout(()=>e.className='toast',3200)}
+
+/* ---------- Excel reading ---------- */
+function loadXlsx(){if(window.XLSX)return Promise.resolve();return new Promise((ok,bad)=>{const s=document.createElement('script');s.src='/tools/receiving/xlsx.full.min.js';s.onload=ok;s.onerror=()=>bad(Error('โหลดตัวอ่าน Excel ไม่สำเร็จ ลองรีเฟรชหน้า'));document.head.append(s)})}
+const cellText=v=>v==null?'':String(v).trim();
+const stripDate=s=>s.replace(/\s*\d{1,2}-\d{1,2}-\d{4}\s*$/,'').trim();
+function sheetRows(ws){return XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false})}
+function readData(wb){
+ for(const n of wb.SheetNames){
+  const rows=sheetRows(wb.Sheets[n]),hi=rows.findIndex(r=>r.some(c=>/รหัสร้าน/.test(c)));
+  if(hi<0)continue;
+  const h=rows[hi].map(cellText),col=re=>h.findIndex(c=>re.test(c));
+  const C={code:col(/รหัสร้าน/),name:col(/ชื่อร้าน/),addr:col(/^ที่อยู่/),sub:col(/แขวง|ตำบล/),dist:col(/^เขต|อำเภอ/),prov:col(/จังหวัด/),zip:col(/ไปรษณีย์/),contact:col(/ผู้ติดต่อ/),tel1:col(/เบอร์โทร\s*1/),tel2:col(/เบอร์โทร\s*2/)};
+  if(C.code<0||C.name<0)continue;
+  const out=rows.slice(hi+1).map(r=>{const o={};for(const k in C)o[k]=C[k]>=0?cellText(r[C[k]]):'';return o}).filter(o=>/^[A-Z]{2,}\d+$/i.test(o.code));
+  if(out.length)return out;
+ }
+ return null;
+}
+function readOrders(wb){
+ for(const n of wb.SheetNames){
+  const rows=sheetRows(wb.Sheets[n]),hi=rows.findIndex(r=>r.some(c=>cellText(c)==='ชื่อโลจิสติกส์'));
+  if(hi<0)continue;
+  const h=rows[hi].map(cellText),cl=h.indexOf('ชื่อโลจิสติกส์'),co=h.indexOf('หมายเลขคำสั่งซื้อ');
+  const map=new Map();let lines=0,date='';const bills=new Set();
+  for(const r of rows.slice(hi+1)){
+   const raw=cellText(r[cl]).split(/\r?\n/)[0].trim(),ord=co>=0?cellText(r[co]):'';
+   if(!raw&&!ord)continue;
+   lines++;if(ord)bills.add(ord);
+   const m=raw.match(/(\d{1,2})-(\d{1,2})-(\d{4})\s*$/);if(m&&!date)date=m;
+   const name=stripDate(raw)||'(ไม่มีชื่อสาขา)';
+   if(!map.has(name))map.set(name,new Set());if(ord)map.get(name).add(ord);
+  }
+  return {lines,bills:bills.size,date,groups:[...map].map(([name,o])=>({name,orders:[...o]}))};
+ }
+ return null;
+}
+
+/* ---------- matching ---------- */
+const thaiNorm=s=>String(s||'').replace(/เเ/g,'แ').replace(/\s+/g,' ').trim();
+function norm(s){
+ return thaiNorm(stripDate(String(s||''))).replace(/ไอที\s*ซิตี้|ไอทีซิตี้|it\s*city|^\s*เอช|^\s*เอซ|ace\s*@|สาขา|ชั้น\s*\d+|[@\s.]/gi,'').toLowerCase();
+}
+function dice(a,b){if(a===b)return 1;if(a.length<2||b.length<2)return 0;const g=s=>{const m=new Map();for(let i=0;i<s.length-1;i++){const k=s.slice(i,i+2);m.set(k,(m.get(k)||0)+1)}return m};const A=g(a),B=g(b);let n=0;for(const[k,v]of A)n+=Math.min(v,B.get(k)||0);return 2*n/(a.length+b.length-2)}
+const pool=()=>(DATA?.rows||[]).filter(r=>/^IT/i.test(r.code));
+const byCode=c=>(DATA?.rows||[]).find(r=>r.code.toUpperCase()===String(c||'').trim().toUpperCase());
+function match(name){
+ const P=pool(),n=norm(name);
+ if(!P.length||!n)return{status:'none',cands:[]};
+ const eq=P.filter(r=>norm(r.name)===n);
+ if(eq.length){
+  const raw=eq.filter(r=>thaiNorm(r.name)===thaiNorm(name));
+  // one DATA row with the exact same text wins; otherwise the same branch is listed under several codes -> one row
+  return{status:'ok',cands:raw.length===1?raw:eq};
+ }
+ const sc=P.map(r=>({r,s:dice(n,norm(r.name))})).sort((a,b)=>b.s-a.s);
+ if(sc[0].s>=.82)return{status:'near',cands:sc.filter(x=>x.s===sc[0].s).map(x=>x.r)};
+ return{status:'none',cands:[]};
+}
+const digits=t=>String(t||'').replace(/\D/g,'').replace(/^66/,'0');
+function buildRows(){
+ ROWS=(ORD?.groups||[]).map(g=>{
+  const m=match(g.name),old=ROWS.find(x=>x.name===g.name);
+  const r={name:g.name,orders:g.orders,status:m.status,cands:m.cands,box:old?.box??'1',zone:old?.zone??'',weight:old?.weight??'',client:old?.client??'',manual:false};
+  const hand=PICKS[g.name]&&byCode(PICKS[g.name]);
+  if(hand){r.code=hand.code;r.manual=true}
+  else if(m.cands.length)r.code=m.cands.map(x=>x.code).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).pop();
+  else r.code='';
+  return r;
+ });
+}
+
+/* ---------- address: drop ตำบล/อำเภอ/จังหวัด/zip that have their own columns ---------- */
+function shortAddr(c){
+ const a=String(c.addr||'');let cut=a.length;
+ for(const p of['(ต\\.|ตำบล|แขวง)\\s*','(อ\\.|อำเภอ|เขต)\\s*','(จ\\.|จังหวัด)\\s*']){const m=a.match(new RegExp('(?<![\\u0E00-\\u0E7F])'+p+'[\\u0E00-\\u0E7F]'));if(m)cut=Math.min(cut,m.index)}
+ for(const v of[c.sub,c.dist]){const t=String(v||'').trim();if(t.length>2){const i=a.lastIndexOf(t);if(i>0)cut=Math.min(cut,i)}}
+ const z=a.match(/\b\d{5}\s*$/);if(z)cut=Math.min(cut,z.index);
+ const b=a.search(/กรุงเทพ/);if(b>=0)cut=Math.min(cut,b);
+ return a.slice(0,cut).replace(/[\s,]+$/,'').trim();
+}
+function view(r){
+ const c=byCode(r.code);if(!c)return null;
+ let tel2=c.tel2,from='';
+ if(r.cands.length>1&&r.cands.includes(c)){const o=r.cands.find(x=>x!==c&&digits(x.tel1)&&digits(x.tel1)!==digits(c.tel1));if(o){tel2=o.tel1;from=o.code}}
+ return{c,addr:(c.name+' '+shortAddr(c)).trim(),tel2,from};
+}
+
+/* ---------- render ---------- */
+const ship=(r,i)=>`<td class="in gs"><input class="cell box" type="number" min="0" data-f="box" data-i="${i}" value="${esc(r.box)}" aria-label="BOX ${esc(r.name)}"></td><td class="in"><input class="cell" data-f="weight" data-i="${i}" value="${esc(r.weight)}" placeholder="กก." aria-label="น้ำหนัก ${esc(r.name)}"></td><td class="in"><input class="cell" data-f="client" data-i="${i}" value="${esc(r.client)}" aria-label="Client code ${esc(r.name)}"></td><td class="ord">${esc(r.orders.join(', '))}</td>`;
+const zone=(r,i)=>`<td class="in gs"><input class="cell" data-f="zone" data-i="${i}" value="${esc(r.zone)}" aria-label="Zone ${esc(r.name)}"></td>`;
+function row(r,i){
+ const v=view(r);
+ if(!v||r.editing){
+  const hint=r.cands.length?`ใกล้เคียง: ${r.cands.map(x=>x.code+' '+x.name).join(' / ')}`:'ไม่พบสาขานี้ในชีต DATA';
+  return `<tr class="need" id="r${i}"><td class="key"><div class="need-h">${ic('alert')}${v?'เปลี่ยนรหัสร้าน':'ใส่รหัสร้าน'}</div><input class="codein" list="codes" data-code="${i}" value="${esc(r.editing?r.code:'')}" placeholder="พิมพ์รหัส หรือชื่อสาขา" aria-label="รหัสร้าน ${esc(r.name)}"><div class="codehelp">Enter เพื่อใช้ · Esc ยกเลิก</div><span class="from" title="${esc(r.name)}">${esc(r.name)}</span></td>
+   <td class="hint" colspan="5">${esc(hint)}</td>${zone(r,i)}<td class="muted" colspan="3">ขึ้นหลังใส่รหัส</td>${ship(r,i)}</tr>`;
+ }
+ const {c}=v;
+ const tag=r.manual?'<span class="tag mine">เลือกเอง</span>':r.status==='near'?'<span class="tag near">ชื่อใกล้เคียง · ตรวจ</span>':r.cands.length>1?`<span class="tag dup">รวม ${r.cands.map(x=>x.code).join(' + ')}</span>`:'';
+ return `<tr id="r${i}"><td class="key"><div class="code">${ic('check')}${esc(c.code)}<button class="sw" type="button" data-edit="${i}" title="เปลี่ยนรหัสร้าน" aria-label="เปลี่ยนรหัสร้าน ${esc(r.name)}">${ic('edit')}</button></div><span class="from" title="${esc(r.name)}">${esc(r.name)}</span>${tag}</td>
+  <td class="addr"><b>${esc(c.name)}</b> ${esc(shortAddr(c))}</td><td>${esc(c.sub)}</td><td>${esc(c.dist)}</td><td>${esc(c.prov)}</td><td class="r">${esc(c.zip)}</td>
+  ${zone(r,i)}<td>${esc(c.contact)}</td><td>${esc(c.tel1)}</td>${v.tel2?`<td class="t2">${esc(v.tel2)}${v.from?`<small>จาก ${esc(v.from)}</small>`:''}</td>`:'<td class="muted">–</td>'}${ship(r,i)}</tr>`;
+}
+const TH_MON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function draw(flash){
+ // sources
+ $('srcData').classList.toggle('empty',!DATA);
+ if(DATA){$('dataName').textContent=DATA.file;$('dataMeta').innerHTML=`ใช้ไฟล์ที่จำไว้ · สาขา IT <b>${pool().length}</b> แห่ง`;$('dataBtn').textContent='อัปไฟล์ DATA ใหม่'}
+ $('srcOrd').classList.toggle('empty',!ORD);
+ if(ORD){$('ordName').textContent=ORD.file;$('ordMeta').innerHTML=`<b>${ORD.bills}</b> บิล · <b>${ORD.groups.length}</b> สาขา · อ่านสาขาจากคอลัมน์ ชื่อโลจิสติกส์`;$('ordBtn').textContent='เปลี่ยนไฟล์'}
+ const show=!!(ORD&&DATA);$('work').hidden=!show;$('empty').hidden=show;
+ if(!show){$('empty').innerHTML=!ORD?'<b>อัปไฟล์ออเดอร์ BigSeller เพื่อเริ่ม</b>ลากไฟล์มาวางที่กล่องด้านบน หรือกด เลือกไฟล์':'<b>อัปไฟล์ DATA ก่อน</b>ใช้ไฟล์ DATA ORDER GADGETVILLA IT CITY ที่มีชีต DATA อัปครั้งเดียว ระบบจำไว้ใช้รอบต่อไป';return}
+ const d=ORD.date;$('shipDate').textContent=d?`ส่ง ${+d[1]} ${TH_MON[+d[2]-1]} ${+d[3]+543}`:'';
+ $('tb').innerHTML=ROWS.map(row).join('');
+ const w=ROWS.filter(r=>!byCode(r.code)).length;
+ $('cOk').innerHTML=`${ic('check')}พร้อมส่ง ${ROWS.length-w} สาขา`;
+ $('cW').innerHTML=`${ic('alert')}ต้องใส่รหัส ${w} สาขา`;$('cW').hidden=!w;
+ $('dlN').textContent=`${ROWS.length} สาขา`;
+ if(flash!=null)$('r'+flash)?.classList.add('flash');
+ const f=document.querySelector('[data-code]');if(f&&ROWS.some(r=>r.editing))f.focus();
+}
+function fillDatalist(){$('codes').innerHTML=pool().map(r=>`<option value="${esc(r.code)}">${esc(r.name)}</option>`).join('')}
+
+/* ---------- files ---------- */
+async function handle(file,want){
+ try{
+  await loadXlsx();
+  const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+  const ord=readOrders(wb),data=ord?null:readData(wb);
+  if(ord){
+   if(want==='data')toast('ไฟล์นี้เป็นออเดอร์ BigSeller ใช้เป็นไฟล์ออเดอร์ให้แล้ว');
+   if(!ord.groups.length)throw Error('ไฟล์ออเดอร์นี้ไม่มีรายการ');
+   ORD={file:file.name,...ord};buildRows();draw();return;
+  }
+  if(data){
+   DATA={file:file.name,savedAt:Date.now(),rows:data};
+   if(!store.set(DATA_KEY,DATA))toast('จำไฟล์ DATA ไว้ในเครื่องไม่ได้ ต้องอัปใหม่ทุกครั้ง',true);
+   else toast(`จำข้อมูลร้านแล้ว ${pool().length} สาขา IT`);
+   fillDatalist();buildRows();draw();return;
+  }
+  throw Error('ไม่รู้จักไฟล์นี้ · ไฟล์ออเดอร์ต้องมีคอลัมน์ "ชื่อโลจิสติกส์" · ไฟล์ DATA ต้องมีชีตที่มีหัว "รหัสร้าน"');
+ }catch(e){toast(e.message||'อ่านไฟล์ไม่สำเร็จ',true)}
+}
+document.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click',()=>{pickKind=b.dataset.pick;$('file').click()}));
+$('file').addEventListener('change',e=>{const f=e.target.files[0];if(f)handle(f,pickKind);e.target.value=''});
+for(const el of[$('srcOrd'),$('srcData'),$('empty')]){
+ el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag')});
+ el.addEventListener('dragleave',()=>el.classList.remove('drag'));
+ el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag');for(const f of e.dataTransfer.files)handle(f,el.dataset.kind||'orders')});
+}
+
+/* ---------- table interaction ---------- */
+$('tb').addEventListener('click',e=>{const b=e.target.closest('[data-edit]');if(b){const i=+b.dataset.edit;ROWS[i].editing=true;draw()}});
+$('tb').addEventListener('input',e=>{const t=e.target;if(t.dataset.f)ROWS[+t.dataset.i][t.dataset.f]=t.value});
+function applyCode(i,val){
+ const r=ROWS[i],v=String(val||'').trim();
+ const c=byCode(v)||byCode(v.split(/\s/)[0])||pool().find(x=>thaiNorm(x.name)===thaiNorm(v));
+ if(!c){toast(`ไม่พบรหัส "${v}" ในชีต DATA`,true);return}
+ // remembered per branch name, so the next order file for this branch uses the same code
+ r.code=c.code;r.editing=false;r.manual=true;PICKS[r.name]=c.code;
+ store.set(PICK_KEY,PICKS);draw(i);
+}
+$('tb').addEventListener('keydown',e=>{const t=e.target.closest('[data-code]');if(!t)return;const i=+t.dataset.code;
+ if(e.key==='Enter'){e.preventDefault();applyCode(i,t.value)}
+ if(e.key==='Escape'){ROWS[i].editing=false;draw()}});
+$('tb').addEventListener('change',e=>{const t=e.target.closest('[data-code]');if(t&&t.value.trim())applyCode(+t.dataset.code,t.value)});
+$('cW').addEventListener('click',()=>{const t=document.querySelector('tr.need');if(t){t.scrollIntoView({behavior:'smooth',block:'center'});t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash');t.querySelector('input')?.focus({preventScroll:true})}});
+
+/* ---------- outputs ---------- */
+$('copy').addEventListener('click',async()=>{
+ const codes=ROWS.map(r=>byCode(r.code)?.code||'').join('\n');
+ try{await navigator.clipboard.writeText(codes);toast(`คัดลอกรหัสร้าน ${ROWS.length} สาขาแล้ว · วางที่ช่อง A2 ในชีต ORDER`)}catch{toast('คัดลอกไม่ได้ เบราว์เซอร์ไม่อนุญาต',true)}
+});
+$('dl').addEventListener('click',async()=>{
+ if(ROWS.some(r=>!byCode(r.code))){$('cW').click();toast('ใส่รหัสร้านให้ครบก่อนดาวน์โหลด',true);return}
+ try{
+  await loadXlsx();
+  const num=v=>{const n=Number(String(v).replace(/,/g,''));return String(v).trim()!==''&&isFinite(n)?n:String(v||'')};
+  const aoa=[['','ที่อยู่','ถนน*แขวง','เขต','จังหวัด','รหัสไปรษณีย์','Zone','ชื่อผู้ติดต่อ','เบอร์โทร1','เบอร์โทร2 / Fax','BOX','น้ำหนัก','Client code','Order No.']];
+  for(const r of ROWS){const v=view(r),c=v.c;aoa.push([c.code,v.addr,c.sub,c.dist,c.prov,num(c.zip),r.zone,c.contact,c.tel1,v.tel2||'',num(r.box),num(r.weight),r.client,r.orders.join(', ')])}
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[8,70,14,16,14,10,8,16,14,14,6,8,10,20].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'ORDER');
+  const d=ORD.date,tag=d?`${d[1].padStart(2,'0')}.${d[2].padStart(2,'0')}.${String(+d[3]+543).slice(-2)}`:new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb,`ORDER IT CITY ${tag}.xlsx`);
+  toast(`ดาวน์โหลดฟอร์ม ORDER ${ROWS.length} สาขาแล้ว`);
+ }catch(e){toast('สร้างไฟล์ Excel ไม่สำเร็จ: '+(e.message||e),true)}
+});
+
+if(DATA)fillDatalist();
+draw();
+})();
+</script></body></html>
