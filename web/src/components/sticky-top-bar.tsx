@@ -6,6 +6,8 @@ import { useLayoutEffect, useRef, type ReactNode } from "react";
 /** Full-screen app pages (installed PWA) bring their own compact top bar. */
 const APP_ROUTES = ["/m", "/pick/"];
 const isAppRoute = (path: string) => APP_ROUTES.some((r) => path === r || (r.endsWith("/") && path.startsWith(r)));
+/** Pages that are app screens on a phone (own bottom tabs) but keep the site header on desktop. */
+const PHONE_APP_ROUTES = ["/pack", "/pack/"];
 
 /**
  * Pins its children (site header + admin bar) to the top of the viewport
@@ -17,7 +19,9 @@ const isAppRoute = (path: string) => APP_ROUTES.some((r) => path === r || (r.end
  */
 export function StickyTopBar({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  const hidden = isAppRoute(usePathname());
+  const path = usePathname();
+  const hidden = isAppRoute(path);
+  const phoneHidden = PHONE_APP_ROUTES.some((r) => path === r || (r.endsWith("/") && path.startsWith(r)));
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -39,7 +43,7 @@ export function StickyTopBar({ children }: { children: ReactNode }) {
   if (hidden) return null;
 
   return (
-    <div ref={ref} data-site-chrome className="sticky top-0 z-40 bg-bg">
+    <div ref={ref} data-site-chrome className={`sticky top-0 z-40 bg-bg ${phoneHidden ? "max-md:hidden" : ""}`}>
       {children}
     </div>
   );

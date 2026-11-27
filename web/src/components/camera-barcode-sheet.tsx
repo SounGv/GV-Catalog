@@ -9,8 +9,13 @@ type DetectorCtor = {
 };
 
 const WANTED = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "code_93", "itf", "codabar", "qr_code", "data_matrix"];
-/** A piece held under the camera is read many times a second; wait before counting the next one. */
-const COOLDOWN_MS = 1200;
+/**
+ * A piece held under the camera is read many times a second. The same barcode counts again only
+ * after it has left the picture for SAME_CODE_GAP_MS (picker moved to the next piece); a different
+ * barcode counts after NEXT_CODE_MS.
+ */
+const SAME_CODE_GAP_MS = 700;
+const NEXT_CODE_MS = 400;
 
 /**
  * Full-screen phone-camera barcode reader (Chrome on Android has the built-in BarcodeDetector,
@@ -40,6 +45,8 @@ export function CameraBarcodeSheet({
     let timer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
     let lastAt = 0;
+    let lastCode = "";
+    let lastSeenAt = 0;
 
     (async () => {
       const Ctor = (window as unknown as { BarcodeDetector?: DetectorCtor }).BarcodeDetector;
@@ -80,11 +87,16 @@ export function CameraBarcodeSheet({
 
       const tick = async () => {
         if (cancelled) return;
-        if (video.readyState >= 2 && Date.now() - lastAt > COOLDOWN_MS) {
+        if (video.readyState >= 2) {
           const found = await detector.detect(video).catch(() => []);
           const code = found[0]?.rawValue?.trim();
-          if (code && !cancelled) {
-            lastAt = Date.now();
+          const now = Date.now();
+          const stillSamePiece = code === lastCode && now - lastSeenAt < SAME_CODE_GAP_MS;
+          if (code && code === lastCode) lastSeenAt = now;
+          if (code && !cancelled && !stillSamePiece && now - lastAt > NEXT_CODE_MS) {
+            lastAt = now;
+            lastCode = code;
+            lastSeenAt = now;
             navigator.vibrate?.(60);
             setFlash(true);
             setTimeout(() => setFlash(false), 250);
@@ -118,7 +130,7 @@ export function CameraBarcodeSheet({
         {error ? (
           <p className="absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-xl bg-white p-4 text-center text-sm font-semibold text-red-700">{error}</p>
         ) : (
-          <p className="absolute inset-x-0 top-4 text-center text-sm text-white/90 drop-shadow">เล็งบาร์โค้ดให้อยู่ในกรอบ · สแกนต่อได้เรื่อย ๆ</p>
+          <p className="absolute inset-x-0 top-4 px-4 text-center text-sm text-white/90 drop-shadow">เล็งบาร์โค้ดให้อยู่ในกรอบ · นับ 1 ชิ้นต่อครั้ง ยกออกแล้วเล็งชิ้นถัดไป</p>
         )}
         {status && !error ? (
           <p className={`absolute inset-x-3 bottom-3 rounded-xl px-3 py-2 text-sm font-semibold text-white ${tone[status.tone]}`}>{status.text}</p>

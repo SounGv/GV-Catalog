@@ -42,7 +42,17 @@ export default async function PackJobsPage({ searchParams }: { searchParams: Pro
   return (
     <main className="mx-auto flex max-w-[1100px] flex-col gap-3 px-3 py-4 md:gap-4 md:px-4 md:py-8">
       <div>
-        <h1 className="text-lg font-semibold md:text-xl">รายการ PO · งานหยิบและยิงลงลัง</h1>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-lg font-semibold md:text-xl">
+            รายการ PO<span className="hidden md:inline"> · งานหยิบและยิงลงลัง</span>
+          </h1>
+          <Link
+            href="/tools/po-trace/index.html#upload"
+            className="flex h-10 shrink-0 items-center rounded-full bg-accent px-4 text-sm font-semibold text-white md:hidden"
+          >
+            ＋ เพิ่ม PO
+          </Link>
+        </div>
         <p className="hidden text-base text-muted md:block">
           สร้างงานจากหน้า{" "}
           <a href="/tools/po-trace/index.html" className="text-accent underline">
@@ -169,12 +179,6 @@ export default async function PackJobsPage({ searchParams }: { searchParams: Pro
         </>
       )}
 
-      <Link
-        href="/tools/po-trace/index.html#upload"
-        className="fixed right-3.5 bottom-[84px] z-30 flex h-11 items-center gap-1 rounded-full bg-accent px-4 text-sm font-semibold text-white shadow-[0_6px_18px_rgb(24_92_69/0.35)] md:hidden"
-      >
-        ＋ เพิ่ม PO
-      </Link>
       <AppBottomNav active={filter === "picking" ? "pick" : "po"} />
     </main>
   );

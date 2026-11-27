@@ -76,8 +76,19 @@
     BLUE: "BLUE", BL: "BLUE", BLU: "BLUE",
     PINK: "PINK", PK: "PINK", PNK: "PINK",
     RED: "RED", PURPLE: "PURPLE", GREEN: "GREEN", YELLOW: "YELLOW", ORANGE: "ORANGE",
-    SILVER: "SILVER", GOLD: "GOLD", BROWN: "BROWN",
+    SILVER: "SILVER", GOLD: "GOLD", BROWN: "BROWN", PR: "PURPLE",
   };
+  /** Two-colour SKU segment, main colour first: WHPR → [WHITE, PURPLE], PRWH → [PURPLE, WHITE]. */
+  function segColors(seg) {
+    for (const cut of [2, 3]) {
+      const a = COLOR_WORDS[seg.slice(0, cut)];
+      const b = COLOR_WORDS[seg.slice(cut)];
+      if (a && b && seg.length - cut >= 2) return [a, b];
+    }
+    return null;
+  }
+  // Words that sit before "(X-SW)" but are not a switch name: "WIRELESS (BROWN-SW)".
+  const NOT_SWITCH = new Set(["WIRELESS", "MECHANICAL", "MAGNETIC", "GAMING", "KEYBOARD", "EDITION", "PRO"]);
   const COMBO_COLORS = { BLACKPINK: ["BLACK", "PINK"] };
   // Product type word in a PO line → the type segment of a Fantech SKU (FAN-<TYPE>-…).
   const TYPE_WORDS = {
@@ -103,6 +114,7 @@
   function attrs(text) {
     let t = norm(text).replace(/&/g, " ");
     const sw = new Set();
+    const order = [];
     t = t.replace(/\b([A-Z]+(?:\s+[A-Z]+)?)\s*-?\s*(?:SW|SV|SWITCH)\b/g, (_, name) => {
       const n = name.trim().split(/\s+/);
       if (n.length === 1) {
@@ -113,6 +125,8 @@
       // "BERRY FROST-SW" → switch "BERRY FROST"
       if (COLOR_WORDS[n[1]]) {
         sw.add(COLOR_WORDS[n[1]]);
+        // JIB writes the named switch before its type: "TARO (BLUE-SW)" — TARO is the switch too.
+        if (!COLOR_WORDS[n[0]] && !NOT_SWITCH.has(n[0])) sw.add(n[0]);
         return ` ${n[0]} `;
       }
       if (COLOR_WORDS[n[0]]) {
@@ -126,10 +140,12 @@
     const rest = new Set();
     for (const w of words(t)) {
       if (COMBO_COLORS[w]) COMBO_COLORS[w].forEach((c) => colors.add(c));
-      else if (COLOR_WORDS[w] && w.length >= 3) colors.add(COLOR_WORDS[w]);
-      else rest.add(w);
+      else if (COLOR_WORDS[w] && w.length >= 3) {
+        colors.add(COLOR_WORDS[w]);
+        order.push(COLOR_WORDS[w]);
+      } else rest.add(w);
     }
-    return { colors, sw, rest };
+    return { colors, sw, rest, order };
   }
 
   function queryType(ws) {
@@ -142,7 +158,13 @@
     const a = attrs(item.name);
     // Colours from the name; fall back to SKU segments when the name gives none (WHPR, BKPK …).
     // When the name names a switch, the last SKU segment is that switch (…-GEAR5-WH = white switch), not a colour.
-    if (!a.colors.size) for (const s of a.sw.size ? segs.slice(0, -1) : segs) if (COLOR_WORDS[s]) a.colors.add(COLOR_WORDS[s]);
+    if (!a.colors.size)
+      for (const s of a.sw.size ? segs.slice(0, -1) : segs) {
+        if (COLOR_WORDS[s]) a.colors.add(COLOR_WORDS[s]);
+        else segColors(s)?.forEach((c) => a.colors.add(c));
+      }
+    // Which colour comes first matters for two-tone items (WHITE&PURPLE ≠ PURPLE-WHITE); the SKU segment is the authority.
+    const pair = segs.map(segColors).find(Boolean) || (a.order.length >= 2 ? a.order : null);
     let score = 3 * modelHits;
     let conflict = false;
     // A UGREEN number is the SKU itself: a colour word that differs ("Black" vs "Alu Gray") is the
@@ -157,6 +179,7 @@
         conflict = true;
       }
     }
+    if (pair && q.order.length >= 2 && new Set(q.order).has(pair[1])) score += q.order[0] === pair[0] ? 1.5 : -1.5;
     if (q.sw.size && a.sw.size) {
       const same = [...q.sw].some((s) => a.sw.has(s));
       if (same) score += 2;
@@ -170,6 +193,11 @@
     // SKU parts this line says nothing about (another character, colour or edition) count against it.
     for (const s of segs.slice(2)) {
       if (q.models.has(s) || q.rest.has(s)) continue;
+      // OCR glues words together ("ONE PIECELUFFY"): a 4+ letter SKU part inside the squashed line still counts.
+      if (s.length >= 4 && /[A-Z]{3}/.test(s) && q.compact.includes(s)) {
+        score += 1;
+        continue;
+      }
       if (COLOR_WORDS[s]) {
         if (!q.colors.size) score -= 0.25;
         continue;
@@ -237,7 +265,7 @@
     }
     if (!cands.size) return null;
 
-    const q = { ...attrs(text), models, type: queryType(ws) };
+    const q = { ...attrs(text), models, type: queryType(ws), compact: norm(text).replace(/[^0-9A-Z]/g, "") };
     for (const m of models) q.rest.delete(m);
     const ranked = [...cands.values()]
       .map(({ item, hits }) => {
@@ -276,13 +304,29 @@
 
   function matchLine(index, rawSku, rawName) {
     const skuKey = norm(rawSku);
-    const name = String(rawName || "").trim();
+    // Photo OCR reads a 1 at the end of a model code as "!" (WMCX0! → WMCX01).
+    const name = String(rawName || "").replace(/([A-Z]\d*)!(?=[^!]|$)/gi, "$11").trim();
     if (skuKey && index.bySku.has(skuKey)) {
       const hit = index.bySku.get(skuKey);
       return { status: "exact", conf: 0.99, sku: hit.sku, name: hit.name, reason: "SKU ตรงกับแค็ตตาล็อก" };
     }
     if (skuKey && index.byCode.has(skuKey)) {
       const hit = index.byCode.get(skuKey);
+      // A remembered customer code can be wrong (saved against the wrong model once). When the line's own
+      // name clearly points at another SKU, trust the name and make staff confirm — confirming remaps the code.
+      const byName = name ? matchByModel(index, rawSku, name) : null;
+      const nameSkus = byName ? [byName.sku, ...(byName.alts || []).map((a) => a.sku)] : [];
+      const contradicts = byName && ((byName.status === "model" && byName.sku !== hit.sku) || !nameSkus.includes(hit.sku));
+      if (contradicts) {
+        return {
+          status: "ambiguous",
+          conf: 0.6,
+          sku: byName.sku,
+          name: byName.name,
+          reason: `รหัสลูกค้า ${rawSku} เคยผูกกับ ${hit.sku} แต่ชื่อในใบตรงกับ ${byName.sku || "รุ่นอื่น"} — ตรวจแล้วยืนยัน`,
+          alts: [hit, ...(byName.alts || [])],
+        };
+      }
       return { status: "barcode", conf: 0.97, sku: hit.sku, name: hit.name, reason: "บาร์โค้ดลูกค้าตรงกับระบบ" };
     }
     if (name && index.bySku.has(norm(name))) {

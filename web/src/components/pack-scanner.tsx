@@ -559,7 +559,11 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
   // The scan box is disabled while a branch loads, so focusing it from the click
   // handler is too early; focus it the moment it becomes usable instead.
   useEffect(() => {
-    if (canScan) scanInputRef.current?.focus();
+    if (!canScan) return;
+    const input = scanInputRef.current;
+    input?.focus();
+    // On a phone the bill list sits above the scan box — bring the scan box to the top of the screen.
+    if (window.matchMedia("(max-width: 1023px)").matches) input?.closest("section")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [canScan, selected]);
 
   return (
@@ -569,14 +573,14 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
       {/* Inside a retailer tool the tool already provides the header and job list. */}
       {embedded && <style>{"[data-site-chrome]{display:none}"}</style>}
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[10px] bg-[#18364c] px-3 py-2 text-white">
-        <div className="flex min-w-0 items-baseline gap-3">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
           {!embedded && (
             <Link href="/pack" className="shrink-0 text-sm text-[#aebfcc] underline hover:text-white">
               ‹ งานสแกนทั้งหมด
             </Link>
           )}
           <h1 className="shrink-0 text-lg font-semibold text-white">ยิงสแกนลงลัง · {customer}</h1>
-          <span className="truncate text-sm text-[#aebfcc]">{sourceFile}</span>
+          <span className="hidden truncate text-sm text-[#aebfcc] md:inline">{sourceFile}</span>
           <span className="shrink-0 rounded bg-white/15 px-2 py-0.5 text-sm text-white">
             {kindFilter ? `${KIND_LABEL[kindFilter]} · ` : ""}ครบแพ็คแล้ว <b>{totalDone}</b> / {kindBranches.length} สาขา
           </span>
@@ -724,7 +728,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
         <section className="flex min-h-0 min-w-0 flex-col gap-2">
           {!selected ? (
             <p className="flex flex-1 items-center justify-center rounded-[10px] border border-line bg-surface px-4 py-16 text-center text-lg text-muted">
-              เลือกสาขา / บิลจากรายการด้านซ้าย หรือยิงเลขบิลที่ช่องค้นหา
+              เลือกสาขา / บิลจากรายการ หรือยิงเลขบิลที่ช่องค้นหา
             </p>
           ) : (
             <>
@@ -747,6 +751,7 @@ export function PackScanner({ jobId, sourceFile, customer, initialBranches, embe
                   id="scan-input"
                   aria-label="ช่องยิงบาร์โค้ด"
                   ref={scanInputRef}
+                  inputMode="none"
                   autoFocus
                   autoComplete="off"
                   disabled={!canScan}
