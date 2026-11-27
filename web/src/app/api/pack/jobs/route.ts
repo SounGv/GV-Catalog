@@ -1,4 +1,5 @@
 import { createPackJob, listPackJobs, previewPackJob, type IncomingPackLine } from "@/lib/pack";
+import { getPickTotals } from "@/lib/pick";
 
 type CreateJobBody = {
   customer?: string;
@@ -16,10 +17,12 @@ const PACK_CUSTOMERS = ["ITCity", "Jaymart", "Com7"];
 
 export const dynamic = "force-dynamic";
 
-/** Scan jobs for one retailer tool's scan tab (`?customer=ITCity`), newest first. */
+/** Scan jobs (all, or one retailer tool's via `?customer=ITCity`), newest first, with picked pieces. */
 export async function GET(request: Request) {
   const customer = new URL(request.url).searchParams.get("customer")?.trim() || undefined;
-  return Response.json({ jobs: await listPackJobs(customer) });
+  const jobs = await listPackJobs(customer);
+  const picked = await getPickTotals(jobs.map((j) => j.id));
+  return Response.json({ jobs: jobs.map((j) => ({ ...j, picked: picked.get(j.id) ?? 0 })) });
 }
 
 /**
