@@ -249,7 +249,40 @@ function createPackingPrint(app) {
     return `<!doctype html><html lang="th"><head><meta charset="utf-8"><title>Carton Labels</title><style>${app.printStyles(app.activePrintProfile())}${sourceCss}</style></head><body><main class="print-document" data-expected-pages="${p.pages.length}">${labels(null, p)}</main><script>window.addEventListener('load',async()=>{await document.fonts.ready;if(document.querySelectorAll('.carton-label').length!==${p.pages.length}){alert('จำนวนใบพิมพ์ไม่ครบ');return}window.print()})<\/script></body></html>`;
   }
 
+  // GV print agent (print-agent/, 127.0.0.1:9101) on the computer the TSC is plugged into: each label goes to the printer
+  // as a 100 x 150 mm bitmap with SIZE/GAP and a gap calibration, so long runs no longer creep down a few mm per label
+  // (the Chrome/driver page length never matches the real label pitch exactly). Without the agent: the browser dialog as before.
+  let agentAlive = false;
+  const checkAgent = () => window.GVAgent?.ping().then(ok => { agentAlive = ok; renderAgentNote(); });
+  const agentNote = document.createElement('span');
+  agentNote.className = 'agent-note';
+  batchBar.append(agentNote);
+  function renderAgentNote() {
+    const tsc = /^tsc-/.test(document.getElementById('printerProfile')?.value || '');
+    agentNote.textContent = agentAlive && tsc ? '● พิมพ์ตรงผ่านโปรแกรมพิมพ์ GV (ใบไม่เลื่อน)' : tsc ? '○ ไม่พบโปรแกรมพิมพ์ GV — พิมพ์ผ่าน Chrome (พิมพ์หลายใบอาจเลื่อนลง)' : '';
+    agentNote.style.cssText = `font-size:12px;color:${agentAlive && tsc ? '#1a7f4e' : '#8a6d00'}`;
+  }
+  checkAgent();
+  setInterval(checkAgent, 15000);
+  document.getElementById('printerProfile')?.addEventListener('change', renderAgentNote);
+
+  async function agentPrint(p) {
+    const A = window.GVAgent;
+    const css = app.printStyles({ width: 100, mediaHeight: 150 }) + sourceCss + '.carton-label{break-after:auto!important;font-family:Arial,"Noto Sans Thai",sans-serif}.bc-number{font-family:Arial,sans-serif}';
+    const html = p.pages.map(page => label(page).replace(/ data-print-page="\d+"/, ''));
+    try {
+      app.toast(`กำลังส่ง ${html.length} ใบไปเครื่องพิมพ์…`);
+      const r = await A.printRows('TSC TE210', 100, 150, html, h => A.raster(h, css, 100, 150));
+      if (r.ok) app.toast(`ส่งไปเครื่องพิมพ์แล้ว ${html.length} ใบ`);
+      else { agentAlive = false; renderAgentNote(); app.toast((r.error === 'bad job' ? 'โปรแกรมพิมพ์ GV เป็นรุ่นเก่า (พิมพ์ใบ 150 มม. ไม่ได้) — ดาวน์โหลดใหม่ที่หน้า โปรแกรมพิมพ์ GV' : (r.error || 'ส่งไปเครื่องพิมพ์ไม่สำเร็จ')) + ' — กดพิมพ์อีกครั้งเพื่อพิมพ์ผ่าน Chrome', true); }
+    } catch (e) {
+      agentAlive = false; renderAgentNote();
+      app.toast('พิมพ์ผ่านโปรแกรมพิมพ์ GV ไม่สำเร็จ: ' + (e.message || e) + ' — กดพิมพ์อีกครั้งเพื่อพิมพ์ผ่าน Chrome', true);
+    }
+  }
+
   function openPrint(p) {
+    if (agentAlive && window.GVAgent && /^tsc-/.test(document.getElementById('printerProfile')?.value || '')) { agentPrint(p); return true; }
     const w = window.open('', '_blank');
     if (!w) { app.toast('เบราว์เซอร์บล็อกหน้าพิมพ์ กรุณาอนุญาต Pop-up', true); return false; }
     try { w.document.open(); w.document.write(printable(p)); w.document.close(); return true; }

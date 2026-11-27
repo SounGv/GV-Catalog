@@ -92,13 +92,13 @@ http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/ping') return reply(res, 200, { ok: true, printers: Object.keys(PRINTERS) });
   if (req.method === 'POST' && req.url === '/print') {
     const chunks = []; let size = 0;
-    req.on('data', c => { size += c.length; if (size > 30e6) req.destroy(); else chunks.push(c); });
+    req.on('data', c => { size += c.length; if (size > 80e6) req.destroy(); else chunks.push(c); });
     req.on('end', async () => {
       try {
         const b = JSON.parse(Buffer.concat(chunks).toString('utf8'));
         if (!PRINTERS[b.printer]) return reply(res, 400, { error: `ยังไม่รองรับเครื่อง ${b.printer}` });
         const w = Number(b.widthMm), h = Number(b.heightMm), g = Number(b.gapMm);
-        if (!(w > 10 && w < 120 && h > 5 && h < 120 && g >= 0 && g < 10) || !Array.isArray(b.jobs) || !b.jobs.length) return reply(res, 400, { error: 'bad job' });
+        if (!(w > 10 && w < 120 && h > 5 && h <= 200 && g >= 0 && g < 10) || !Array.isArray(b.jobs) || !b.jobs.length) return reply(res, 400, { error: 'bad job' });
         const result = await sendRaw(b.printer, tspl(b.jobs, w, h, g, b.printer));
         console.log(new Date().toLocaleTimeString(), b.printer, `${w}x${h} gap ${g}`, b.jobs.reduce((a, j) => a + j.copies, 0), 'rows ->', result);
         reply(res, result === 'OK' ? 200 : 500, { result });
