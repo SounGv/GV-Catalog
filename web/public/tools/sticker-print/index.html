@@ -310,12 +310,16 @@ a.back+.app-header{display:flex!important;align-items:center;gap:12px}.app-heade
    pm('กำลังอ่านไฟล์…');await loadXlsx();
    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
-   // header row = the first row with a SKU column and a price column (ราคา / In-VAT / Price)
-   const hi=rows.findIndex(r=>r.some(c=>/^\s*sku\s*$/i.test(String(c)))&&r.some(c=>/ราคา|in-?vat|price/i.test(String(c))));
+   // header row = the first row with a SKU column and a price column (ราคา / In-VAT / Price / Ex-VAT / บาท);
+   // an In-VAT / ราคา column wins, an Ex-VAT column gets 7% VAT added (same as typing a price with "ไม่รวม VAT")
+   const PR=/ราคา|in-?vat|ex-?vat|price|บาท/i;
+   const hi=rows.findIndex(r=>r.some(c=>/^\s*sku\s*$/i.test(String(c)))&&r.some(c=>PR.test(String(c))));
    if(hi<0)throw Error('ไม่พบหัวคอลัมน์ SKU และราคาในไฟล์นี้');
-   const h=rows[hi].map(c=>String(c).trim()),cs=h.findIndex(c=>/^sku$/i.test(c)),cp=h.findIndex(c=>/ราคา|in-?vat|price/i.test(c)),cm=h.findIndex(c=>/^รุ่น$|model/i.test(c));
+   const h=rows[hi].map(c=>String(c).trim()),cs=h.findIndex(c=>/^sku$/i.test(c)),cm=h.findIndex(c=>/^รุ่น$|model/i.test(c));
+   let cp=h.findIndex(c=>PR.test(c)&&!/ex-?vat/i.test(c));if(cp<0)cp=h.findIndex(c=>PR.test(c));
+   const exVat=/ex-?vat/i.test(h[cp]);
    if(!ready)await GVProductStickers.ready();
-   P=rows.slice(hi+1).filter(r=>String(r[cs]).trim()).flatMap(r=>priceRows(String(r[cs]).trim(),Number(String(r[cp]).replace(/[^\d.]/g,'')),cm>=0?String(r[cm]).trim():''));
+   P=rows.slice(hi+1).filter(r=>String(r[cs]).trim()).flatMap(r=>{const n=Number(String(r[cp]).replace(/[^\d.]/g,''));return priceRows(String(r[cs]).trim(),exVat?Math.round(n*107)/100:n,cm>=0?String(r[cm]).trim():'')});
    $('pName').textContent=f.name;pm('');drawPrice();setMode('price');
   }catch(e){P=[];drawPrice();pm(e.message||'อ่านไฟล์ไม่สำเร็จ')}
  }
